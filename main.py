@@ -742,8 +742,9 @@ async def _crear_qr_y_avanzar(
     msg = (
         f"Orden #{orden_id} por ${monto} MXN.\n"
         f"Concepto CoDi: {concepto}\n"
-        f"Escanea el QR (válido 10 min).\n\n{fiscal_msg}"
+        f"Escanea el QR (válido 10 min):\n{media}\n\n{fiscal_msg}"
     )
+    # Intenta media por API; si Auth Token falla, el webhook igual devuelve el link por TwiML
     send_whatsapp(telefono, msg, media_url=media)
     return msg
 
