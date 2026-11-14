@@ -8,7 +8,7 @@ Cobrar con tarjeta implica ~3.5% de comisión y facturar después es un proceso 
 
 - **Cobro instantáneo** vía CoDi (`pey`) desde WhatsApp (Twilio).
 - **Facturación CFDI 4.0** vía Facturapi cuando hay pago **y** datos fiscales válidos.
-- **Monitor en vivo** en `/admin` para proyectar KPIs en la demo.
+- **Consola de Tesorería** en `/admin` (UI ejecutiva CoDi + CFDI 4.0) para proyectar KPIs en la demo.
 
 ## Arquitectura
 
@@ -27,7 +27,7 @@ flowchart LR
 | FastAPI + SQLite | Orquestación, máquina de estados, idempotencia |
 | pey | Generación de QR CoDi y notificación de pago |
 | Facturapi | Timbrado CFDI 4.0 y descarga PDF/XML |
-| `/admin` | Panel de demo en tiempo real (polling 2s) |
+| `/admin` | Consola de Tesorería en tiempo real (polling ~2.5s) |
 
 ## Máquina de estados paralela
 

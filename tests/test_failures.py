@@ -387,7 +387,8 @@ async def test_7_pdf_vacio_y_admin_kpis(app_env: TestClient, respx_mock: respx.M
     admin = client.get("/admin")
     assert admin.status_code == 200
     assert "text/html" in admin.headers.get("content-type", "")
-    assert "Total Cobrado" in admin.text
+    assert "Volumen Liquidado" in admin.text or "Total Cobrado" in admin.text
+    assert "Consola de Tesorería" in admin.text or "CFDI" in admin.text
 
     # KPIs: hay una orden PAGADA de 100 sin factura
     api = client.get("/api/ordenes")

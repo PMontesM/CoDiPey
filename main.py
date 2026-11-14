@@ -995,17 +995,24 @@ def _fiscal_badge(orden: dict[str, Any]) -> str:
         return "ERROR FISCAL"
     if not orden.get("datos_fiscales_ok"):
         return "PENDIENTE DATOS"
-    return "PENDIENTE DATOS" if orden["pago_estado"] != "PAGADO" else "LISTO POR TIMBRAR"
+    if orden.get("pago_estado") == "PAGADO":
+        return "LISTO POR TIMBRAR"
+    return "DATOS OK"
 
 
 def build_ordenes_payload(conn: sqlite3.Connection) -> dict[str, Any]:
     rows = conn.execute(
         """
         SELECT o.*,
-               c.rfc AS rfc,
-               c.razon_social AS razon_social
+               COALESCE(c.rfc, c2.rfc) AS rfc,
+               COALESCE(c.razon_social, c2.razon_social) AS razon_social,
+               COALESCE(c.codigo_postal, c2.codigo_postal) AS codigo_postal,
+               COALESCE(c.regimen, c2.regimen) AS regimen,
+               COALESCE(c.uso_cfdi, c2.uso_cfdi) AS uso_cfdi
         FROM ordenes o
         LEFT JOIN clientes_fiscales c ON c.id = o.cliente_fiscal_id
+        LEFT JOIN clientes_fiscales c2
+          ON o.cliente_fiscal_id IS NULL AND c2.telefono = o.telefono
         ORDER BY o.id DESC
         """
     ).fetchall()
@@ -1032,8 +1039,13 @@ def build_ordenes_payload(conn: sqlite3.Connection) -> dict[str, Any]:
             {
                 **{k: o[k] for k in o.keys()},
                 "conceptos_parseados": conceptos,
+                "total": float(Decimal(o["monto"])),
                 "rfc": o.get("rfc"),
                 "razon_social": o.get("razon_social"),
+                "cp": o.get("codigo_postal"),
+                "codigo_postal": o.get("codigo_postal"),
+                "regimen": o.get("regimen"),
+                "uso_cfdi": o.get("uso_cfdi"),
                 "fiscal_badge": _fiscal_badge(o),
             }
         )
