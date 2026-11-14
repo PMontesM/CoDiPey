@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor CoDi + CFDI — Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0b1220",
+            panel: "#111827",
+            line: "#1f2937",
+            accent: "#22c55e",
+            warn: "#f59e0b",
+            danger: "#ef4444",
+            info: "#3b82f6",
+          },
+          fontFamily: {
+            display: ['"Segoe UI"', "system-ui", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { background: radial-gradient(1200px 600px at 10% -10%, #1e3a5f 0%, #0b1220 55%); }
+    .kpi { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+    .badge { letter-spacing: 0.02em; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  </style>
+</head>
+<body class="min-h-screen text-white font-display">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <header class="flex flex-wrap items-end justify-between gap-3 mb-6">
+      <div>
+        <p class="text-sm uppercase tracking-[0.2em] text-slate-400">Hackathon MVP</p>
+        <h1 class="text-3xl sm:text-4xl font-bold">Cobro WhatsApp · CoDi · CFDI 4.0</h1>
+        <p class="text-slate-300 mt-1">Monitor en vivo · auto-refresh 2s</p>
+      </div>
+      <div class="text-right text-sm text-slate-400">
+        <div>Actualizado: <span id="updatedAt" class="text-white">—</span></div>
+        <div id="pollStatus" class="text-accent">● en vivo</div>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <article class="kpi rounded-xl border border-line bg-panel/80 p-4">
+        <p class="text-slate-400 text-sm">Total Cobrado (CoDi)</p>
+        <p id="kpiCobrado" class="text-3xl font-bold text-accent mt-1">$0.00</p>
+      </article>
+      <article class="kpi rounded-xl border border-line bg-panel/80 p-4">
+        <p class="text-slate-400 text-sm">Facturas CFDI 4.0 Timbradas</p>
+        <p id="kpiFacturas" class="text-3xl font-bold text-sky-400 mt-1">0</p>
+      </article>
+      <article class="kpi rounded-xl border border-line bg-panel/80 p-4">
+        <p class="text-slate-400 text-sm">Comisiones Ahorradas ($0 costo CoDi)</p>
+        <p id="kpiComisiones" class="text-3xl font-bold text-emerald-300 mt-1">$0.00</p>
+        <p class="text-xs text-slate-500 mt-1">vs tarjeta ~3.5%</p>
+      </article>
+      <article class="kpi rounded-xl border border-line bg-panel/80 p-4">
+        <p class="text-slate-400 text-sm">Órdenes Pendientes</p>
+        <p id="kpiPendientes" class="text-3xl font-bold text-warn mt-1">0</p>
+      </article>
+    </section>
+
+    <section class="rounded-xl border border-line bg-panel/70 overflow-hidden">
+      <div class="px-4 py-3 border-b border-line flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Órdenes</h2>
+        <span class="text-xs text-slate-400">GET /api/ordenes</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-black/30 text-slate-300 uppercase text-xs">
+            <tr>
+              <th class="text-left px-3 py-3">ID</th>
+              <th class="text-left px-3 py-3">Teléfono</th>
+              <th class="text-left px-3 py-3">Conceptos</th>
+              <th class="text-right px-3 py-3">Monto</th>
+              <th class="text-left px-3 py-3">Pago</th>
+              <th class="text-left px-3 py-3">Fiscal</th>
+              <th class="text-left px-3 py-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="ordenesBody">
+            <tr>
+              <td colspan="7" class="px-3 py-8 text-center text-slate-400">Cargando órdenes…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const money = (n) =>
+      new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(n || 0));
+
+    function pagoBadge(o) {
+      if (o.pago_estado === "PAGADO") {
+        const tx = o.pey_transaction_id ? `<div class="text-[10px] text-slate-400 mt-1">${o.pey_transaction_id}</div>` : "";
+        return `<span class="badge inline-flex px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">PAGADO</span>${tx}`;
+      }
+      return `<span class="badge inline-flex px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">PENDIENTE</span>`;
+    }
+
+    function fiscalBadge(o) {
+      const b = o.fiscal_badge || "SIN FACTURA";
+      if (b === "TIMBRADO") {
+        return `
+          <div class="space-y-1">
+            <span class="badge inline-flex px-2 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">TIMBRADO</span>
+            <div class="flex gap-2">
+              <a class="underline text-sky-300" target="_blank" href="/files/factura_${o.id}.pdf">PDF</a>
+              <a class="underline text-sky-300" target="_blank" href="/files/factura_${o.id}.xml">XML</a>
+            </div>
+          </div>`;
+      }
+      if (b === "ERROR FISCAL") {
+        const tip = (o.error_fiscal || "Error fiscal").replace(/"/g, "&quot;");
+        return `<span class="badge inline-flex px-2 py-1 rounded bg-red-500/20 text-red-300 border border-red-500/40" title="${tip}">ERROR FISCAL</span>
+                <div class="text-[11px] text-red-300/90 mt-1 max-w-[220px]">${o.error_fiscal || ""}</div>`;
+      }
+      if (b === "PENDIENTE DATOS" || b === "LISTO POR TIMBRAR") {
+        return `<span class="badge inline-flex px-2 py-1 rounded bg-amber-500/15 text-amber-200 border border-amber-500/30">${b}</span>`;
+      }
+      return `<span class="badge inline-flex px-2 py-1 rounded bg-slate-500/20 text-slate-300 border border-slate-500/30">SIN FACTURA</span>`;
+    }
+
+    function conceptosHtml(o) {
+      const items = o.conceptos_parseados || [];
+      if (!items.length) return "—";
+      return items.map((i) => `${i.cantidad}× ${i.concepto}`).join("<br>");
+    }
+
+    function acciones(o) {
+      const canRetry =
+        o.pago_estado === "PAGADO" &&
+        o.requiere_factura == 1 &&
+        !o.facturapi_id;
+      if (!canRetry) return "—";
+      return `<button data-id="${o.id}" class="retryBtn px-3 py-1.5 rounded bg-white text-ink font-semibold hover:bg-slate-200">Reintentar timbrado</button>`;
+    }
+
+    function render(data) {
+      const k = data.kpis || {};
+      document.getElementById("kpiCobrado").textContent = money(k.total_cobrado);
+      document.getElementById("kpiFacturas").textContent = k.facturas_timbradas ?? 0;
+      document.getElementById("kpiComisiones").textContent = money(k.comisiones_ahorradas);
+      document.getElementById("kpiPendientes").textContent = k.ordenes_pendientes ?? 0;
+      document.getElementById("updatedAt").textContent = new Date().toLocaleTimeString("es-MX");
+
+      const body = document.getElementById("ordenesBody");
+      const ordenes = data.ordenes || [];
+      if (!ordenes.length) {
+        body.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400">Sin órdenes todavía</td></tr>`;
+        return;
+      }
+      body.innerHTML = ordenes
+        .map(
+          (o) => `
+        <tr class="border-t border-line/80 align-top">
+          <td class="px-3 py-3 font-mono">#${o.id}</td>
+          <td class="px-3 py-3">${o.telefono || ""}</td>
+          <td class="px-3 py-3">${conceptosHtml(o)}</td>
+          <td class="px-3 py-3 text-right font-semibold">${money(o.monto)}</td>
+          <td class="px-3 py-3">${pagoBadge(o)}</td>
+          <td class="px-3 py-3">${fiscalBadge(o)}</td>
+          <td class="px-3 py-3">${acciones(o)}</td>
+        </tr>`
+        )
+        .join("");
+
+      document.querySelectorAll(".retryBtn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          btn.textContent = "Reintentando…";
+          try {
+            await fetch(`/api/ordenes/${btn.dataset.id}/reintentar-timbrado`, { method: "POST" });
+            await refresh();
+          } catch (e) {
+            btn.textContent = "Error";
+          }
+        });
+      });
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch("/api/ordenes");
+        if (!res.ok) throw new Error("bad status");
+        const data = await res.json();
+        render(data);
+        document.getElementById("pollStatus").textContent = "● en vivo";
+        document.getElementById("pollStatus").className = "text-accent";
+      } catch (e) {
+        document.getElementById("pollStatus").textContent = "● sin conexión";
+        document.getElementById("pollStatus").className = "text-danger";
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>
