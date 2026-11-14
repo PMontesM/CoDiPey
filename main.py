@@ -248,7 +248,7 @@ def get_twilio_client() -> Optional[TwilioClient]:
 
 
 def send_whatsapp(to: str, body: str, media_url: Optional[str] = None) -> None:
-    """Envía mensaje WhatsApp. En tests se puede monkeypatchar."""
+    """Envía mensaje WhatsApp. Nunca propaga errores de Twilio (el webhook responde TwiML)."""
     client = get_twilio_client()
     if client is None:
         # Modo local / tests sin credenciales
@@ -261,7 +261,10 @@ def send_whatsapp(to: str, body: str, media_url: Optional[str] = None) -> None:
     }
     if media_url:
         kwargs["media_url"] = [media_url]
-    client.messages.create(**kwargs)
+    try:
+        client.messages.create(**kwargs)
+    except Exception as exc:  # noqa: BLE001 — no tumbar el flujo del chat
+        print(f"[whatsapp] send failed: {type(exc).__name__}: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -634,14 +637,22 @@ async def _crear_qr_y_avanzar(
     try:
         pey_data = await crear_qr_pey(orden_id, monto, concepto)
     except (httpx.TimeoutException, httpx.ConnectTimeout, httpx.HTTPStatusError, httpx.HTTPError) as exc:
-        send_whatsapp(
-            telefono,
-            (
-                "⚠️ No pudimos generar el QR CoDi en este momento "
-                f"({type(exc).__name__}). Por favor reintenta en unos segundos "
-                "enviando de nuevo tus productos."
-            ),
+        detail = type(exc).__name__
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status in (401, 403):
+            detail = (
+                f"pey rechazó la API key (HTTP {status}). "
+                "Revisa PEY_API_KEY en .env y que tenga cuenta CoDi vinculada en portal.mipey.mx"
+            )
+        elif status:
+            detail = f"HTTP {status}"
+        print(f"[pey] crear_qr failed: {detail} | {exc}")
+        msg = (
+            "⚠️ No pudimos generar el QR CoDi.\n"
+            f"{detail}\n"
+            "Reintenta enviando de nuevo tus productos cuando esté corregido."
         )
+        send_whatsapp(telefono, msg)
         with db_session() as conn:
             conn.execute(
                 """
@@ -652,10 +663,7 @@ async def _crear_qr_y_avanzar(
                 (now_iso(), orden_id),
             )
             conn.commit()
-        return (
-            "Hubo un problema temporal con CoDi. "
-            "Reintenta enviando de nuevo la lista de productos."
-        )
+        return msg
 
     qr_payload = (
         pey_data.get("qr")
