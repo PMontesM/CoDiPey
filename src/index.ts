@@ -71,9 +71,20 @@ app.post("/whatsapp/webhook", async (c) => {
   const form = await c.req.parseBody();
   const body = String(form.Body || "");
   const from = String(form.From || "whatsapp:+0000000000");
+  const buttonPayload = String(
+    form.ButtonPayload || form.ListId || form.InteractiveData || "",
+  );
+  const buttonText = String(form.ButtonText || "");
   let reply: string;
   try {
-    reply = await handleWhatsappMessage(c.env, publicUrl(c), from, body);
+    reply = await handleWhatsappMessage(
+      c.env,
+      publicUrl(c),
+      from,
+      body,
+      buttonPayload || undefined,
+      buttonText || undefined,
+    );
   } catch (err) {
     console.log(`[whatsapp] unhandled: ${String(err)}`);
     reply =

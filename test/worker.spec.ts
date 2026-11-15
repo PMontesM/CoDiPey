@@ -145,14 +145,67 @@ describe("Worker HTTP", () => {
     expect(res.status).toBe(200);
     const twiml = await res.text();
     expect(twiml).toContain("Orden #");
-    expect(twiml).toContain("factura CFDI 4.0");
-    expect(twiml).toContain("*1*");
+    expect(twiml).toMatch(/factura CFDI 4\.0/i);
+    expect(twiml).toMatch(/Sí|1/i);
 
     const row = await env.DB.prepare(
       "SELECT estado_chat, monto FROM ordenes ORDER BY id DESC LIMIT 1",
     ).first<{ estado_chat: string; monto: string }>();
     expect(row?.estado_chat).toBe("ESPERANDO_FACTURA");
     expect(row?.monto).toBe("0.01");
+  });
+
+  it("WhatsApp list picker PROD_ creates order from catalog", async () => {
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "Prueba CoDi $0.01",
+        ButtonPayload: "PROD_PRUEBA_001",
+        ButtonText: "Prueba CoDi $0.01",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const twiml = await res.text();
+    expect(twiml).toContain("Orden #");
+    expect(twiml).toMatch(/factura CFDI 4\.0/i);
+
+    const row = await env.DB.prepare(
+      "SELECT monto, conceptos FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{ monto: string; conceptos: string }>();
+    expect(row?.monto).toBe("0.01");
+    expect(row?.conceptos).toContain("Prueba CoDi");
+  });
+
+  it("WhatsApp button payload FACTURA_SI advances like tapping Sí", async () => {
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "1 Prueba CoDi 0.01",
+      }),
+    });
+
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "Sí, factura",
+        ButtonPayload: "FACTURA_SI",
+        ButtonText: "Sí, factura",
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toMatch(/QR CoDi|\/files\/qr_/);
+
+    const orden = await env.DB.prepare(
+      "SELECT estado_chat, requiere_factura FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{ estado_chat: string; requiere_factura: number }>();
+    expect(orden?.requiere_factura).toBe(1);
+    expect(orden?.estado_chat).toBe("ESPERANDO_DATOS_FISCALES");
   });
 
   it("WhatsApp 1 generates CoDi QR via pey and stores PNG", async () => {
@@ -239,13 +292,24 @@ describe("Worker HTTP", () => {
     });
   });
 
-  it("rejects empty product webhook with helpful TwiML", async () => {
+  it("hola opens product menu with catalog options", async () => {
     const res = await call("/whatsapp/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formBody({ From: "whatsapp:+5215510076571", Body: "hola" }),
     });
-    expect(await res.text()).toMatch(/No entendí|Formato|productos/i);
+    const twiml = await res.text();
+    expect(twiml).toMatch(/Cobro CoDi|productos|pedido/i);
+    expect(twiml).toMatch(/Prueba CoDi/i);
+  });
+
+  it("rejects gibberish with helpful TwiML", async () => {
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({ From: "whatsapp:+5215510076571", Body: "asdfqwer" }),
+    });
+    expect(await res.text()).toMatch(/No entendí|menú|cantidad concepto/i);
   });
 
   it("fiscal data + paid order stamps CFDI", async () => {

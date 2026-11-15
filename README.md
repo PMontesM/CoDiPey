@@ -36,13 +36,15 @@ Otros endpoints: `GET /admin`, `GET /api/ordenes`, `POST /api/ordenes/:id/reinte
 
 ## Flujo WhatsApp
 
-1. Productos: `1 Prueba CoDi 0.01` (o varias líneas `cantidad concepto precio`)
-2. Factura: `1` = sí / `2` = no → llega **imagen QR CoDi** (+ link de respaldo)
+Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de respaldo.
+
+1. Escribe `hola` → menú con lista *Ver productos* (o escribe `cantidad concepto precio`)
+2. Tras el pedido → tarjetas **Sí, factura** / **Solo pagar** → llega **imagen QR CoDi**
 3. Pago: escanear QR en banca ($0.01 en demo)
-4. Fiscal (si pediste factura):  
+4. Fiscal (si pediste factura): tarjetas **Público general** / **Reenviar QR**, o cadena  
    `RFC | Razón Social | CP | Régimen | UsoCFDI`  
    Ejemplo SAT: `XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03`
-5. Comandos útiles: `qr` o `reenviar` (reenvía la imagen del QR activo)
+5. Compat texto: `1`/`2` = factura sí/no; `qr` = reenviar imagen
 
 El cobro y la captura fiscal avanzan en paralelo. Timbrado solo si:
 
