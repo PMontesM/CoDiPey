@@ -47,6 +47,7 @@ async function main() {
     else ok("/health");
   }
 
+  // Primer producto → carrito (ARMAR_PEDIDO). Cobrar es el paso siguiente.
   const smokeFrom = "whatsapp:+5215500009999";
   const wa = await fetch(`${WORKER}/whatsapp/webhook`, {
     method: "POST",
@@ -57,12 +58,12 @@ async function main() {
     }),
   });
   const twiml = await wa.text();
-  // Con Twilio: Content API envía botones y el webhook responde TwiML vacío.
-  // Sin Twilio: el texto de factura viaja en TwiML.
+  // Con Twilio: Content API manda botones y el webhook responde TwiML vacío.
+  // Sin Twilio / fallback: el texto del carrito viaja en TwiML.
   const twimlOk =
     wa.ok &&
     (twiml.includes("<Response></Response>") ||
-      (twiml.includes("Orden #") && /factura/i.test(twiml)));
+      (/Pedido en curso|orden #/i.test(twiml) && /cobrar/i.test(twiml)));
   if (!twimlOk) {
     fail(`whatsapp step1 unexpected: ${wa.status} ${twiml.slice(0, 200)}`);
   } else {
@@ -70,11 +71,15 @@ async function main() {
     const list = ordenes.ok ? await ordenes.json() : null;
     const rows = list?.ordenes || (Array.isArray(list) ? list : []);
     const hit = rows.find(
-      (o) => o.telefono === smokeFrom && o.estado_chat === "ESPERANDO_FACTURA",
+      (o) => o.telefono === smokeFrom && o.estado_chat === "ARMAR_PEDIDO",
     );
     if (!hit) {
-      fail("whatsapp step1: no order in ESPERANDO_FACTURA for smoke phone");
-    } else ok(`whatsapp step1 creates order #${hit.id} (interactive or TwiML)`);
+      fail("whatsapp step1: no order in ARMAR_PEDIDO for smoke phone");
+    } else {
+      ok(`whatsapp step1 creates cart #${hit.id} (ARMAR_PEDIDO)`);
+      // No ensuciar el panel de pitch: cancela la orden de smoke.
+      await fetch(`${WORKER}/api/ordenes/${hit.id}/cancelar`, { method: "POST" });
+    }
   }
 
   const env = loadEnv();
