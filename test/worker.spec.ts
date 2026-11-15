@@ -105,6 +105,29 @@ describe("Worker HTTP", () => {
             headers: { "content-type": "image/png" },
           });
         }
+        if (url.includes("www.facturapi.io/v2/tools/tax_id_validation")) {
+          return Response.json({
+            efos: { is_valid: true, data: { mensaje: "ok", detalles: [] } },
+          });
+        }
+        if (
+          url.includes("www.facturapi.io/v2/customers") &&
+          url.includes("tax-info-validation")
+        ) {
+          return Response.json({ is_valid: true, errors: [] });
+        }
+        if (
+          url.includes("www.facturapi.io/v2/customers") &&
+          (init?.method || "GET") === "POST"
+        ) {
+          return Response.json({ id: "cus_test_1" });
+        }
+        if (
+          url.includes("www.facturapi.io/v2/customers/") &&
+          (init?.method || "") === "DELETE"
+        ) {
+          return new Response(null, { status: 204 });
+        }
         if (url.includes("www.facturapi.io/v2/invoices") && !url.includes("/pdf") && !url.includes("/xml")) {
           return Response.json({ id: "inv_test_1" });
         }

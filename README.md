@@ -42,7 +42,8 @@ Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de 
 2. Tras el pedido → **Sí, factura** / **Solo pagar** → imagen QR CoDi (**vigencia ~10 min**)
 3. Si el QR vence: Banxico ya no lo acepta; la orden sigue `PENDIENTE` hasta que uses **Nuevo QR** (mismo monto) o abras otro pedido desde el menú
 4. Fiscal (pensado para mostrador): **Sin RFC** (un toque) o **Sí tengo RFC** → 5 pasos
-   simples (RFC → nombre → CP → régimen en lista → uso en lista). Sin cadenas raras.
+   simples (RFC → nombre → CP → régimen → uso). Al terminar, **Facturapi valida contra el SAT**
+   (mejor que el portal de certificados, que pide captcha y no es API). Si no cuadran, te dice qué corregir.
 5. Revisar: WhatsApp `estado` / `historial`, o consola `/admin` (ticket por fila)
 6. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
 
