@@ -3,6 +3,10 @@ import { buildOrdenesPayload, resolveEmisor } from "./lib/admin";
 import { getBlob } from "./lib/blobs";
 import { handleWhatsappMessage } from "./lib/chat";
 import { simularCobroDemo, simularPagoDemo } from "./lib/demo";
+import {
+  buildJoinPayload,
+  registrarDemoWhatsapp,
+} from "./lib/demo-whatsapp";
 import { evaluarYTimbrar } from "./lib/facturapi";
 import { nowIso, xmlEscape } from "./lib/parse";
 import { getQrExpiresInSec } from "./lib/pey";
@@ -114,6 +118,35 @@ app.post("/api/ordenes/:id/cancelar", async (c) => {
     .bind(id)
     .first<Orden>();
   return c.json({ orden: updated, message: "Orden cancelada" });
+});
+
+/** Config pública para que el juez abra WhatsApp con el join listo. */
+app.get("/api/demo/whatsapp-join", (c) => {
+  const payload = buildJoinPayload(c.env);
+  return c.json({
+    configured: payload.configured,
+    sandbox: payload.sandbox,
+    /** Solo si está configurado: el juez puede copiar/pegar. */
+    join_text: payload.configured ? payload.join_text : null,
+    wa_link: payload.configured ? payload.wa_link : null,
+    sms_disponible: Boolean((c.env.TWILIO_SMS_FROM || "").trim()),
+    nota: payload.configured
+      ? "Registra tu número y abre WhatsApp con el join listo. Tú no necesitas aprobación manual."
+      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker. Usa /admin para demoea sin WhatsApp.",
+  });
+});
+
+/** Registra número de juez; opcionalmente SMS; siempre devuelve wa.me con join. */
+app.post("/api/demo/registrar-whatsapp", async (c) => {
+  let telefono = "";
+  try {
+    const body = (await c.req.json()) as { telefono?: string };
+    telefono = String(body.telefono || "");
+  } catch {
+    return c.json({ detail: "JSON inválido" }, 400);
+  }
+  const result = await registrarDemoWhatsapp(c.env, telefono);
+  return c.json(result.body, result.status as 200 | 400 | 503);
 });
 
 /** Demo pública sin Twilio Sandbox: crea cobro + QR CoDi. */

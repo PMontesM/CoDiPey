@@ -55,6 +55,15 @@ async function migrate(db: D1Database) {
         data BLOB NOT NULL,
         updated_at TEXT NOT NULL
       )`),
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS demo_whatsapp (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telefono TEXT NOT NULL,
+        e164 TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        sms_enviado INTEGER NOT NULL DEFAULT 0,
+        sms_error TEXT
+      )`),
   ]);
 }
 
@@ -63,6 +72,7 @@ async function clearDb(db: D1Database) {
     db.prepare("DELETE FROM blobs"),
     db.prepare("DELETE FROM ordenes"),
     db.prepare("DELETE FROM clientes_fiscales"),
+    db.prepare("DELETE FROM demo_whatsapp"),
   ]);
 }
 
@@ -664,5 +674,48 @@ describe("Worker HTTP", () => {
     expect(body.orden.pago_estado).toBe("PAGADO");
     expect(body.orden.facturapi_id).toBe("inv_test_1");
     expect(body.message).toMatch(/timbrado/i);
+  });
+
+  it("GET /api/demo/whatsapp-join reports config", async () => {
+    const e = env as Record<string, unknown>;
+    e.TWILIO_SANDBOX_JOIN_CODE = "demo-join";
+    const res = await call("/api/demo/whatsapp-join");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.configured).toBe(true);
+    expect(body.join_text).toBe("join demo-join");
+    expect(body.wa_link).toContain("wa.me/");
+    expect(body.wa_link).toContain(encodeURIComponent("join demo-join"));
+  });
+
+  it("POST /api/demo/registrar-whatsapp returns wa.me link", async () => {
+    await env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS demo_whatsapp (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telefono TEXT NOT NULL,
+        e164 TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        sms_enviado INTEGER NOT NULL DEFAULT 0,
+        sms_error TEXT
+      )`,
+    ).run();
+    const e = env as Record<string, unknown>;
+    e.TWILIO_SANDBOX_JOIN_CODE = "demo-join";
+    e.TWILIO_SMS_FROM = "";
+    const res = await call("/api/demo/registrar-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telefono: "5512345678" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.e164).toBe("+525512345678");
+    expect(body.join_text).toBe("join demo-join");
+    expect(body.wa_link).toContain("wa.me/14155238886");
+    expect(body.sms_enviado).toBe(false);
+    const row = await env.DB.prepare(
+      "SELECT e164 FROM demo_whatsapp ORDER BY id DESC LIMIT 1",
+    ).first<{ e164: string }>();
+    expect(row?.e164).toBe("+525512345678");
   });
 });

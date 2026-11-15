@@ -30,13 +30,18 @@ En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a 
 ### Stack
 Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Facturapi CFDI 4.0
 
-### Cómo demoea el jurado (2 min, sin Sandbox)
-1. Abrir la [consola](https://cobro-codi.inomali.workers.dev/admin).
-2. **+ Simular Cobro WhatsApp** → crea orden real + QR CoDi (`POST /api/demo/simular-cobro`).
-3. Abrir el ticket → **Simular Webhook Pago pey** → liquidación + timbrado CFDI (`POST /api/demo/simular-pago/:id`).
-4. (Opcional) WhatsApp real solo si el número ya hizo `join` al Twilio Sandbox.
+### Cómo demoea el jurado
 
-> El Sandbox de Twilio **no permite** autorizar números por API: cada teléfono debe enviar `join …`. La consola pública simula cobro y pago sin unir números.
+**A) Sin WhatsApp (2 min)**  
+1. Abrir la [consola](https://cobro-codi.inomali.workers.dev/admin).  
+2. **+ Simular Cobro WhatsApp** → **Simular Webhook Pago pey**.
+
+**B) Con su WhatsApp (auto-servicio, sin que apruebes tú)**  
+1. En la [landing](https://cobro-codi.inomali.workers.dev/) → *Registra tu WhatsApp*.  
+2. Toca **Abrir WhatsApp con el join** (o usa el SMS si configuraste `TWILIO_SMS_FROM`).  
+3. Envía el `join …` → cuando confirme, escribe `hola`.
+
+> El Sandbox no deja mandar WhatsApp *antes* del join. Por eso la instrucción va por enlace `wa.me` (y SMS opcional). El juez se une solo; no hay aprobación manual.
 
 ---
 
@@ -62,6 +67,8 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 | `PEY_API_KEY` | QR CoDi |
 | `FACTURAPI_KEY` | Timbrado CFDI 4.0 |
 | `TWILIO_*` | WhatsApp |
+| `TWILIO_SANDBOX_JOIN_CODE` | Código `join` del Sandbox (ej. `ceil-maltese`) |
+| `TWILIO_SMS_FROM` | (Opcional) Número SMS Twilio para mandar la instrucción |
 | `PUBLIC_URL` | Base HTTPS del Worker |
 
 ### Webhooks

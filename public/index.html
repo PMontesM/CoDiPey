@@ -506,6 +506,104 @@
       color: var(--taupe);
     }
 
+    .join {
+      padding: 4.5rem 1.25rem;
+      background: #fff;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .join-inner {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .join-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--moss);
+      margin-bottom: 0.65rem;
+    }
+    .join h2 {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: clamp(1.85rem, 3.5vw, 2.6rem);
+      line-height: 1.12;
+      color: var(--forest);
+      margin-bottom: 0.75rem;
+    }
+    .join-lead {
+      color: var(--taupe);
+      margin-bottom: 1.5rem;
+      font-size: 1.02rem;
+    }
+    .join-form label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--forest);
+      margin-bottom: 0.45rem;
+    }
+    .join-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+    .join-prefix {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 0.85rem;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.9rem;
+      color: var(--taupe);
+    }
+    .join-row input {
+      flex: 1 1 140px;
+      min-width: 0;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-family: "JetBrains Mono", monospace;
+      background: var(--ivory);
+      color: var(--ink);
+    }
+    .join-row input:focus {
+      outline: 2px solid rgba(47, 92, 79, 0.35);
+      border-color: var(--moss);
+    }
+    .join-hint, .join-alt, .join-status {
+      font-size: 0.88rem;
+      color: var(--taupe);
+      margin-top: 0.85rem;
+    }
+    .join-alt a { color: var(--forest); font-weight: 700; text-decoration: underline; }
+    .join-result {
+      margin-top: 1.25rem;
+      padding: 1.15rem 1.2rem;
+      background: var(--sage);
+      border-radius: 1rem;
+      border: 1px solid var(--line);
+    }
+    .join-result p { color: var(--forest); margin-bottom: 0.9rem; font-size: 0.95rem; }
+    .join-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .join-code {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.82rem;
+      color: var(--taupe);
+      word-break: break-all;
+    }
+    .join-status.is-error { color: #9F1239; }
+    .join-status.is-ok { color: var(--moss); font-weight: 600; }
+
     .console {
       padding: 4.5rem 1.25rem 0;
       background: var(--ivory);
@@ -600,7 +698,7 @@
           Probar el panel
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="btn btn-line" href="#historia">¿Cómo funciona?</a>
+        <a class="btn btn-line" href="#probar-whatsapp">Probar en mi WhatsApp</a>
       </div>
     </div>
 
@@ -723,6 +821,44 @@
     </div>
   </section>
 
+  <section class="join" id="probar-whatsapp">
+    <div class="join-inner">
+      <p class="join-eyebrow">Demo en tu celular</p>
+      <h2>Registra tu WhatsApp y únete solo.</h2>
+      <p class="join-lead">
+        No hace falta que nadie te apruebe. Pones tu número, abres WhatsApp con el mensaje listo, lo envías y ya puedes escribir <strong>hola</strong>.
+      </p>
+      <form class="join-form" id="joinForm">
+        <label for="waPhone">Tu WhatsApp (México)</label>
+        <div class="join-row">
+          <span class="join-prefix">+52</span>
+          <input
+            id="waPhone"
+            name="telefono"
+            type="tel"
+            inputmode="numeric"
+            autocomplete="tel-national"
+            placeholder="5512345678"
+            maxlength="14"
+            required
+          />
+          <button type="submit" class="btn btn-dark" id="joinSubmit">Continuar</button>
+        </div>
+        <p class="join-hint" id="joinHint">Te devolvemos un botón para abrir WhatsApp con el <em>join</em> ya escrito. Si hay SMS configurado, también te llega por mensaje de texto.</p>
+      </form>
+      <div class="join-result" id="joinResult" hidden>
+        <p id="joinNext"></p>
+        <div class="join-actions">
+          <a class="btn btn-dark" id="joinWaBtn" href="#" target="_blank" rel="noopener">Abrir WhatsApp con el join</a>
+          <button type="button" class="btn btn-line" id="joinCopyBtn">Copiar mensaje</button>
+        </div>
+        <p class="join-code mono" id="joinCodeLine"></p>
+      </div>
+      <p class="join-status" id="joinStatus" role="status"></p>
+      <p class="join-alt">¿Sin WhatsApp a la mano? <a href="/admin">Usa el panel</a> y simula el cobro ahí.</p>
+    </div>
+  </section>
+
   <section class="console" id="consola">
     <div class="console-inner">
       <h2>El panel es de control. La caja es WhatsApp.</h2>
@@ -759,6 +895,77 @@
       el.classList.add("js-ready");
       io.observe(el);
     });
+
+    (function setupWhatsappJoin() {
+      const form = document.getElementById("joinForm");
+      const status = document.getElementById("joinStatus");
+      const result = document.getElementById("joinResult");
+      const next = document.getElementById("joinNext");
+      const waBtn = document.getElementById("joinWaBtn");
+      const copyBtn = document.getElementById("joinCopyBtn");
+      const codeLine = document.getElementById("joinCodeLine");
+      const submit = document.getElementById("joinSubmit");
+      const phone = document.getElementById("waPhone");
+      if (!form || !status) return;
+
+      let lastJoinText = "";
+
+      fetch("/api/demo/whatsapp-join")
+        .then((r) => r.json())
+        .then((cfg) => {
+          if (!cfg.configured) {
+            status.className = "join-status is-error";
+            status.textContent =
+              "El join de WhatsApp aún no está configurado. Mientras tanto usa el panel.";
+            submit.disabled = true;
+          } else if (cfg.sms_disponible) {
+            status.textContent = "Listo: al continuar también intentamos mandarte SMS con la instrucción.";
+          }
+        })
+        .catch(() => {});
+
+      form.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        status.className = "join-status";
+        status.textContent = "Registrando…";
+        result.hidden = true;
+        submit.disabled = true;
+        try {
+          const res = await fetch("/api/demo/registrar-whatsapp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telefono: phone.value }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+          lastJoinText = data.join_text || "";
+          next.textContent = data.siguiente || "Abre WhatsApp y envía el join.";
+          waBtn.href = data.wa_link || "#";
+          codeLine.textContent = `Mensaje: ${data.join_text}  →  ${data.sandbox}`;
+          result.hidden = false;
+          status.className = "join-status is-ok";
+          status.textContent = data.sms_enviado
+            ? "Listo. Te mandamos SMS y aquí tienes el botón de WhatsApp."
+            : "Listo. Toca Abrir WhatsApp — el mensaje ya va escrito.";
+        } catch (err) {
+          status.className = "join-status is-error";
+          status.textContent = err.message || "No se pudo registrar.";
+        } finally {
+          submit.disabled = false;
+        }
+      });
+
+      copyBtn?.addEventListener("click", async () => {
+        if (!lastJoinText) return;
+        try {
+          await navigator.clipboard.writeText(lastJoinText);
+          status.className = "join-status is-ok";
+          status.textContent = "Mensaje copiado. Pégalo en WhatsApp al número del Sandbox.";
+        } catch (_) {
+          status.textContent = "Copia manual: " + lastJoinText;
+        }
+      });
+    })();
   </script>
 </body>
 </html>

@@ -6,6 +6,10 @@ export type Env = {
   TWILIO_ACCOUNT_SID: string;
   TWILIO_AUTH_TOKEN: string;
   TWILIO_WHATSAPP_FROM: string;
+  /** Código del Sandbox, ej. "ceil-maltese" (sin la palabra join). */
+  TWILIO_SANDBOX_JOIN_CODE?: string;
+  /** Número Twilio SMS (E.164) para mandar la instrucción antes del join. Opcional. */
+  TWILIO_SMS_FROM?: string;
   PUBLIC_URL?: string;
 };
 
