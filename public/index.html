@@ -302,6 +302,52 @@
       to { opacity: 1; transform: none; }
     }
 
+    .video {
+      padding: 4rem 1.25rem 3.5rem;
+      background: var(--sage);
+    }
+    .video-inner {
+      max-width: 920px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .video-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--moss);
+      margin-bottom: 0.55rem;
+    }
+    .video h2 {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      color: var(--forest);
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
+    }
+    .video-frame {
+      border-radius: 1.1rem;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #0b141a;
+      box-shadow: 0 24px 50px rgba(22, 48, 43, 0.12);
+      aspect-ratio: 16 / 9;
+    }
+    .video-frame video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      vertical-align: middle;
+      object-fit: cover;
+      background: #0b141a;
+    }
+    .video-caption {
+      margin-top: 0.9rem;
+      font-size: 0.88rem;
+      color: var(--taupe);
+    }
+
     .marquee {
       background: var(--sage);
       color: var(--forest);
@@ -698,7 +744,7 @@
           Probar el panel
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="btn btn-line" href="#probar-whatsapp">Probar en mi WhatsApp</a>
+        <a class="btn btn-line" href="#video">Ver el video</a>
       </div>
     </div>
 
@@ -720,6 +766,26 @@
       <span>$0 de comisión</span><span>Muy fácil por WhatsApp</span><span>Paga con QR</span><span>Sin tarjeta cara</span><span>Factura si la piden</span>
     </div>
   </div>
+
+  <section class="video" id="video">
+    <div class="video-inner">
+      <p class="video-eyebrow">Míralo en 30 segundos</p>
+      <h2>Del chat al cobro, sin comisión de tarjeta.</h2>
+      <div class="video-frame">
+        <video
+          controls
+          playsinline
+          preload="metadata"
+          poster="/demo-codipey-poster.jpg"
+          title="Demo CoDiPey"
+        >
+          <source src="/demo-codipey.mp4" type="video/mp4" />
+          Tu navegador no reproduce video HTML5.
+        </video>
+      </div>
+      <p class="video-caption">WhatsApp opera · el panel vigila · $0 de comisión</p>
+    </div>
+  </section>
 
   <section class="statement">
     <div class="statement-inner">
