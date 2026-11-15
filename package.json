@@ -1,16 +1,20 @@
 {
   "name": "cobro-whatsapp-codi",
   "private": true,
-  "version": "1.0.0",
-  "description": "WhatsApp + CoDi (pey) + CFDI 4.0 — Cloudflare Containers",
+  "version": "2.0.0",
+  "description": "WhatsApp + CoDi + CFDI 4.0 — Cloudflare Worker (D1 + R2)",
   "scripts": {
     "deploy": "wrangler deploy",
     "deploy:temp": "wrangler deploy --temporary",
     "dev": "wrangler dev",
-    "tail": "wrangler tail"
+    "db:migrate:local": "wrangler d1 migrations apply cobro-db --local",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.13.18"
   },
   "devDependencies": {
-    "@cloudflare/containers": "^0.0.30",
     "@cloudflare/workers-types": "^5.20261113.1",
     "typescript": "^5.9.3",
     "wrangler": "^4.162.0"

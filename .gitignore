@@ -36,3 +36,5 @@ node_modules/
 .wrangler/
 dist/
 *.tsbuildinfo
+.dev.vars
+/tmp-cf-secrets.env

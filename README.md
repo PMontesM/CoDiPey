@@ -1,179 +1,78 @@
 # Cobro WhatsApp + CoDi (pey) + CFDI 4.0 (Facturapi)
 
-MVP para hackathon: el comercio cobra por WhatsApp con **QR CoDi** (sin comisión de tarjeta) y, si el cliente lo pide, **timbra automáticamente un CFDI 4.0** sin salir del chat.
+MVP: cobro por WhatsApp con **QR CoDi** y **CFDI 4.0** automático.
 
-## Problema y propuesta de valor
+## Runtime principal: Cloudflare Worker (gratis)
 
-Cobrar con tarjeta implica ~3.5% de comisión y facturar después es un proceso aparte (portal, PDF, XML, datos fiscales). Este MVP une ambos flujos:
+Stack productivo: **Worker (TypeScript + Hono) + D1 + blobs en D1**. URL fija `*.workers.dev` sin tunnels.
 
-- **Cobro instantáneo** vía CoDi (`pey`) desde WhatsApp (Twilio).
-- **Facturación CFDI 4.0** vía Facturapi cuando hay pago **y** datos fiscales válidos.
-- **Consola de Tesorería** en `/admin` (UI ejecutiva CoDi + CFDI 4.0) para proyectar KPIs en la demo.
+| Binding / secret | Uso |
+|---|---|
+| `DB` (D1) | Órdenes, datos fiscales, archivos QR/PDF/XML |
+| `ASSETS` | Consola `/admin` |
+| `PEY_API_KEY` | QR CoDi |
+| `FACTURAPI_KEY` | Timbrado CFDI 4.0 |
+| `TWILIO_*` | WhatsApp |
+| `PUBLIC_URL` | Base HTTPS pública del Worker |
 
-## Arquitectura
+### Deploy a tu cuenta Cloudflare free
 
-```mermaid
-flowchart LR
-  WA[WhatsApp / Twilio] <-->|webhook / mensajes| API[FastAPI + SQLite]
-  API <-->|POST /codi/qr + webhook pago| PEY[pey CoDi]
-  API <-->|POST /invoices + PDF/XML| FA[Facturapi CFDI 4.0]
-  API --> ADM[Monitor GET /admin]
-  API --> FILES[public_files QR PDF XML]
+```bash
+npm install
+npx wrangler login          # o: npx wrangler login --device
+npx wrangler d1 create cobro-db
+# pega el database_id en wrangler.jsonc
+npx wrangler d1 migrations apply cobro-db --remote
+npx wrangler secret bulk .dev.vars   # o secret put uno a uno
+npm run deploy
 ```
 
-| Componente | Rol |
+Webhooks (URL fija):
+
+| Proveedor | Path |
 |---|---|
-| Twilio WhatsApp | Canal del comercio y del cliente |
-| FastAPI + SQLite | Orquestación, máquina de estados, idempotencia |
-| pey | Generación de QR CoDi y notificación de pago |
-| Facturapi | Timbrado CFDI 4.0 y descarga PDF/XML |
-| `/admin` | Consola de Tesorería en tiempo real (polling ~2.5s) |
+| Twilio Sandbox | `https://<worker>.<subdomain>.workers.dev/whatsapp/webhook` |
+| portal.mipey.mx | `https://<worker>.<subdomain>.workers.dev/pey/webhook` |
 
-## Máquina de estados paralela
+También: `GET /admin`, `GET /api/ordenes`, `GET /files/...`, `GET /health`.
 
-El cobro y la captura fiscal avanzan **en paralelo**. El timbrado (`evaluar_y_timbrar`) solo dispara cuando se cumplen **ambas** condiciones:
+> En cuentas *preview* temporales Cloudflare puede activar challenge anti-bot y romper Twilio. Usa **tu cuenta free** (login) o reclama la preview y desactiva Bot Fight Mode.
 
-1. `pago_estado == 'PAGADO'`
+## Máquina de estados
+
+El cobro y la captura fiscal avanzan en paralelo. Timbrado solo si:
+
+1. `pago_estado == PAGADO`
 2. `datos_fiscales_ok == 1`
-3. `facturapi_id IS NULL` (idempotencia)
+3. `facturapi_id IS NULL`
 
-No importa si llegó primero el webhook de `pey` o los datos fiscales por WhatsApp.
+## Demo $0.01 MXN
 
-```
-Productos → ¿Factura? (1/2) → QR CoDi
-                ├─ Sí → datos fiscales (o reutilizar clientes_fiscales)
-                └─ No → solo espera pago
-Pago pey ─┬─ + datos OK → timbrar Facturapi → PDF/XML por WhatsApp
-          └─ sin datos → espera; al llegar datos → timbrar
-```
+1. Configura webhooks Twilio/pey a la URL del Worker.
+2. WhatsApp: `1 Prueba CoDi 0.01` → `1` (factura).
+3. Escanea QR CoDi y paga $0.01.
+4. Factura PDF/XML por WhatsApp si hay datos fiscales.
 
-### Tolerancia a fallos
+## Desarrollo local (opcional)
 
-| Escenario | Comportamiento |
-|---|---|
-| Webhook `pey` duplicado (mismo `transactionId`) | `200 OK`, sin re-notificar ni re-timbrar |
-| `POST /codi/qr` timeout / 5xx | `200` a Twilio + aviso al usuario para reintentar |
-| Facturapi 4xx/5xx (RFC/CP inválido) | Mantiene `PAGADO`, `ERROR_FISCAL` + `error_fiscal`, pide corrección **sin volver a cobrar** |
-| PDF/XML vacío o no-200 | No guarda archivos de 0 bytes ni marca `COMPLETADO` |
-| `numRef` desconocido | `200 OK` e ignora el evento |
-
-## Instalación rápida
+### Worker
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+npm install
+cp .env.example .dev.vars   # mismas keys
+npx wrangler d1 migrations apply cobro-db --local
+npx wrangler dev
+```
+
+### Legacy FastAPI + SQLite (repo histórico)
+
+```bash
 pip install -r requirements.txt
-cp .env.example .env        # edita con tus llaves reales
-```
-
-### Variables de entorno (`.env`)
-
-| Variable | Descripción |
-|---|---|
-| `PEY_API_KEY` | API key de [portal.mipey.mx](https://portal.mipey.mx) |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Credenciales Twilio |
-| `TWILIO_WHATSAPP_FROM` | Ej. `whatsapp:+14155238886` (Sandbox) |
-| `FACTURAPI_KEY` | Sandbox o live de [facturapi.io](https://www.facturapi.io) |
-| `PUBLIC_URL` | URL pública del túnel (sin slash final) |
-
-## Ejecución
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8765 --reload
-```
-
-Expón el puerto con Cloudflare Tunnel:
-
-```bash
-cloudflared tunnel --url http://localhost:8765
-```
-
-Copia la URL HTTPS resultante a `PUBLIC_URL` en `.env` y reinicia uvicorn.
-
-> **Nota:** `cloudflared tunnel --url ...` (Quick Tunnel) genera un hostname `*.trycloudflare.com` **nuevo cada vez**. Eso rompe los webhooks de Twilio/pey.
-
-### Webhooks (URLs exactas)
-
-| Proveedor | Método | Path |
-|---|---|---|
-| **Twilio Sandbox** | `POST` | `{PUBLIC_URL}/whatsapp/webhook` |
-| **portal.mipey.mx** | `POST` | `{PUBLIC_URL}/pey/webhook` |
-
-## URL fija con cuenta Cloudflare **gratis** (recomendado)
-
-No hace falta plan de pago. Usa un **Tunnel nombrado** + un dominio en tu zona Cloudflare (el plan Free lo permite).
-
-```bash
-# 1) Login (una vez) — abre el navegador / OAuth
-cloudflared tunnel login
-
-# 2) Crear tunnel permanente
-cloudflared tunnel create cobro-codi
-
-# 3) DNS (sustituye tudominio.com)
-cloudflared tunnel route dns cobro-codi cobro.tudominio.com
-
-# 4) Config ~/.cloudflared/config.yml
-# tunnel: <TUNNEL_ID>
-# credentials-file: /home/ubuntu/.cloudflared/<TUNNEL_ID>.json
-# ingress:
-#   - hostname: cobro.tudominio.com
-#     service: http://127.0.0.1:8765
-#   - service: http_status:404
-
-cloudflared tunnel run cobro-codi
-```
-
-Luego en `.env`:
-
-```bash
-PUBLIC_URL=https://cobro.tudominio.com
-```
-
-Y deja Twilio/pey apuntando a esa URL **para siempre** (no cambia al reiniciar).
-
-### ¿Y Cloudflare Containers / workers.dev?
-
-Eso sube el FastAPI como contenedor a `*.workers.dev`, pero **Containers es de plan de pago**. La cuenta “temporal” de Wrangler solo era un atajo de prueba sin login; **no la necesitas** si usas tu cuenta free + tunnel nombrado.
-
-También disponibles:
-
-- `GET /admin` — monitor visual
-- `GET /api/ordenes` — JSON de KPIs + órdenes
-- `POST /api/ordenes/{id}/reintentar-timbrado` — reintento manual
-- `GET /files/...` — QR, PDF y XML generados
-
-## Demo en vivo con $0.01 MXN
-
-1. Abre `/admin` en pantalla grande (proyector).
-2. Desde el WhatsApp Sandbox de Twilio, envía al bot:
-   ```
-   1 Prueba CoDi 0.01
-   ```
-3. Responde `1` si quieres factura (o `2` solo cobro).
-4. Escanea el QR CoDi y paga **$0.01 MXN**.
-5. Si pediste factura, envía datos fiscales de prueba del SAT (Sandbox Facturapi), por ejemplo:
-   ```
-   XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03
-   ```
-6. En `/admin` verás el badge **PAGADO**, luego **TIMBRADO** con enlaces PDF/XML.
-7. Si Facturapi rechaza datos, corrige el mensaje o usa **Reintentar timbrado** — el cobro no se repite.
-
-## Pruebas
-
-Suite de fallos (idempotencia, carreras, timeouts, rechazo fiscal, malformados, PDF vacío, KPIs):
-
-```bash
+cp .env.example .env
+uvicorn main:app --host 0.0.0.0 --port 8765
+# + cloudflared tunnel (URL cambia cada vez)
 pytest -v
 ```
-
-## Flujo de chat (resumen)
-
-1. Comercio envía productos (uno por línea): `2 Cafe 45`
-2. Bot calcula total con `Decimal` y pregunta factura (`1` / `2`)
-3. Genera QR CoDi (`expiration: 600`, `numRef = orden_id`) y lo manda por WhatsApp
-4. Pago y/o datos fiscales llegan en cualquier orden → `evaluar_y_timbrar`
-5. PDF + XML se validan (`200` y `len(content) > 0`) antes de guardarse en `public_files/`
 
 ## Licencia
 
