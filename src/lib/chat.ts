@@ -691,16 +691,16 @@ async function emitirQr(
 
   const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
   if (hasTwilio) {
+    // Un solo mensaje: imagen del ticket + caption con el link (no repetir el link aparte).
     await sendWhatsapp(env, telefono, qrMsg, media);
     if (!opts?.announceOnly) {
       await sendWhatsappQuickReply(
         env,
         telefono,
-        `Ticket listo. Para escanear más fácil ábrelo a pantalla completa:\n${ticketUrl}\nSi vence (~10 min), pide *Nuevo QR*.`,
+        "Si el QR vence (~10 min), pide *Nuevo QR*.",
         [
           { title: "Estado", id: "STATUS" },
           { title: "Nuevo QR", id: "QR_RENEW" },
-          { title: "Menú", id: "MENU" },
         ],
       );
     }
@@ -832,10 +832,8 @@ async function releaseQrAfterFiscal(
     return preface;
   }
 
+  // No mandar preface aparte: el ticket (imagen + caption) ya lleva el cobro.
   const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
-  if (hasTwilio && preface.trim()) {
-    await sendWhatsapp(env, telefono, preface);
-  }
   const qr = await emitirQr(env, publicUrl, telefono, orden);
   if (hasTwilio) return "";
   return `${preface}\n\n${qr}`.trim();
