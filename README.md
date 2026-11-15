@@ -53,6 +53,19 @@ El cobro y la captura fiscal avanzan en paralelo. Timbrado solo si:
 3. Escanea QR CoDi y paga $0.01.
 4. Factura PDF/XML por WhatsApp si hay datos fiscales.
 
+## Tests (obligatorio antes/después de cambios)
+
+```bash
+npm test          # Vitest en runtime Workers (parse + webhooks + pey idempotente + CFDI)
+npm run smoke     # Live: /health, WhatsApp step1, Twilio webhook URL, alertas 11210
+npm run check     # test + smoke
+```
+
+El smoke **falla** si Twilio Sandbox sigue apuntando a un tunnel `*.trycloudflare.com` (error 11210).
+La URL correcta es siempre:
+
+`https://cobro-codi.inomali.workers.dev/whatsapp/webhook`
+
 ## Desarrollo local (opcional)
 
 ### Worker
@@ -70,7 +83,6 @@ npx wrangler dev
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn main:app --host 0.0.0.0 --port 8765
-# + cloudflared tunnel (URL cambia cada vez)
 pytest -v
 ```
 
