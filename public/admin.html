@@ -48,11 +48,11 @@
 
   <style>
     :root {
-      --bg-oat: #F6F3EC;
-      --bg-ivory: #FCFBF8;
-      --border-hairline: #E4DFD3;
-      --ink-espresso: #1C1917;
-      --ink-taupe: #686158;
+      --bg-oat: #F3EFE6;
+      --bg-ivory: #FFFFFF;
+      --border-hairline: #D6CFC0;
+      --ink-espresso: #141210;
+      --ink-taupe: #4A443D;
       --brand-forest: #16302B;
     }
 
@@ -60,6 +60,29 @@
       background-color: var(--bg-oat);
       color: var(--ink-espresso);
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #ledgerTableBody td {
+      font-size: 13px;
+    }
+    #ledgerTableBody .cell-meta {
+      color: #4A443D;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 0.5rem;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      border: 1px solid transparent;
     }
 
     .tabular-mono {
@@ -313,16 +336,16 @@
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
-              <tr class="border-b border-[#E4DFD3] bg-[#F7F4EC] text-[10px] tabular-mono uppercase tracking-wider text-[#686158]">
-                <th class="py-2.5 pl-5 pr-3 font-semibold">Orden &amp; Hora</th>
-                <th class="py-2.5 px-3 font-semibold">Cliente / WhatsApp</th>
-                <th class="py-2.5 px-3 font-semibold">Conceptos</th>
-                <th class="py-2.5 px-3 font-semibold text-right">Importe (MXN)</th>
-                <th class="py-2.5 px-3 font-semibold">Liquidación CoDi</th>
-                <th class="py-2.5 pl-3 pr-5 font-semibold text-right">Estatus CFDI 4.0</th>
+              <tr class="border-b-2 border-[#D6CFC0] bg-[#EFEAE0] text-[11px] uppercase tracking-wide text-[#3F3A34]">
+                <th class="py-3.5 pl-5 pr-3 font-bold">Orden &amp; hora</th>
+                <th class="py-3.5 px-3 font-bold">Cliente / WhatsApp</th>
+                <th class="py-3.5 px-3 font-bold">Conceptos</th>
+                <th class="py-3.5 px-3 font-bold text-right">Importe</th>
+                <th class="py-3.5 px-3 font-bold">Liquidación</th>
+                <th class="py-3.5 pl-3 pr-5 font-bold text-right">Factura CFDI</th>
               </tr>
             </thead>
-            <tbody id="ledgerTableBody" class="divide-y divide-[#E4DFD3]/80 text-xs">
+            <tbody id="ledgerTableBody" class="divide-y divide-[#D6CFC0] bg-white">
               <!-- Rows dynamically rendered -->
             </tbody>
           </table>
@@ -558,6 +581,31 @@
       });
     }
 
+    function formatCreadoEn(raw) {
+      if (!raw) return "Reciente";
+      if (typeof raw === "string" && !raw.includes("T") && raw.includes("·")) return raw;
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return String(raw);
+      try {
+        return new Intl.DateTimeFormat("es-MX", {
+          timeZone: "America/Mexico_City",
+          day: "2-digit",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        }).format(d);
+      } catch (_e) {
+        return d.toLocaleString("es-MX");
+      }
+    }
+
+    function shortRef(id) {
+      const s = String(id || "");
+      if (s.length <= 10) return s;
+      return `…${s.slice(-8)}`;
+    }
+
     function normalizeOrder(raw) {
       const conceptos = normalizeConceptos(raw);
       const total = Number(raw.total ?? raw.monto ?? conceptos.reduce((s, c) => s + c.importe, 0));
@@ -581,7 +629,7 @@
         cp: raw.cp || raw.codigo_postal || null,
         regimen: raw.regimen || null,
         uso_cfdi: raw.uso_cfdi || null,
-        creado_en: raw.creado_en || raw.created_at || "Reciente",
+        creado_en: formatCreadoEn(raw.creado_en || raw.created_at),
         expires_in_sec: typeof raw.expires_in_sec === "number" ? raw.expires_in_sec : 540
       };
     }
@@ -953,22 +1001,22 @@
         const isCancelled =
           order.pago_estado === "CANCELADO" || order.estado_chat === "CANCELADO";
         const paymentHtml = order.pago_estado === "PAGADO"
-          ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DCFCE7] text-[#15803D] font-semibold text-[11px]">
-               <span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>
-               <span>Liquidado</span>
-             </div>
-             ${order.pey_transaction_id ? `<div class="tabular-mono text-[10px] text-[#686158] mt-1 truncate max-w-[130px]">${escapeHtml(order.pey_transaction_id)}</div>` : ""}`
+          ? `<span class="status-pill bg-[#DCFCE7] text-[#14532D] border-[#86EFAC]">
+               <span class="w-2 h-2 rounded-full bg-[#16A34A]"></span>
+               Liquidado
+             </span>
+             ${order.pey_transaction_id ? `<div class="cell-meta tabular-mono" title="${escapeHtml(order.pey_transaction_id)}">${escapeHtml(shortRef(order.pey_transaction_id))}</div>` : ""}`
           : isCancelled
-          ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#686158] font-semibold text-[11px]">
-               <span class="w-1.5 h-1.5 rounded-full bg-[#8C8377]"></span>
-               <span>Cancelado</span>
-             </div>
-             <div class="tabular-mono text-[10px] text-[#686158] mt-1">No se cobrará</div>`
-          : `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] font-semibold text-[11px]">
-               <span class="w-1.5 h-1.5 rounded-full bg-[#B45309]"></span>
-               <span>Pendiente QR</span>
-             </div>
-             <div class="tabular-mono text-[10px] text-[#686158] mt-1">Expira ${formatTimer(order.expires_in_sec)}</div>`;
+          ? `<span class="status-pill bg-[#E7E5E4] text-[#44403C] border-[#D6D3D1]">
+               <span class="w-2 h-2 rounded-full bg-[#78716C]"></span>
+               Cancelado
+             </span>
+             <div class="cell-meta">No se cobrará</div>`
+          : `<span class="status-pill bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]">
+               <span class="w-2 h-2 rounded-full bg-[#D97706]"></span>
+               Pendiente
+             </span>
+             <div class="cell-meta tabular-mono">Expira ${formatTimer(order.expires_in_sec)}</div>`;
 
         // CFDI 4.0 Status Badge
         const fiscalHtml = getLedgerFiscalBadge(order);
@@ -978,53 +1026,49 @@
             onclick="selectOrder('${escapeHtml(order.id)}')"
             class="transition-colors cursor-pointer ${
               isSelected
-                ? "bg-[#F7F4EC] border-l-4 border-l-[#16302B]"
-                : "bg-[#FCFBF8] hover:bg-[#F3EFE6] border-l-4 border-l-transparent"
+                ? "bg-[#E8EFECE6] border-l-4 border-l-[#16302B]"
+                : "bg-white hover:bg-[#F7F4EC] border-l-4 border-l-transparent"
             }"
           >
             <!-- Orden & Hora -->
-            <td class="py-3.5 pl-4 pr-3 align-top whitespace-nowrap">
-              <div class="tabular-mono font-semibold text-xs ${isSelected ? "text-[#16302B]" : "text-[#1C1917]"}">
-                ${escapeHtml(order.id)}
+            <td class="py-4 pl-5 pr-3 align-middle whitespace-nowrap">
+              <div class="tabular-mono font-bold text-[14px] ${isSelected ? "text-[#16302B]" : "text-[#141210]"}">
+                #${escapeHtml(order.id)}
               </div>
-              <div class="text-[11px] text-[#686158] mt-0.5">${escapeHtml(order.creado_en)}</div>
+              <div class="cell-meta">${escapeHtml(order.creado_en)}</div>
             </td>
 
             <!-- Cliente / WhatsApp -->
-            <td class="py-3.5 px-3 align-top">
-              <div class="tabular-mono text-xs text-[#1C1917] font-medium whitespace-nowrap">
+            <td class="py-4 px-3 align-middle">
+              <div class="tabular-mono text-[13px] text-[#141210] font-semibold whitespace-nowrap">
                 ${escapeHtml(phoneClean)}
               </div>
-              <div class="tabular-mono text-[10px] text-[#686158] mt-0.5 truncate max-w-[170px]">
-                ${order.rfc ? `${escapeHtml(order.rfc)} · CP ${escapeHtml(order.cp || "—")}` : "Sin RFC asociado"}
+              <div class="cell-meta tabular-mono truncate max-w-[200px]">
+                ${order.rfc ? `${escapeHtml(order.rfc)} · CP ${escapeHtml(order.cp || "—")}` : "Sin RFC"}
               </div>
             </td>
 
             <!-- Conceptos -->
-            <td class="py-3.5 px-3 align-top">
-              <div class="text-xs font-medium text-[#1C1917] line-clamp-1 max-w-[200px]" title="${escapeHtml(conceptSummary)}">
+            <td class="py-4 px-3 align-middle">
+              <div class="text-[13px] font-semibold text-[#141210] line-clamp-2 max-w-[220px]" title="${escapeHtml(conceptSummary)}">
                 ${escapeHtml(conceptSummary)}
-              </div>
-              <div class="text-[11px] text-[#686158] mt-0.5">
-                ${order.conceptos.length} ${order.conceptos.length === 1 ? "partida" : "partidas"}
               </div>
             </td>
 
             <!-- Importe MXN -->
-            <td class="py-3.5 px-3 align-top text-right whitespace-nowrap">
-              <span class="tabular-mono text-xs font-bold text-[#1C1917]">
+            <td class="py-4 px-3 align-middle text-right whitespace-nowrap">
+              <span class="money text-[15px] font-bold text-[#141210]">
                 ${formatMXN(order.total)}
               </span>
-              <span class="block tabular-mono text-[10px] text-[#15803D] mt-0.5">Comisión $0.00</span>
             </td>
 
             <!-- Liquidación CoDi -->
-            <td class="py-3.5 px-3 align-top whitespace-nowrap">
+            <td class="py-4 px-3 align-middle whitespace-nowrap">
               ${paymentHtml}
             </td>
 
             <!-- Estatus CFDI 4.0 -->
-            <td class="py-3.5 pl-3 pr-5 align-top text-right whitespace-nowrap">
+            <td class="py-4 pl-3 pr-5 align-middle text-right whitespace-nowrap">
               ${fiscalHtml}
             </td>
           </tr>
@@ -1037,43 +1081,42 @@
     function getLedgerFiscalBadge(order) {
       if (order.facturapi_id) {
         return `
-          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E8EFECE6] text-[#16302B] border border-[#16302B]/20 font-semibold text-[11px]">
-            <i data-lucide="badge-check" class="w-3 h-3 text-[#16302B]"></i>
-            <span>CFDI Timbrado</span>
+          <span class="status-pill bg-[#DCFCE7] text-[#14532D] border-[#86EFAC] ml-auto">
+            <i data-lucide="badge-check" class="w-3.5 h-3.5"></i>
+            Timbrado
           </span>
-          <div class="tabular-mono text-[10px] text-[#686158] mt-1">PDF · XML listos</div>
+          <div class="cell-meta">PDF · XML</div>
         `;
       }
       if (order.error_fiscal) {
         return `
-          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFEDD5] text-[#C2410C] border border-[#FDBA74] font-semibold text-[11px]">
-            <i data-lucide="alert-triangle" class="w-3 h-3"></i>
-            <span>Error Fiscal</span>
+          <span class="status-pill bg-[#FFEDD5] text-[#9A3412] border-[#FDBA74] ml-auto">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+            Error fiscal
           </span>
-          <div class="text-[10px] font-medium text-[#C2410C] mt-1">Requiere reintento</div>
+          <div class="cell-meta text-[#9A3412]">Reintentar</div>
         `;
       }
       if (order.requiere_factura === 0) {
         return `
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#686158] text-[11px] font-medium">
+          <span class="status-pill bg-[#F5F5F4] text-[#44403C] border-[#D6D3D1] ml-auto">
             Sin factura
           </span>
-          <div class="text-[10px] text-[#8C8377] mt-1">Solo recibo</div>
         `;
       }
       if (order.datos_fiscales_ok === 0) {
         return `
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] text-[11px] font-medium">
+          <span class="status-pill bg-[#FEF3C7] text-[#92400E] border-[#FCD34D] ml-auto">
             Falta RFC
           </span>
-          <div class="text-[10px] text-[#686158] mt-1">Esperando en chat</div>
+          <div class="cell-meta">En chat</div>
         `;
       }
       return `
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#16302B] border border-[#E4DFD3] text-[11px] font-semibold">
-          RFC Validado
+        <span class="status-pill bg-[#E8EFECE6] text-[#16302B] border-[#16302B]/25 ml-auto">
+          RFC listo
         </span>
-        <div class="text-[10px] text-[#686158] mt-1">Timbra al pagar</div>
+        <div class="cell-meta">Al pagar</div>
       `;
     }
 
