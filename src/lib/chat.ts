@@ -148,8 +148,9 @@ async function crearQrYAvanzar(
     fiscalMsg = "Sin factura. Escanea el QR CoDi para pagar.";
   }
 
+  // Solo link en texto: WhatsApp Sandbox falla (63015) al adjuntar media desde workers.dev
   const msg = `Orden #${ordenId} por $${monto} MXN.\nConcepto CoDi: ${concepto}\nEscanea el QR (válido 10 min):\n${media}\n\n${fiscalMsg}`;
-  await sendWhatsapp(env, telefono, msg, media);
+  await sendWhatsapp(env, telefono, msg);
   return msg;
 }
 
@@ -192,7 +193,19 @@ export async function handleWhatsappMessage(
       return `✅ Datos fiscales guardados para orden #${o2?.id}. Cuando se confirme el pago CoDi, timbraremos automáticamente.`;
     }
     if (estado === "ESPERANDO_DATOS_FISCALES" || estado === "ERROR_FISCAL") {
-      return "Para facturar envía:\nRFC | Razón Social | CP | Régimen | UsoCFDI";
+      // Si manda productos otra vez, dejar caer al flujo de nueva orden
+      const maybeProducts = parseProductLines(text);
+      if (!maybeProducts.error && maybeProducts.items) {
+        // continue below
+      } else {
+        const qrHint = orden.pey_qr_id
+          ? `\n\nTu QR CoDi sigue aquí:\n${publicUrl}/files/qr_${orden.id}.png`
+          : "";
+        return (
+          "Para facturar envía:\nRFC | Razón Social | CP | Régimen | UsoCFDI" +
+          qrHint
+        );
+      }
     }
   }
 
