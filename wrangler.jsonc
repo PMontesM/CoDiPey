@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cobro-codi-worker",
+  "name": "cobro-codi",
   "main": "src/index.ts",
   "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -16,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "cobro-db",
-      "database_id": "4253a4d7-dbb3-4fd7-ad40-3b0024d3c55f",
+      "database_id": "1c535acb-5335-4f48-abab-e3525bb19925",
       "migrations_dir": "migrations"
     }
   ]
