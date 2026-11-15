@@ -3,6 +3,7 @@ import { evaluarYTimbrar } from "./facturapi";
 import {
   clearFiscalDraft,
   draftComplete,
+  fiscalRetryStepFromHints,
   isFiscalWizardState,
   loadFiscalDraft,
   normalizeRfc,
@@ -12,6 +13,7 @@ import {
   validateCp,
   validateNombre,
   validateRfc,
+  type FiscalRetryStep,
 } from "./fiscal-wizard";
 import { checkRfcEfos, validateFiscalWithSat } from "./sat-validate";
 import {
@@ -296,10 +298,15 @@ async function askSavedFiscalChoice(
   return `${body}\n\nResponde *si*, *otros* o *sin rfc*.`;
 }
 
+function withPreface(preface: string | undefined, body: string): string {
+  return preface ? `${preface}\n\n${body}` : body;
+}
+
 async function startFiscalWizard(
   env: Env,
   telefono: string,
   orden: Orden,
+  preface?: string,
 ): Promise<string> {
   await clearFiscalDraft(env, telefono);
   await saveFiscalDraft(env, telefono, {});
@@ -308,12 +315,21 @@ async function startFiscalWizard(
   )
     .bind(nowIso(), orden.id)
     .run();
-  const body =
-    `Perfecto. Vamos despacio 👍\n\n` +
+  return askFiscalRfc(env, telefono, preface);
+}
+
+async function askFiscalRfc(
+  env: Env,
+  telefono: string,
+  preface?: string,
+): Promise<string> {
+  const body = withPreface(
+    preface,
     `*Paso 1 de 5 — RFC*\n` +
-    `Escríbelo tal cual viene en la constancia (12 o 13 caracteres).\n` +
-    `Lo revisamos contra el SAT (no hace falta entrar al portal).\n` +
-    `Ejemplo: \`VECJ880326XXX\``;
+      `Escríbelo tal cual viene en la constancia (12 o 13 caracteres).\n` +
+      `Lo revisamos contra el SAT (no hace falta entrar al portal).\n` +
+      `Ejemplo: \`VECJ880326XXX\``,
+  );
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
     { title: "Cancelar", id: "MENU" },
@@ -321,32 +337,50 @@ async function startFiscalWizard(
   return sent ? "" : body;
 }
 
-async function askFiscalNombre(env: Env, telefono: string): Promise<string> {
-  const body =
+async function askFiscalNombre(
+  env: Env,
+  telefono: string,
+  preface?: string,
+): Promise<string> {
+  const body = withPreface(
+    preface,
     `*Paso 2 de 5 — Nombre*\n` +
-    `¿Cómo se llama la persona o el negocio?\n` +
-    `(Como en la constancia del SAT)`;
+      `¿Cómo se llama la persona o el negocio?\n` +
+      `(Como en la constancia del SAT)`,
+  );
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
   ]);
   return sent ? "" : body;
 }
 
-async function askFiscalCp(env: Env, telefono: string): Promise<string> {
-  const body =
+async function askFiscalCp(
+  env: Env,
+  telefono: string,
+  preface?: string,
+): Promise<string> {
+  const body = withPreface(
+    preface,
     `*Paso 3 de 5 — Código postal*\n` +
-    `Los *5 dígitos* del domicilio fiscal.\n` +
-    `Ejemplo: \`06600\``;
+      `Los *5 dígitos* del domicilio fiscal.\n` +
+      `Ejemplo: \`06600\``,
+  );
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
   ]);
   return sent ? "" : body;
 }
 
-async function askFiscalRegimen(env: Env, telefono: string): Promise<string> {
-  const body =
+async function askFiscalRegimen(
+  env: Env,
+  telefono: string,
+  preface?: string,
+): Promise<string> {
+  const body = withPreface(
+    preface,
     `*Paso 4 de 5 — Régimen*\n` +
-    `Elige el que más se parezca (si dudas, *RESICO* suele ser el de personas físicas).`;
+      `Elige el que más se parezca (si dudas, *RESICO* suele ser el de personas físicas).`,
+  );
   const sent = await sendWhatsappList(
     env,
     telefono,
@@ -365,10 +399,16 @@ async function askFiscalRegimen(env: Env, telefono: string): Promise<string> {
   );
 }
 
-async function askFiscalUso(env: Env, telefono: string): Promise<string> {
-  const body =
+async function askFiscalUso(
+  env: Env,
+  telefono: string,
+  preface?: string,
+): Promise<string> {
+  const body = withPreface(
+    preface,
     `*Paso 5 de 5 — ¿Para qué la factura?*\n` +
-    `Si no estás seguro, elige *Gastos en general*.`;
+      `Si no estás seguro, elige *Gastos en general*.`,
+  );
   const sent = await sendWhatsappList(
     env,
     telefono,
@@ -384,6 +424,73 @@ async function askFiscalUso(env: Env, telefono: string): Promise<string> {
   return (
     `${body}\n\n` + USO_OPTIONS.map((o, i) => `${i + 1}) ${o.item}`).join("\n")
   );
+}
+
+/** Pide de nuevo el campo que falló (conserva el borrador). */
+async function askFiscalRetryStep(
+  env: Env,
+  telefono: string,
+  orden: Orden,
+  step: FiscalRetryStep,
+  preface: string,
+): Promise<string> {
+  await setOrdenEstado(env, orden.id, step);
+  if (step === "ESPERANDO_FISCAL_RFC") {
+    return askFiscalRfc(env, telefono, preface);
+  }
+  if (step === "ESPERANDO_FISCAL_NOMBRE") {
+    return askFiscalNombre(env, telefono, preface);
+  }
+  if (step === "ESPERANDO_FISCAL_REGIMEN") {
+    return askFiscalRegimen(env, telefono, preface);
+  }
+  return askFiscalCp(env, telefono, preface);
+}
+
+/** Valida borrador completo con SAT; si falla, re-pide el dato concreto. */
+async function confirmFiscalDraftWithSat(
+  env: Env,
+  publicUrl: string,
+  telefono: string,
+  orden: Orden,
+  draft: {
+    rfc: string;
+    razon_social: string;
+    codigo_postal: string;
+    regimen: string;
+    uso_cfdi: string;
+  },
+): Promise<string> {
+  await sendWhatsapp(
+    env,
+    telefono,
+    "Un segundo… estoy confirmando estos datos con el SAT ⏳",
+  );
+  const sat = await validateFiscalWithSat(env, {
+    rfc: draft.rfc,
+    razon_social: draft.razon_social,
+    codigo_postal: draft.codigo_postal,
+    regimen: draft.regimen,
+  });
+  if (!sat.ok) {
+    const preface =
+      `No cuadran con el SAT:\n` +
+      sat.hints.map((h) => `• ${h}`).join("\n") +
+      `\n\nCorrige este dato (o escribe *sin rfc* / *menú*).`;
+    const step = fiscalRetryStepFromHints(sat.hints);
+    return askFiscalRetryStep(env, telefono, orden, step, preface);
+  }
+
+  await clearFiscalDraft(env, telefono);
+  const okHint = sat.hints[0] ? `${sat.hints[0]}\n` : "";
+  const saved = await applyFiscalAndContinue(env, publicUrl, telefono, orden, {
+    rfc: draft.rfc,
+    razon_social: draft.razon_social,
+    codigo_postal: draft.codigo_postal,
+    regimen: draft.regimen,
+    uso_cfdi: draft.uso_cfdi,
+  });
+  return `${okHint}${saved}`;
 }
 
 async function advanceFiscalWizard(
@@ -425,48 +532,69 @@ async function advanceFiscalWizard(
   if (estado === "ESPERANDO_FISCAL_RFC") {
     const err = validateRfc(text);
     if (err) {
-      const retry =
-        `${err}\n\n*Paso 1 de 5 — RFC*\nEscríbelo sin espacios. Ejemplo: \`VECJ880326XXX\``;
-      const sent = await sendWhatsappQuickReply(env, telefono, retry, [
-        { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
-        { title: "Cancelar", id: "MENU" },
-      ]);
-      return sent ? "" : retry;
+      return askFiscalRfc(env, telefono, err);
     }
     const rfc = normalizeRfc(text);
     const efos = await checkRfcEfos(env, rfc);
     if (!efos.ok) {
-      const sent = await sendWhatsappQuickReply(env, telefono, efos.hint, [
-        { title: "Otro RFC", id: "FISCAL_EDIT" },
-        { title: "Sin RFC", id: "FISCAL_DEMO" },
-        { title: "Menú", id: "MENU" },
-      ]);
-      return sent ? "" : efos.hint;
+      // Pedir otro RFC aquí mismo (no solo “empezar de nuevo”).
+      return askFiscalRfc(env, telefono, efos.hint);
     }
 
     draft.rfc = rfc;
     await saveFiscalDraft(env, telefono, draft);
-    await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_NOMBRE");
     if (efos.hint) {
       await sendWhatsapp(env, telefono, efos.hint);
     }
+    if (draftComplete(draft)) {
+      return confirmFiscalDraftWithSat(
+        env,
+        publicUrl,
+        telefono,
+        orden,
+        draft,
+      );
+    }
+    await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_NOMBRE");
     return askFiscalNombre(env, telefono);
   }
 
   if (estado === "ESPERANDO_FISCAL_NOMBRE") {
     const err = validateNombre(text);
-    if (err) return err;
+    if (err) {
+      return askFiscalNombre(env, telefono, err);
+    }
     draft.razon_social = text.trim();
     await saveFiscalDraft(env, telefono, draft);
+    if (draftComplete(draft)) {
+      return confirmFiscalDraftWithSat(
+        env,
+        publicUrl,
+        telefono,
+        orden,
+        draft,
+      );
+    }
     await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_CP");
     return askFiscalCp(env, telefono);
   }
 
   if (estado === "ESPERANDO_FISCAL_CP") {
     const err = validateCp(text);
-    if (err) return err;
+    if (err) {
+      return askFiscalCp(env, telefono, err);
+    }
     draft.codigo_postal = text.trim();
     await saveFiscalDraft(env, telefono, draft);
+    if (draftComplete(draft)) {
+      return confirmFiscalDraftWithSat(
+        env,
+        publicUrl,
+        telefono,
+        orden,
+        draft,
+      );
+    }
     await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_REGIMEN");
     return askFiscalRegimen(env, telefono);
   }
@@ -480,10 +608,23 @@ async function advanceFiscalWizard(
       picked = REGIMEN_OPTIONS.find((o) => o.code === text.trim());
     }
     if (!picked) {
-      return askFiscalRegimen(env, telefono);
+      return askFiscalRegimen(
+        env,
+        telefono,
+        "No reconocí ese régimen. Elige una opción de la lista:",
+      );
     }
     draft.regimen = picked.code;
     await saveFiscalDraft(env, telefono, draft);
+    if (draftComplete(draft)) {
+      return confirmFiscalDraftWithSat(
+        env,
+        publicUrl,
+        telefono,
+        orden,
+        draft,
+      );
+    }
     await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_USO");
     return askFiscalUso(env, telefono);
   }
@@ -499,57 +640,29 @@ async function advanceFiscalWizard(
       );
     }
     if (!picked) {
-      return askFiscalUso(env, telefono);
+      return askFiscalUso(
+        env,
+        telefono,
+        "No reconocí ese uso. Elige una opción de la lista:",
+      );
     }
     draft.uso_cfdi = picked.code;
     await saveFiscalDraft(env, telefono, draft);
     if (!draftComplete(draft)) {
-      await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_RFC");
-      return startFiscalWizard(env, telefono, orden);
+      return startFiscalWizard(
+        env,
+        telefono,
+        orden,
+        "Faltan datos. Empecemos otra vez desde el RFC.",
+      );
     }
-
-    await sendWhatsapp(
+    return confirmFiscalDraftWithSat(
       env,
+      publicUrl,
       telefono,
-      "Un segundo… estoy confirmando estos datos con el SAT ⏳",
+      orden,
+      draft,
     );
-    const sat = await validateFiscalWithSat(env, {
-      rfc: draft.rfc,
-      razon_social: draft.razon_social,
-      codigo_postal: draft.codigo_postal,
-      regimen: draft.regimen,
-    });
-    if (!sat.ok) {
-      const msg =
-        `No cuadran con el SAT:\n` +
-        sat.hints.map((h) => `• ${h}`).join("\n") +
-        `\n\nCorrige con los botones o empieza de nuevo.`;
-      const sent = await sendWhatsappQuickReply(env, telefono, msg, [
-        { title: "Empezar de nuevo", id: "FISCAL_EDIT" },
-        { title: "Sin RFC", id: "FISCAL_DEMO" },
-        { title: "Menú", id: "MENU" },
-      ]);
-      // Volver a CP o nombre según el error más común
-      if (sat.hints.some((h) => /postal|código postal/i.test(h))) {
-        await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_CP");
-      } else if (sat.hints.some((h) => /nombre|razón|legal_name/i.test(h))) {
-        await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_NOMBRE");
-      } else if (sat.hints.some((h) => /régimen|regimen/i.test(h))) {
-        await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_REGIMEN");
-      }
-      return sent ? "" : msg;
-    }
-
-    await clearFiscalDraft(env, telefono);
-    const okHint = sat.hints[0] ? `${sat.hints[0]}\n` : "";
-    const saved = await applyFiscalAndContinue(env, publicUrl, telefono, orden, {
-      rfc: draft.rfc,
-      razon_social: draft.razon_social,
-      codigo_postal: draft.codigo_postal,
-      regimen: draft.regimen,
-      uso_cfdi: draft.uso_cfdi,
-    });
-    return `${okHint}${saved}`;
   }
 
   return askFiscalActions(env, telefono, orden);

@@ -5,6 +5,7 @@ import {
   sumItems,
   xmlEscape,
 } from "../src/lib/parse";
+import { fiscalRetryStepFromHints } from "../src/lib/fiscal-wizard";
 import { ensureMenuActions } from "../src/lib/twilio";
 
 describe("parseProductLines", () => {
@@ -57,6 +58,29 @@ describe("parseFiscalData", () => {
 describe("xmlEscape", () => {
   it("escapes XML special chars for TwiML", () => {
     expect(xmlEscape(`a&b<c>"d`)).toBe("a&amp;b&lt;c&gt;&quot;d");
+  });
+});
+
+describe("fiscalRetryStepFromHints", () => {
+  it("routes SAT hints to the field that must be corrected", () => {
+    expect(
+      fiscalRetryStepFromHints([
+        "El código postal no coincide con el RFC en el SAT.",
+      ]),
+    ).toBe("ESPERANDO_FISCAL_CP");
+    expect(
+      fiscalRetryStepFromHints([
+        "El nombre no coincide con el RFC. Debe ser igual a la constancia.",
+      ]),
+    ).toBe("ESPERANDO_FISCAL_NOMBRE");
+    expect(
+      fiscalRetryStepFromHints(["El SAT no reconoce este RFC."]),
+    ).toBe("ESPERANDO_FISCAL_RFC");
+    expect(
+      fiscalRetryStepFromHints([
+        "Ese régimen no corresponde a este RFC.",
+      ]),
+    ).toBe("ESPERANDO_FISCAL_REGIMEN");
   });
 });
 

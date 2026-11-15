@@ -163,3 +163,34 @@ export function draftComplete(
     d.rfc && d.razon_social && d.codigo_postal && d.regimen && d.uso_cfdi,
   );
 }
+
+export type FiscalRetryStep =
+  | "ESPERANDO_FISCAL_RFC"
+  | "ESPERANDO_FISCAL_NOMBRE"
+  | "ESPERANDO_FISCAL_CP"
+  | "ESPERANDO_FISCAL_REGIMEN";
+
+/** Tras fallo SAT: a qué paso regresar según el hint (para re-pedir el dato). */
+export function fiscalRetryStepFromHints(hints: string[]): FiscalRetryStep {
+  const blob = hints.join("\n");
+  // Orden importa: "CP no coincide con el RFC" debe ir a CP, no a RFC.
+  if (/código postal|codigo postal|\bcp\b|tax_address_zip|\bzip\b/i.test(blob)) {
+    return "ESPERANDO_FISCAL_CP";
+  }
+  if (
+    /nombre|razón social|razon social|legal_name|tax_id_and_legal_name/i.test(
+      blob,
+    )
+  ) {
+    return "ESPERANDO_FISCAL_NOMBRE";
+  }
+  if (/régimen|regimen|tax_system/i.test(blob)) {
+    return "ESPERANDO_FISCAL_REGIMEN";
+  }
+  if (
+    /\brfc\b|tax_id_not_found|no reconoce|efos|incumplid/i.test(blob)
+  ) {
+    return "ESPERANDO_FISCAL_RFC";
+  }
+  return "ESPERANDO_FISCAL_CP";
+}
