@@ -158,10 +158,54 @@
       background: #EFEAE0;
       box-shadow: inset 0 -2px 0 #D6CFC0;
     }
+
+    /* Móvil: el chrome sticky (header+4 KPIs+filtros) tapa toda la pantalla.
+       Solo fijamos barra + filtros; KPIs se scrollean y las órdenes quedan visibles. */
     @media (max-width: 900px) {
-      /* En móvil permitimos scroll horizontal; el sticky vertical puede degradarse */
+      #stickyChrome {
+        position: static;
+        box-shadow: none;
+        border-bottom: none;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+      #mobileTopBar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: rgba(243, 239, 230, 0.97);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-bottom: 1px solid #D6CFC0;
+        box-shadow: 0 6px 16px rgba(28, 25, 23, 0.06);
+      }
+      #kpiStrip {
+        grid-template-columns: 1fr 1fr !important;
+      }
+      #kpiStrip > div {
+        padding: 0.75rem 0.85rem !important;
+      }
+      #kpiStrip .money-lg {
+        font-size: 1.15rem !important;
+      }
+      #kpiStrip p,
+      #kpiStrip .kpi-sub {
+        display: none;
+      }
       #ledgerScroll {
-        overflow-x: auto;
+        display: none;
+      }
+      #ledgerCards {
+        display: block !important;
+      }
+      #ledgerTable thead th {
+        position: static;
+      }
+    }
+    @media (min-width: 901px) {
+      #ledgerCards {
+        display: none !important;
       }
     }
   </style>
@@ -172,14 +216,15 @@
   <!-- 1. STICKY CHROME: header + KPIs + filtros                             -->
   <!-- ===================================================================== -->
   <div id="stickyChrome">
+  <div id="mobileTopBar">
   <header class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-3">
     <!-- Top Executive Bar -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 pb-3 md:pb-4">
       <div>
         <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
           <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ECE7DC] border border-[#DFD8C8] text-[11px] font-semibold tracking-wider uppercase text-[#4A443D]">
             <span class="w-1.5 h-1.5 rounded-full bg-[#16302B]"></span>
-            TESORERÍA &amp; FACTURACIÓN INSTANTÁNEA
+            TESORERÍA &amp; FACTURACIÓN
           </span>
 
           <!-- Live Backend / Demo Mode Pill -->
@@ -193,8 +238,8 @@
           </span>
         </div>
 
-        <h1 class="editorial-serif text-2xl sm:text-[30px] font-semibold tracking-tight text-[#1C1917] leading-tight">
-          Consola Operativa CoDi <span class="text-[#9A9083] font-normal">·</span> CFDI 4.0
+        <h1 class="editorial-serif text-xl sm:text-[30px] font-semibold tracking-tight text-[#1C1917] leading-tight">
+          Consola CoDi <span class="text-[#9A9083] font-normal">·</span> CFDI 4.0
         </h1>
       </div>
 
@@ -214,16 +259,71 @@
           id="btnSimularCobro"
           type="button"
           onclick="simulateIncomingWhatsappOrder()"
-          class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#16302B] hover:bg-[#1F423B] text-[#FCFBF8] shadow-warm text-xs font-semibold tracking-wide transition cursor-pointer"
+          class="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[#16302B] hover:bg-[#1F423B] text-[#FCFBF8] shadow-warm text-xs font-semibold tracking-wide transition cursor-pointer"
         >
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>+ Simular Cobro WhatsApp</span>
+          <span class="sm:hidden">Simular cobro</span>
+          <span class="hidden sm:inline">+ Simular Cobro WhatsApp</span>
         </button>
       </div>
     </div>
+  </header>
 
-    <!-- Unified Horizontal Treasury Strip (Replaces 4 bulky separate cards) -->
-    <div class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E4DFD3]">
+  <!-- Filtros + búsqueda (fijos en móvil junto a la barra) -->
+  <div class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+    <div class="p-3 sm:px-4 bg-[#FCFBF8] border border-[#D6CFC0] rounded-xl shadow-warm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" role="tablist">
+        <button
+          type="button"
+          data-filter="ALL"
+          onclick="setFilter('ALL')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
+        >
+          Todas <span id="countAll" class="tabular-mono text-[11px] opacity-80 ml-1">4</span>
+        </button>
+        <button
+          type="button"
+          data-filter="LIQUIDADAS"
+          onclick="setFilter('LIQUIDADAS')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+        >
+          Liquidadas <span id="countLiquidadas" class="tabular-mono text-[11px] ml-1">3</span>
+        </button>
+        <button
+          type="button"
+          data-filter="PENDIENTES"
+          onclick="setFilter('PENDIENTES')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+        >
+          Pendientes <span id="countPendientes" class="tabular-mono text-[11px] ml-1">1</span>
+        </button>
+        <button
+          type="button"
+          data-filter="FISCAL"
+          onclick="setFilter('FISCAL')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+        >
+          Atención Fiscal <span id="countFiscal" class="tabular-mono text-[11px] ml-1">1</span>
+        </button>
+      </div>
+
+      <div class="relative w-full xl:w-64">
+        <i data-lucide="search" class="w-3.5 h-3.5 text-[#686158] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input
+          id="searchInput"
+          type="text"
+          oninput="handleSearch(this.value)"
+          placeholder="Buscar orden, teléfono o RFC..."
+          class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#F6F3EC] border border-[#E4DFD3] text-xs text-[#1C1917] placeholder:text-[#8C8377] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#16302B] transition"
+        />
+      </div>
+    </div>
+  </div>
+  </div><!-- /mobileTopBar -->
+
+  <div class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+    <!-- Unified Horizontal Treasury Strip -->
+    <div id="kpiStrip" class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E4DFD3]">
 
       <!-- Metric 1: Volumen Liquidado (CoDi) -->
       <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
@@ -302,57 +402,6 @@
       </div>
 
     </div>
-  </header>
-
-  <!-- Filtros + búsqueda (también fijos) -->
-  <div class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-3">
-    <div class="p-3 sm:px-4 bg-[#FCFBF8] border border-[#D6CFC0] rounded-xl shadow-warm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" role="tablist">
-        <button
-          type="button"
-          data-filter="ALL"
-          onclick="setFilter('ALL')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
-        >
-          Todas <span id="countAll" class="tabular-mono text-[11px] opacity-80 ml-1">4</span>
-        </button>
-        <button
-          type="button"
-          data-filter="LIQUIDADAS"
-          onclick="setFilter('LIQUIDADAS')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
-        >
-          Liquidadas <span id="countLiquidadas" class="tabular-mono text-[11px] ml-1">3</span>
-        </button>
-        <button
-          type="button"
-          data-filter="PENDIENTES"
-          onclick="setFilter('PENDIENTES')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
-        >
-          Pendientes <span id="countPendientes" class="tabular-mono text-[11px] ml-1">1</span>
-        </button>
-        <button
-          type="button"
-          data-filter="FISCAL"
-          onclick="setFilter('FISCAL')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
-        >
-          Atención Fiscal <span id="countFiscal" class="tabular-mono text-[11px] ml-1">1</span>
-        </button>
-      </div>
-
-      <div class="relative w-full xl:w-64">
-        <i data-lucide="search" class="w-3.5 h-3.5 text-[#686158] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-        <input
-          id="searchInput"
-          type="text"
-          oninput="handleSearch(this.value)"
-          placeholder="Buscar orden, teléfono o RFC..."
-          class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#F6F3EC] border border-[#E4DFD3] text-xs text-[#1C1917] placeholder:text-[#8C8377] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#16302B] transition"
-        />
-      </div>
-    </div>
   </div>
   </div>
 
@@ -384,6 +433,11 @@
               <!-- Rows dynamically rendered -->
             </tbody>
           </table>
+        </div>
+
+        <!-- Mobile card list (visible &lt; 900px) -->
+        <div id="ledgerCards" class="hidden divide-y divide-[#D6CFC0] bg-white rounded-t-xl">
+          <!-- Cards dynamically rendered -->
         </div>
 
         <!-- Empty Search State -->
@@ -1011,13 +1065,39 @@
       document.getElementById("countFiscal").textContent = computed.atencion_fiscal;
     }
 
+    function paymentBadgeHtml(order) {
+      const isCancelled =
+        order.pago_estado === "CANCELADO" || order.estado_chat === "CANCELADO";
+      if (order.pago_estado === "PAGADO") {
+        return `<span class="status-pill bg-[#DCFCE7] text-[#14532D] border-[#86EFAC]">
+             <span class="w-2 h-2 rounded-full bg-[#16A34A]"></span>
+             Liquidado
+           </span>
+           ${order.pey_transaction_id ? `<div class="cell-meta tabular-mono" title="${escapeHtml(order.pey_transaction_id)}">${escapeHtml(shortRef(order.pey_transaction_id))}</div>` : ""}`;
+      }
+      if (isCancelled) {
+        return `<span class="status-pill bg-[#E7E5E4] text-[#44403C] border-[#D6D3D1]">
+             <span class="w-2 h-2 rounded-full bg-[#78716C]"></span>
+             Cancelado
+           </span>
+           <div class="cell-meta">No se cobrará</div>`;
+      }
+      return `<span class="status-pill bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]">
+           <span class="w-2 h-2 rounded-full bg-[#D97706]"></span>
+           Pendiente
+         </span>
+         <div class="cell-meta tabular-mono">Expira ${formatTimer(order.expires_in_sec)}</div>`;
+    }
+
     function renderLedger() {
       const tbody = document.getElementById("ledgerTableBody");
+      const cards = document.getElementById("ledgerCards");
       const emptyState = document.getElementById("ledgerEmptyState");
       const rows = getFilteredOrders();
 
       if (rows.length === 0) {
         tbody.innerHTML = "";
+        if (cards) cards.innerHTML = "";
         emptyState.classList.remove("hidden");
         lucide.createIcons();
         return;
@@ -1031,29 +1111,7 @@
         const conceptSummary = order.conceptos
           .map(c => `${c.quantity}× ${c.description}`)
           .join(", ") || "Cobro general";
-
-        // CoDi Settlement Badge
-        const isCancelled =
-          order.pago_estado === "CANCELADO" || order.estado_chat === "CANCELADO";
-        const paymentHtml = order.pago_estado === "PAGADO"
-          ? `<span class="status-pill bg-[#DCFCE7] text-[#14532D] border-[#86EFAC]">
-               <span class="w-2 h-2 rounded-full bg-[#16A34A]"></span>
-               Liquidado
-             </span>
-             ${order.pey_transaction_id ? `<div class="cell-meta tabular-mono" title="${escapeHtml(order.pey_transaction_id)}">${escapeHtml(shortRef(order.pey_transaction_id))}</div>` : ""}`
-          : isCancelled
-          ? `<span class="status-pill bg-[#E7E5E4] text-[#44403C] border-[#D6D3D1]">
-               <span class="w-2 h-2 rounded-full bg-[#78716C]"></span>
-               Cancelado
-             </span>
-             <div class="cell-meta">No se cobrará</div>`
-          : `<span class="status-pill bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]">
-               <span class="w-2 h-2 rounded-full bg-[#D97706]"></span>
-               Pendiente
-             </span>
-             <div class="cell-meta tabular-mono">Expira ${formatTimer(order.expires_in_sec)}</div>`;
-
-        // CFDI 4.0 Status Badge
+        const paymentHtml = paymentBadgeHtml(order);
         const fiscalHtml = getLedgerFiscalBadge(order);
 
         return `
@@ -1065,15 +1123,12 @@
                 : "bg-white hover:bg-[#F7F4EC] border-l-4 border-l-transparent"
             }"
           >
-            <!-- Orden & Hora -->
             <td class="py-4 pl-5 pr-3 align-middle whitespace-nowrap">
               <div class="tabular-mono font-bold text-[14px] ${isSelected ? "text-[#16302B]" : "text-[#141210]"}">
                 #${escapeHtml(order.id)}
               </div>
               <div class="cell-meta">${escapeHtml(order.creado_en)}</div>
             </td>
-
-            <!-- Cliente / WhatsApp -->
             <td class="py-4 px-3 align-middle">
               <div class="tabular-mono text-[13px] text-[#141210] font-semibold whitespace-nowrap">
                 ${escapeHtml(phoneClean)}
@@ -1082,33 +1137,60 @@
                 ${order.rfc ? `${escapeHtml(order.rfc)} · CP ${escapeHtml(order.cp || "—")}` : "Sin RFC"}
               </div>
             </td>
-
-            <!-- Conceptos -->
             <td class="py-4 px-3 align-middle">
               <div class="text-[13px] font-semibold text-[#141210] line-clamp-2 max-w-[220px]" title="${escapeHtml(conceptSummary)}">
                 ${escapeHtml(conceptSummary)}
               </div>
             </td>
-
-            <!-- Importe MXN -->
             <td class="py-4 px-3 align-middle text-right whitespace-nowrap">
               <span class="money text-[15px] font-bold text-[#141210]">
                 ${formatMXN(order.total)}
               </span>
             </td>
-
-            <!-- Liquidación CoDi -->
             <td class="py-4 px-3 align-middle whitespace-nowrap">
               ${paymentHtml}
             </td>
-
-            <!-- Estatus CFDI 4.0 -->
             <td class="py-4 pl-3 pr-5 align-middle text-right whitespace-nowrap">
               ${fiscalHtml}
             </td>
           </tr>
         `;
       }).join("");
+
+      if (cards) {
+        cards.innerHTML = rows.map(order => {
+          const isSelected = order.id === state.selectedId;
+          const phoneClean = order.telefono.replace(/^whatsapp:/i, "");
+          const conceptSummary = order.conceptos
+            .map(c => `${c.quantity}× ${c.description}`)
+            .join(", ") || "Cobro general";
+          return `
+            <button
+              type="button"
+              onclick="selectOrder('${escapeHtml(order.id)}')"
+              class="w-full text-left px-4 py-3.5 transition-colors ${
+                isSelected ? "bg-[#E8EFECE6] border-l-4 border-l-[#16302B]" : "bg-white border-l-4 border-l-transparent"
+              }"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="tabular-mono font-bold text-[14px] text-[#141210]">#${escapeHtml(order.id)}</span>
+                    <span class="cell-meta !mt-0">${escapeHtml(order.creado_en)}</span>
+                  </div>
+                  <div class="tabular-mono text-[12px] font-semibold text-[#141210] mt-1 truncate">${escapeHtml(phoneClean)}</div>
+                  <div class="text-[12px] text-[#4A443D] mt-1 line-clamp-2">${escapeHtml(conceptSummary)}</div>
+                </div>
+                <div class="text-right shrink-0 space-y-1.5">
+                  <div class="money text-[15px] font-bold text-[#141210]">${formatMXN(order.total)}</div>
+                  ${paymentBadgeHtml(order)}
+                </div>
+              </div>
+              <div class="mt-2.5 flex justify-end">${getLedgerFiscalBadge(order)}</div>
+            </button>
+          `;
+        }).join("");
+      }
 
       lucide.createIcons();
     }
@@ -2055,11 +2137,14 @@
     });
 
     function syncStickyChromeHeight() {
-      const chrome = document.getElementById("stickyChrome");
-      if (!chrome) return;
+      const mobile = window.matchMedia("(max-width: 900px)").matches;
+      const el = mobile
+        ? document.getElementById("mobileTopBar")
+        : document.getElementById("stickyChrome");
+      if (!el) return;
       document.documentElement.style.setProperty(
         "--sticky-chrome-h",
-        `${chrome.offsetHeight}px`
+        `${el.offsetHeight}px`
       );
     }
 
@@ -2069,8 +2154,10 @@
       lucide.createIcons();
       syncStickyChromeHeight();
       const chrome = document.getElementById("stickyChrome");
-      if (chrome && window.ResizeObserver) {
-        new ResizeObserver(syncStickyChromeHeight).observe(chrome);
+      const topBar = document.getElementById("mobileTopBar");
+      if (window.ResizeObserver) {
+        if (chrome) new ResizeObserver(syncStickyChromeHeight).observe(chrome);
+        if (topBar) new ResizeObserver(syncStickyChromeHeight).observe(topBar);
       }
       renderAll();
       pollOrders();
