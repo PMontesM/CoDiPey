@@ -79,6 +79,34 @@ app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
   return c.json({ orden: updated });
 });
 
+app.post("/api/ordenes/:id/cancelar", async (c) => {
+  const id = Number(c.req.param("id"));
+  const row = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+    .bind(id)
+    .first<Orden>();
+  if (!row) return c.json({ detail: "Orden no encontrada" }, 404);
+  if (row.pago_estado === "PAGADO") {
+    return c.json(
+      { detail: "No se puede cancelar: ya está pagada." },
+      409,
+    );
+  }
+  if (row.estado_chat === "CANCELADO" || row.pago_estado === "CANCELADO") {
+    return c.json({ orden: row, message: "Ya estaba cancelada" });
+  }
+  await c.env.DB.prepare(
+    `UPDATE ordenes
+     SET estado_chat = 'CANCELADO', pago_estado = 'CANCELADO', updated_at = ?
+     WHERE id = ?`,
+  )
+    .bind(nowIso(), id)
+    .run();
+  const updated = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+    .bind(id)
+    .first<Orden>();
+  return c.json({ orden: updated, message: "Orden cancelada" });
+});
+
 app.post("/whatsapp/webhook", async (c) => {
   const form = await c.req.parseBody();
   const body = String(form.Body || "");

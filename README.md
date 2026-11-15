@@ -44,8 +44,9 @@ Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de 
 4. **Sí, factura** → primero datos (**Sin RFC** o wizard); *el QR se manda al cerrar*
    para que no se pierda en el chat. Facturapi valida contra el SAT.
 5. Si el QR vence: Banxico ya no lo acepta; **Nuevo QR** o otro pedido desde el menú
-5. Revisar: WhatsApp `estado` / `historial`, o consola `/admin` (ticket por fila)
-6. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
+6. Cancelar pendiente: consola `/admin` → ticket → **Cancelar cobro**, o WhatsApp `cancelar`
+7. Revisar: WhatsApp `estado` / `historial`, o consola `/admin`
+8. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
 
 El cobro y la captura fiscal avanzan en paralelo. Timbrado solo si:
 

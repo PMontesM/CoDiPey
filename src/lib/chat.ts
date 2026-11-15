@@ -74,6 +74,7 @@ const MENU_ACTIONS: Array<{ id: string; item: string; description: string }> = [
   { id: "STATUS", item: "Estado del cobro", description: "Orden activa y vigencia QR" },
   { id: "HISTORY", item: "Historial", description: "Últimas 5 órdenes" },
   { id: "QR_RENEW", item: "Nuevo QR", description: "Si venció la solicitud CoDi" },
+  { id: "CANCEL", item: "Cancelar cobro", description: "Si ya no se va a cobrar" },
 ];
 
 async function getActiveOrder(
@@ -870,6 +871,33 @@ export async function handleWhatsappMessage(
       return askMenu(env, telefono);
     }
     return resendOrRenewQr(env, publicUrl, telefono, orden, true);
+  }
+
+  if (
+    interactive === "CANCEL" ||
+    /^(cancelar|cancelar cobro|anular)$/i.test(text)
+  ) {
+    if (!orden) {
+      return "No hay un cobro activo para cancelar.";
+    }
+    if (orden.pago_estado === "PAGADO") {
+      return `La orden #${orden.id} ya está pagada; no se puede cancelar.`;
+    }
+    await clearFiscalDraft(env, telefono);
+    await env.DB.prepare(
+      `UPDATE ordenes
+       SET estado_chat = 'CANCELADO', pago_estado = 'CANCELADO', updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(nowIso(), orden.id)
+      .run();
+    const msg =
+      `Orden #${orden.id} cancelada. Ya no quedará pendiente.\n` +
+      `Cuando quieras cobrar otra vez, abre el menú.`;
+    const sent = await sendWhatsappQuickReply(env, telefono, msg, [
+      { title: "Menú", id: "MENU" },
+    ]);
+    return sent ? "" : msg;
   }
 
   // Factura sí/no (antes del catálogo numérico: "1"/"2" son Sí/No aquí)

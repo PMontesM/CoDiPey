@@ -272,6 +272,67 @@ describe("Worker HTTP", () => {
     expect(blob).toBeTruthy();
   });
 
+  it("POST /api/ordenes/:id/cancelar marks order cancelled", async () => {
+    const ts = new Date().toISOString();
+    const inserted = await env.DB.prepare(
+      `INSERT INTO ordenes
+        (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
+         estado_chat, created_at, updated_at)
+       VALUES (?, ?, '45.00', 'PENDIENTE', 0, 0, 'ESPERANDO_PAGO', ?, ?)`,
+    )
+      .bind(
+        "whatsapp:+5215510076571",
+        JSON.stringify([
+          {
+            cantidad: "1",
+            concepto: "Cafe",
+            precio_unitario: "45",
+            subtotal: "45.00",
+          },
+        ]),
+        ts,
+        ts,
+      )
+      .run();
+    const id = Number(inserted.meta.last_row_id);
+
+    const res = await call(`/api/ordenes/${id}/cancelar`, { method: "POST" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.orden.estado_chat).toBe("CANCELADO");
+    expect(body.orden.pago_estado).toBe("CANCELADO");
+
+    const list = await call("/api/ordenes");
+    const payload = await list.json();
+    expect(payload.kpis.ordenes_pendientes).toBe(0);
+  });
+
+  it("WhatsApp cancelar ends active cobro", async () => {
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "1 Cafe 45",
+      }),
+    });
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "cancelar",
+        ButtonPayload: "CANCEL",
+      }),
+    });
+    expect(await res.text()).toMatch(/cancelada/i);
+    const orden = await env.DB.prepare(
+      "SELECT estado_chat, pago_estado FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{ estado_chat: string; pago_estado: string }>();
+    expect(orden?.estado_chat).toBe("CANCELADO");
+    expect(orden?.pago_estado).toBe("CANCELADO");
+  });
+
   it("WhatsApp Sin RFC after factura releases QR at the end", async () => {
     await call("/whatsapp/webhook", {
       method: "POST",

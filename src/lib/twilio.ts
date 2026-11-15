@@ -208,6 +208,9 @@ export function resolveInteractiveId(
     "nuevo qr": "QR_RENEW",
     "renovar qr": "QR_RENEW",
     renovar: "QR_RENEW",
+    cancelar: "CANCEL",
+    "cancelar cobro": "CANCEL",
+    anular: "CANCEL",
     "estado del cobro": "STATUS",
     estado: "STATUS",
     status: "STATUS",
@@ -229,7 +232,7 @@ export function resolveInteractiveId(
     /^FISCAL_/.test(text) ||
     /^REG_/.test(text) ||
     /^USO_/.test(text) ||
-    /^(STATUS|HISTORY|QR_RENEW|QR_RESEND|MENU|HELP)$/.test(text)
+    /^(STATUS|HISTORY|QR_RENEW|QR_RESEND|CANCEL|MENU|HELP)$/.test(text)
   ) {
     return text;
   }

@@ -88,7 +88,13 @@ export function buildOrdenesPayload(
       conceptos = [];
     }
     if (o.pago_estado === "PAGADO") totalCobrado += Number(o.monto);
-    else pendientes += 1;
+    else if (
+      o.pago_estado !== "CANCELADO" &&
+      o.estado_chat !== "CANCELADO" &&
+      o.estado_chat !== "COMPLETADO"
+    ) {
+      pendientes += 1;
+    }
     if (o.facturapi_id) facturas += 1;
 
     const hasFiscal =

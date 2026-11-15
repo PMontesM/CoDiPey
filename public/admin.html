@@ -594,6 +594,9 @@
       let atencionFiscal = 0;
 
       for (const o of orders) {
+        if (o.pago_estado === "CANCELADO" || o.estado_chat === "CANCELADO") {
+          continue;
+        }
         if (o.pago_estado === "PAGADO") {
           totalCobrado += o.total;
           paidCount += 1;
@@ -655,15 +658,19 @@
     let pollInFlight = false;
 
     function hasActiveCobros(orders) {
-      return (orders || []).some(
-        (o) =>
+      return (orders || []).some((o) => {
+        if (o.pago_estado === "CANCELADO" || o.estado_chat === "CANCELADO") {
+          return false;
+        }
+        return (
           o.pago_estado === "PENDIENTE" ||
           o.estado_chat === "ESPERANDO_PAGO" ||
           o.estado_chat === "ESPERANDO_FACTURA" ||
           o.estado_chat === "ESPERANDO_DATOS_FISCALES" ||
           String(o.estado_chat || "").startsWith("ESPERANDO_FISCAL_") ||
           o.estado_chat === "ERROR_FISCAL"
-      );
+        );
+      });
     }
 
     function nextPollDelayMs() {
@@ -815,7 +822,14 @@
     function getFilteredOrders() {
       return state.orders.filter(o => {
         if (state.activeFilter === "LIQUIDADAS" && o.pago_estado !== "PAGADO") return false;
-        if (state.activeFilter === "PENDIENTES" && o.pago_estado !== "PENDIENTE") return false;
+        if (
+          state.activeFilter === "PENDIENTES" &&
+          (o.pago_estado !== "PENDIENTE" ||
+            o.estado_chat === "CANCELADO" ||
+            o.pago_estado === "CANCELADO")
+        ) {
+          return false;
+        }
         if (state.activeFilter === "FISCAL") {
           const needsFiscalAttention = Boolean(o.error_fiscal) || (o.pago_estado === "PAGADO" && o.requiere_factura === 1 && !o.facturapi_id);
           if (!needsFiscalAttention) return false;
@@ -1268,6 +1282,21 @@
             `).join("")}
           </div>
 
+          <div class="pt-1 space-y-2">
+            <button
+              type="button"
+              onclick="cancelarOrden('${escapeHtml(order.id)}')"
+              ${isBusy ? "disabled" : ""}
+              class="w-full py-2.5 px-4 rounded-lg bg-[#FCFBF8] hover:bg-[#FFE4E6] disabled:opacity-50 text-[#9F1239] border border-[#FECDD3] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <i data-lucide="${isBusy ? "loader-2" : "ban"}" class="w-4 h-4 ${isBusy ? "animate-spin" : ""}"></i>
+              <span>Cancelar cobro (no se va a cobrar)</span>
+            </button>
+            <p class="text-[11px] text-[#686158] text-center">
+              Lo saca de pendientes. El QR deja de contar como solicitud activa.
+            </p>
+          </div>
+
           <!-- Interactive Demo Webhook Trigger -->
           ${!state.isLiveApi ? `
             <div class="pt-1">
@@ -1691,6 +1720,46 @@
         renderAll();
         showToast(`Pago liquidado y CFDI 4.0 timbrado (${order.id})`, "success");
       }, 650);
+    }
+
+    async function cancelarOrden(orderId) {
+      if (state.busyOrderIds.has(orderId)) return;
+      if (!confirm(`¿Cancelar la orden ${orderId}? No se cobrará.`)) return;
+      state.busyOrderIds.add(orderId);
+      renderInspector();
+
+      if (state.isLiveApi) {
+        try {
+          const res = await fetch(`/api/ordenes/${encodeURIComponent(orderId)}/cancelar`, {
+            method: "POST"
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+          pushWebhookLog("orden.cancelada", orderId, "manual", "rose");
+          showToast(`Orden ${orderId} cancelada`, "success");
+          state.busyOrderIds.delete(orderId);
+          closeTicket();
+          await pollOrders();
+          return;
+        } catch (err) {
+          state.busyOrderIds.delete(orderId);
+          renderInspector();
+          showToast(err.message || `No se pudo cancelar ${orderId}`, "error");
+          return;
+        }
+      }
+
+      const order = state.orders.find((o) => o.id === orderId);
+      if (order) {
+        order.pago_estado = "CANCELADO";
+        order.estado_chat = "CANCELADO";
+        order.expires_in_sec = 0;
+      }
+      state.busyOrderIds.delete(orderId);
+      closeTicket();
+      state.kpis = calculateMetrics(state.orders);
+      renderAll();
+      showToast(`Orden ${orderId} cancelada (demo)`, "success");
     }
 
     async function retryFiscalStamping(orderId) {
