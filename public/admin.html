@@ -143,18 +143,26 @@
       box-shadow: 0 8px 20px rgba(28, 25, 23, 0.06);
     }
 
-    /* Tabla: scroll interno; encabezados fijos debajo del chrome */
+    /*
+      Encabezados de tabla fijos al scrollear la PÁGINA (debajo del chrome).
+      Importante: ningún ancestro puede tener overflow != visible, o el sticky
+      queda atrapado en ese contenedor.
+    */
     #ledgerScroll {
-      max-height: calc(100vh - var(--sticky-chrome-h, 280px) - 5.5rem);
-      overflow: auto;
-      overscroll-behavior: contain;
+      overflow: visible;
     }
-    #ledgerScroll thead th {
+    #ledgerTable thead th {
       position: sticky;
-      top: 0;
-      z-index: 12;
+      top: var(--sticky-chrome-h, 280px);
+      z-index: 20;
       background: #EFEAE0;
       box-shadow: inset 0 -2px 0 #D6CFC0;
+    }
+    @media (max-width: 900px) {
+      /* En móvil permitimos scroll horizontal; el sticky vertical puede degradarse */
+      #ledgerScroll {
+        overflow-x: auto;
+      }
     }
   </style>
 </head>
@@ -357,11 +365,11 @@
       <!-- ================================================================= -->
       <!-- LIBRO MAYOR DE OPERACIONES (ancho completo; ticket a la derecha)  -->
       <!-- ================================================================= -->
-      <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden flex flex-col min-h-0">
+      <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm flex flex-col min-h-0">
 
-        <!-- Desktop High-Density Table (scroll + thead sticky) -->
-        <div id="ledgerScroll">
-          <table class="w-full text-left border-collapse">
+        <!-- Desktop High-Density Table (thead sticky al scroll de página) -->
+        <div id="ledgerScroll" class="rounded-t-xl">
+          <table id="ledgerTable" class="w-full text-left border-collapse">
             <thead>
               <tr class="text-[11px] uppercase tracking-wide text-[#3F3A34]">
                 <th class="py-3.5 pl-5 pr-3 font-bold">Orden &amp; hora</th>
