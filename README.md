@@ -13,6 +13,7 @@ Pensado para mostrador: botones, menús y pasos guiados (no tecnicismos del SAT)
 | **Nombre** | CoDiPey |
 | **Tagline** | Cobro CoDi + factura CFDI desde WhatsApp, listo para tienda |
 | **Repo** | https://github.com/PMontesM/CoDiPey *(público)* |
+| **Landing** | https://cobro-codi.inomali.workers.dev/ |
 | **App / consola** | https://cobro-codi.inomali.workers.dev/admin |
 | **Health** | https://cobro-codi.inomali.workers.dev/health |
 | **Demo sin WhatsApp** | En la consola: **+ Simular Cobro WhatsApp** → abrir orden → **Simular Webhook Pago pey** (flujo completo sin unir números al Sandbox) |
@@ -50,8 +51,8 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 | | |
 |---|---|
 | Worker | `https://cobro-codi.inomali.workers.dev` |
-| Consola | `https://cobro-codi.inomali.workers.dev/admin` |
-| Health | `https://cobro-codi.inomali.workers.dev/health` |
+| Landing | `https://cobro-codi.inomali.workers.dev/` |
+| Consola | `https://cobro-codi.inomali.workers.dev/admin` || Health | `https://cobro-codi.inomali.workers.dev/health` |
 | Repo | https://github.com/PMontesM/CoDiPey |
 
 | Binding / secret | Uso |

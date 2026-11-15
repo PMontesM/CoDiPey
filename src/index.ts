@@ -20,6 +20,14 @@ function publicUrl(c: { env: Env; req: { url: string } }): string {
 
 app.get("/health", (c) => c.json({ status: "ok", runtime: "cloudflare-worker" }));
 
+app.get("/", async (c) => {
+  if (c.env.ASSETS) {
+    const res = await c.env.ASSETS.fetch(new URL("/index.html", c.req.url));
+    if (res.ok) return res;
+  }
+  return c.redirect("/admin");
+});
+
 app.get("/admin", async (c) => {
   if (c.env.ASSETS) {
     const res = await c.env.ASSETS.fetch(new URL("/admin.html", c.req.url));

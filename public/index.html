@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoDiPey — Cobro CoDi + CFDI desde WhatsApp</title>
+  <meta name="description" content="Cobro digital para tiendas de barrio: WhatsApp, QR CoDi sin comisión de tarjeta y factura CFDI 4.0." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --oat: #F3EFE6;
+      --oat-deep: #E8E1D2;
+      --ivory: #FCFBF8;
+      --ink: #141210;
+      --taupe: #4A443D;
+      --forest: #16302B;
+      --forest-mid: #1F423B;
+      --forest-soft: #2A564C;
+      --hairline: #D6CFC0;
+      --amber: #C4A35A;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--oat);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.45;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* —— Hero: full-bleed atmospheric plane —— */
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 90% 70% at 70% 20%, rgba(42, 86, 76, 0.55) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 15% 85%, rgba(196, 163, 90, 0.18) 0%, transparent 50%),
+        linear-gradient(155deg, #0F221E 0%, var(--forest) 38%, #1A3832 72%, #243F38 100%);
+      color: var(--ivory);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(252, 251, 248, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(252, 251, 248, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 80% 70% at 60% 40%, #000 20%, transparent 75%);
+      pointer-events: none;
+      animation: gridDrift 28s linear infinite;
+    }
+
+    @keyframes gridDrift {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(-48px, -48px, 0); }
+    }
+
+    .nav {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      max-width: 1120px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .nav-brand {
+      font-family: "Newsreader", Georgia, serif;
+      font-weight: 600;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-link {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.75;
+      transition: opacity 0.2s ease;
+    }
+    .nav-link:hover { opacity: 1; }
+
+    .hero-body {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: end;
+      gap: 2.5rem;
+      max-width: 1120px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3.5rem;
+    }
+
+    @media (min-width: 900px) {
+      .hero-body {
+        grid-template-columns: 1.05fr 0.95fr;
+        align-items: center;
+        padding: 1rem 1.5rem 4rem;
+        gap: 3rem;
+      }
+    }
+
+    .brand-mark {
+      font-family: "Newsreader", Georgia, serif;
+      font-weight: 700;
+      font-size: clamp(3.25rem, 9vw, 5.75rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+      animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .headline {
+      font-family: "Newsreader", Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+      line-height: 1.25;
+      max-width: 22ch;
+      color: rgba(252, 251, 248, 0.92);
+      margin-bottom: 0.85rem;
+      animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+    }
+
+    .lede {
+      font-size: 1rem;
+      font-weight: 400;
+      color: rgba(252, 251, 248, 0.68);
+      max-width: 36ch;
+      margin-bottom: 1.75rem;
+      animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      animation: riseIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.85rem 1.35rem;
+      background: var(--ivory);
+      color: var(--forest);
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      border-radius: 0.5rem;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .btn-primary:hover {
+      background: #fff;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.85rem 1.15rem;
+      color: rgba(252, 251, 248, 0.85);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(252, 251, 248, 0.28);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(252, 251, 248, 0.08);
+      border-color: rgba(252, 251, 248, 0.45);
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Visual: CoDi QR plane — product anchor, edge-to-edge on mobile feel */
+    .visual {
+      position: relative;
+      justify-self: stretch;
+      animation: riseIn 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    }
+
+    .qr-plane {
+      position: relative;
+      aspect-ratio: 1;
+      max-width: min(100%, 420px);
+      margin-left: auto;
+      margin-right: 0;
+      border-radius: 1.25rem;
+      background:
+        linear-gradient(145deg, rgba(252, 251, 248, 0.12), rgba(252, 251, 248, 0.04));
+      border: 1px solid rgba(252, 251, 248, 0.14);
+      backdrop-filter: blur(8px);
+      padding: 1.75rem;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .qr-plane::after {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(from 180deg, transparent, rgba(196, 163, 90, 0.2), transparent 40%);
+      animation: sweep 8s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes sweep {
+      to { transform: rotate(360deg); }
+    }
+
+    .qr-frame {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 280px;
+      aspect-ratio: 1;
+      background: var(--ivory);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    }
+
+    .qr-frame svg { width: 100%; height: 100%; display: block; }
+
+    .qr-caption {
+      position: relative;
+      z-index: 1;
+      margin-top: 1rem;
+      text-align: center;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.6875rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(252, 251, 248, 0.55);
+    }
+
+    /* —— One section: how it works —— */
+    .flow {
+      padding: 4.5rem 1.5rem 5rem;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .flow-head {
+      max-width: 28rem;
+      margin-bottom: 2.75rem;
+    }
+
+    .flow-head h2 {
+      font-family: "Newsreader", Georgia, serif;
+      font-weight: 600;
+      font-size: clamp(1.75rem, 4vw, 2.35rem);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.65rem;
+    }
+
+    .flow-head p {
+      color: var(--taupe);
+      font-size: 1rem;
+    }
+
+    .steps {
+      display: grid;
+      gap: 0;
+      border-top: 1px solid var(--hairline);
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 3.5rem 1fr;
+      gap: 1rem;
+      padding: 1.5rem 0;
+      border-bottom: 1px solid var(--hairline);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .step.in {
+      opacity: 1;
+      transform: none;
+    }
+
+    .step-num {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--forest);
+      padding-top: 0.2rem;
+    }
+
+    .step h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .step p {
+      color: var(--taupe);
+      font-size: 0.9375rem;
+      max-width: 42ch;
+    }
+
+    .footer {
+      border-top: 1px solid var(--hairline);
+      padding: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.5rem;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1120px;
+      margin: 0 auto;
+      font-size: 0.8125rem;
+      color: var(--taupe);
+    }
+
+    .footer a {
+      font-weight: 600;
+      color: var(--forest);
+    }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <nav class="nav" aria-label="Principal">
+      <span class="nav-brand">CoDiPey</span>
+      <a class="nav-link" href="/admin">Consola</a>
+    </nav>
+
+    <div class="hero-body">
+      <div>
+        <h1 class="brand-mark">CoDiPey</h1>
+        <p class="headline">Cobro CoDi y factura CFDI desde WhatsApp.</p>
+        <p class="lede">
+          Para el mostrador de barrio: el cliente pide por chat, paga con QR sin comisión de tarjeta y, si hace falta, se lleva su factura.
+        </p>
+        <div class="cta-row">
+          <a class="btn-primary" href="/admin">
+            Abrir consola
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <a class="btn-ghost" href="#flujo">Cómo funciona</a>
+        </div>
+      </div>
+
+      <div class="visual" aria-hidden="true">
+        <div class="qr-plane">
+          <div class="qr-frame">
+            <!-- Stylized CoDi-style QR mark (decorative) -->
+            <svg viewBox="0 0 120 120" role="img" aria-label="">
+              <rect width="120" height="120" fill="#FCFBF8"/>
+              <g fill="#16302B">
+                <rect x="8" y="8" width="34" height="34" rx="2"/>
+                <rect x="14" y="14" width="22" height="22" fill="#FCFBF8"/>
+                <rect x="20" y="20" width="10" height="10"/>
+                <rect x="78" y="8" width="34" height="34" rx="2"/>
+                <rect x="84" y="14" width="22" height="22" fill="#FCFBF8"/>
+                <rect x="90" y="20" width="10" height="10"/>
+                <rect x="8" y="78" width="34" height="34" rx="2"/>
+                <rect x="14" y="84" width="22" height="22" fill="#FCFBF8"/>
+                <rect x="20" y="90" width="10" height="10"/>
+                <rect x="50" y="8" width="8" height="8"/>
+                <rect x="62" y="8" width="8" height="8"/>
+                <rect x="50" y="20" width="8" height="8"/>
+                <rect x="8" y="50" width="8" height="8"/>
+                <rect x="20" y="50" width="8" height="8"/>
+                <rect x="32" y="50" width="8" height="8"/>
+                <rect x="50" y="50" width="8" height="8"/>
+                <rect x="62" y="50" width="8" height="8"/>
+                <rect x="74" y="50" width="8" height="8"/>
+                <rect x="86" y="50" width="8" height="8"/>
+                <rect x="98" y="50" width="8" height="8"/>
+                <rect x="50" y="62" width="8" height="8"/>
+                <rect x="74" y="62" width="8" height="8"/>
+                <rect x="98" y="62" width="8" height="8"/>
+                <rect x="50" y="74" width="8" height="8"/>
+                <rect x="62" y="74" width="8" height="8"/>
+                <rect x="86" y="74" width="8" height="8"/>
+                <rect x="98" y="74" width="20" height="8"/>
+                <rect x="50" y="86" width="8" height="8"/>
+                <rect x="74" y="86" width="8" height="8"/>
+                <rect x="98" y="86" width="8" height="8"/>
+                <rect x="50" y="98" width="20" height="8"/>
+                <rect x="86" y="98" width="8" height="8"/>
+                <rect x="98" y="98" width="14" height="14"/>
+              </g>
+            </svg>
+          </div>
+          <p class="qr-caption">QR CoDi · pey · ~10 min</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="flow" id="flujo">
+    <div class="flow-head">
+      <h2>Del chat al cobro, sin tecnicismos del SAT.</h2>
+      <p>Tres pasos pensados para cajero, no para contador.</p>
+    </div>
+    <div class="steps">
+      <article class="step">
+        <span class="step-num">01</span>
+        <div>
+          <h3>Pedido por WhatsApp</h3>
+          <p>Lista de productos y botones: sí factura, solo pagar, sin RFC o cancelar.</p>
+        </div>
+      </article>
+      <article class="step">
+        <span class="step-num">02</span>
+        <div>
+          <h3>Pago con QR CoDi</h3>
+          <p>Sin comisión de tarjeta. El código dura ~10 minutos; se regenera o cancela desde el chat o la consola.</p>
+        </div>
+      </article>
+      <article class="step">
+        <span class="step-num">03</span>
+        <div>
+          <h3>CFDI 4.0 si lo piden</h3>
+          <p>Sin RFC en un toque, o wizard guiado. Timbrado con Facturapi; la consola muestra liquidación en vivo.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>CoDiPey · WhatsApp + CoDi + CFDI 4.0</span>
+    <a href="/admin">Ir a la consola operativa →</a>
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add("in");
+        });
+      },
+      { threshold: 0.25 },
+    );
+    document.querySelectorAll(".step").forEach((el) => io.observe(el));
+  </script>
+</body>
+</html>
