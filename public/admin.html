@@ -69,7 +69,20 @@
 
     .editorial-serif {
       font-family: 'Newsreader', Georgia, serif;
+      /* Sin tabular-nums: en Newsreader el glifo $ se ve “doble” */
+    }
+
+    /* Montos: mono tabular; el $ nunca va en serif editorial */
+    .money {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
       font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+      letter-spacing: -0.02em;
+    }
+    .money-lg {
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1;
     }
 
     /* Warm subtle scrollbars */
@@ -164,7 +177,7 @@
           </span>
         </div>
         <div class="flex items-baseline gap-2">
-          <span id="kpiVolumen" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#1C1917] leading-none">
+          <span id="kpiVolumen" class="money money-lg text-[#1C1917]">
             $2,270.00
           </span>
           <span class="tabular-mono text-[11px] font-medium text-[#686158]">MXN</span>
@@ -183,7 +196,7 @@
           </span>
         </div>
         <div class="flex items-baseline gap-2">
-          <span id="kpiAhorro" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#15803D] leading-none">
+          <span id="kpiAhorro" class="money money-lg text-[#15803D]">
             $79.45
           </span>
           <span class="tabular-mono text-[11px] font-medium text-[#686158]">MXN</span>
@@ -1162,7 +1175,7 @@
               <div class="flex-1 w-full space-y-2 text-xs">
                 <div class="pb-2 border-b border-[#E4DFD3]">
                   <span class="text-[11px] text-[#686158] block">Monto a liquidar</span>
-                  <span class="editorial-serif text-2xl font-semibold text-[#1C1917]">
+                  <span class="money text-[28px] font-semibold text-[#1C1917]">
                     ${formatMXN(order.total)} <span class="tabular-mono text-xs font-normal text-[#686158]">MXN</span>
                   </span>
                 </div>
@@ -1452,7 +1465,7 @@
 
           <div class="pt-2.5 border-t border-[#E4DFD3] flex justify-between items-baseline">
             <span class="text-xs font-medium text-[#686158]">Total Liquidado</span>
-            <span class="editorial-serif text-2xl font-semibold text-[#15803D]">${formatMXN(order.total)} MXN</span>
+            <span class="money text-[28px] font-semibold text-[#15803D]">${formatMXN(order.total)} <span class="text-xs font-medium text-[#686158]">MXN</span></span>
           </div>
 
           <div class="p-2.5 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3] tabular-mono text-[11px] flex items-center justify-between">
