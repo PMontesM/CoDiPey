@@ -28,12 +28,22 @@ import {
   QR_TTL_SEC,
   storeQrPng,
 } from "./pey";
+import { formatTicketCaption } from "./ticket";
 import {
   resolveInteractiveId,
   sendWhatsapp,
   sendWhatsappList,
   sendWhatsappQuickReply,
 } from "./twilio";
+
+function parseOrdenItems(orden: Orden): Item[] {
+  try {
+    const raw = JSON.parse(orden.conceptos) as Item[];
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
 
 const DEMO_FISCAL = {
   rfc: "XAXX010101000",
@@ -537,7 +547,7 @@ async function replyStatus(
       `\n\n⚠️ La solicitud CoDi *venció* (~${Math.floor(QR_TTL_SEC / 60)} min). ` +
       `Banxico ya no la acepta. Genera un *Nuevo QR* (mismo monto) o inicia otro pedido.`;
   } else if (orden.pey_qr_id) {
-    body += `\nQR: ${publicUrl}/files/qr_${orden.id}.png`;
+    body += `\nTicket: ${publicUrl}/files/qr_${orden.id}.png`;
   }
 
   const actions = vencido
@@ -616,7 +626,12 @@ async function emitirQr(
   const qrPayload = extractQrPayload(peyData);
   const peyQrId =
     String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
-  await storeQrPng(env, orden.id, qrPayload);
+  const items = parseOrdenItems(orden);
+  await storeQrPng(env, orden.id, qrPayload, {
+    items,
+    monto: String(orden.monto),
+    concepto,
+  });
   await env.DB.prepare(
     `UPDATE ordenes SET pey_qr_id = ?, concepto_pey = ?, estado_chat = 'ESPERANDO_PAGO', updated_at = ? WHERE id = ?`,
   )
@@ -624,10 +639,16 @@ async function emitirQr(
     .run();
 
   const media = `${publicUrl}/files/qr_${orden.id}.png`;
-  const qrMsg =
-    `🔲 *QR CoDi* orden #${orden.id} ($${orden.monto} MXN)\n` +
-    `${concepto}\nVálido ${Math.floor(QR_TTL_SEC / 60)} min — escanéalo con tu banca.\n` +
-    `Si no ves la imagen: ${media}`;
+  const qrMsg = formatTicketCaption(
+    {
+      ordenId: orden.id,
+      monto: String(orden.monto),
+      items,
+      concepto,
+      vigenciaMin: Math.floor(QR_TTL_SEC / 60),
+    },
+    media,
+  );
 
   const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
   if (hasTwilio) {
@@ -636,7 +657,7 @@ async function emitirQr(
       await sendWhatsappQuickReply(
         env,
         telefono,
-        "Este es el código para pagar. Si vence (~10 min), pide *Nuevo QR*.",
+        "Ahí va tu ticket con el QR. Si vence (~10 min), pide *Nuevo QR*.",
         [
           { title: "Estado", id: "STATUS" },
           { title: "Nuevo QR", id: "QR_RENEW" },
@@ -670,10 +691,18 @@ async function resendOrRenewQr(
   }
 
   const media = `${publicUrl}/files/qr_${orden.id}.png`;
+  const items = parseOrdenItems(orden);
   const qrMsg =
-    `🔲 QR CoDi orden #${orden.id} ($${orden.monto} MXN)\n` +
-    `Vigencia restante: ${formatMmSs(expires)}\n` +
-    `Si no ves la imagen: ${media}`;
+    formatTicketCaption(
+      {
+        ordenId: orden.id,
+        monto: String(orden.monto),
+        items,
+        concepto: orden.concepto_pey || undefined,
+        vigenciaMin: Math.floor(QR_TTL_SEC / 60),
+      },
+      media,
+    ) + `\n⏱ Vigencia restante: ${formatMmSs(expires)}`;
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     await sendWhatsapp(env, telefono, qrMsg, media);
     return "";

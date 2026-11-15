@@ -100,7 +100,11 @@ export async function simularCobroDemo(
   const qrPayload = extractQrPayload(peyData);
   const peyQrId =
     String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
-  await storeQrPng(env, ordenId, qrPayload);
+  await storeQrPng(env, ordenId, qrPayload, {
+    items: DEMO_ITEMS,
+    monto,
+    concepto,
+  });
   await env.DB.prepare(
     `UPDATE ordenes SET pey_qr_id = ?, updated_at = ? WHERE id = ?`,
   )

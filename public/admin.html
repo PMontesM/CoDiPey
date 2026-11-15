@@ -1301,9 +1301,9 @@
       const qrVisual = useLiveQrImg
         ? `<img
              src="/files/qr_${encodeURIComponent(order.id)}.png"
-             alt="QR CoDi ${escapeHtml(order.id)}"
+             alt="Ticket CoDi ${escapeHtml(order.id)}"
              onerror="handleQrImgError('${escapeHtml(order.id)}')"
-             class="w-32 h-32 object-contain rounded"
+             class="w-36 h-52 object-contain rounded bg-[#FCFBF8]"
            />`
         : buildWarmCoDiQrSvg(`${order.id}|${order.total}|${order.telefono}`);
 
@@ -1333,7 +1333,7 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center gap-4">
-              <div class="w-36 h-36 p-2 bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl flex items-center justify-center shrink-0">
+              <div class="w-40 h-56 p-2 bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
                 ${qrVisual}
               </div>
 

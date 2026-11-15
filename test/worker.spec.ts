@@ -268,7 +268,7 @@ describe("Worker HTTP", () => {
       }),
     });
     const text = await res.text();
-    expect(text).toMatch(/QR CoDi|\/files\/qr_\d+\.png/);
+    expect(text).toMatch(/Ticket CoDiPey|QR CoDi|\/files\/qr_\d+\.png/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",

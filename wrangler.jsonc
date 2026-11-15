@@ -12,6 +12,9 @@
   "observability": {
     "enabled": true
   },
+  "rules": [
+    { "type": "CompiledWasm", "globs": ["**/*.wasm"], "fallthrough": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

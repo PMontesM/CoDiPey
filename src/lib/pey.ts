@@ -1,5 +1,6 @@
-import type { Env } from "../types";
+import type { Env, Item } from "../types";
 import { putBlob } from "./blobs";
+import { renderTicketPng, type TicketMeta } from "./ticket";
 
 /** Vigencia CoDi en pey (segundos). */
 export const QR_TTL_SEC = 600;
@@ -71,16 +72,44 @@ export function extractQrPayload(peyData: Record<string, unknown>): string {
   return String(qrPayload);
 }
 
+export type StoreQrOptions = {
+  items?: Item[];
+  monto?: string;
+  concepto?: string;
+};
+
+/**
+ * Genera QR CoDi y lo guarda como ticket de cobro (conceptos + total + QR).
+ * Si el render del ticket falla, cae al QR plano.
+ */
 export async function storeQrPng(
   env: Env,
   ordenId: number,
   qrPayload: string,
+  opts?: StoreQrOptions,
 ): Promise<string> {
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrPayload)}`;
   const img = await fetch(url);
   if (!img.ok) throw new Error(`QR image HTTP ${img.status}`);
-  const bytes = await img.arrayBuffer();
+  const qrBytes = await img.arrayBuffer();
   const key = `qr_${ordenId}.png`;
+
+  let bytes = qrBytes;
+  if (opts?.monto) {
+    const meta: TicketMeta = {
+      ordenId,
+      monto: opts.monto,
+      items: opts.items || [],
+      concepto: opts.concepto,
+      vigenciaMin: Math.floor(QR_TTL_SEC / 60),
+    };
+    try {
+      bytes = await renderTicketPng(qrBytes, meta);
+    } catch (err) {
+      console.log(`[ticket] render failed, plain QR: ${String(err)}`);
+    }
+  }
+
   await putBlob(env, key, bytes, "image/png");
   return key;
 }
