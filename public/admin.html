@@ -1751,11 +1751,7 @@
           pushWebhookLog("codi.qr.created", newId || "demo", formatMXN(Number(data.orden?.monto || 25)), "amber");
           showToast(`Orden #${newId} creada (demo sin WhatsApp)`, "success");
           await pollOrders();
-          if (newId) {
-            state.selectedId = newId;
-            openTicket();
-            renderInspector();
-          }
+          if (newId) selectOrder(String(newId));
         } catch (err) {
           showToast(err.message || "No se pudo simular el cobro", "error");
         }
@@ -1803,33 +1799,34 @@
     }
 
     async function simulatePeyPaymentWebhook(orderId) {
-      if (state.busyOrderIds.has(orderId)) return;
-      const order = state.orders.find(o => o.id === orderId);
+      const id = String(orderId);
+      if (state.busyOrderIds.has(id)) return;
+      const order = state.orders.find(o => o.id === id);
       if (!order || order.pago_estado === "PAGADO") return;
 
-      state.busyOrderIds.add(orderId);
+      state.busyOrderIds.add(id);
       renderInspector();
-      showToast(`Recibiendo webhook codi.qr.payment_received para ${orderId}...`, "info");
+      showToast(`Recibiendo webhook codi.qr.payment_received para ${id}...`, "info");
 
       if (state.isLiveApi) {
         try {
-          const res = await fetch(`/api/demo/simular-pago/${encodeURIComponent(orderId)}`, {
+          const res = await fetch(`/api/demo/simular-pago/${encodeURIComponent(id)}`, {
             method: "POST"
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-          pushWebhookLog("codi.qr.payment_received", orderId, formatMXN(order.total), "emerald");
+          pushWebhookLog("codi.qr.payment_received", id, formatMXN(order.total), "emerald");
           if (data.orden?.facturapi_id) {
-            pushWebhookLog("facturapi.invoice.stamped", orderId, "CFDI 4.0", "forest");
+            pushWebhookLog("facturapi.invoice.stamped", id, "CFDI 4.0", "forest");
           }
-          showToast(data.message || `Pago liquidado (${orderId})`, "success");
-          state.busyOrderIds.delete(orderId);
+          showToast(data.message || `Pago liquidado (${id})`, "success");
+          state.busyOrderIds.delete(id);
           await pollOrders();
-          renderInspector();
+          selectOrder(id);
         } catch (err) {
-          state.busyOrderIds.delete(orderId);
+          state.busyOrderIds.delete(id);
           renderInspector();
-          showToast(err.message || `No se pudo liquidar ${orderId}`, "error");
+          showToast(err.message || `No se pudo liquidar ${id}`, "error");
         }
         return;
       }
@@ -1852,7 +1849,7 @@
           order.estado_chat = "COMPLETADO";
         }
 
-        state.busyOrderIds.delete(orderId);
+        state.busyOrderIds.delete(id);
         state.kpis = calculateMetrics(state.orders);
         renderAll();
         showToast(`Pago liquidado y CFDI 4.0 timbrado (${order.id})`, "success");
