@@ -239,4 +239,12 @@ app.post("/pey/webhook", async (c) => {
   return c.json({ ok: true, orden_id: orden.id, pago: "PAGADO" });
 });
 
+/** Estáticos de /public (p. ej. hero-barrio.jpg) vía binding ASSETS. */
+app.get("*", async (c) => {
+  if (!c.env.ASSETS) return c.text("not found", 404);
+  const res = await c.env.ASSETS.fetch(c.req.raw);
+  if (res.status === 404) return c.text("not found", 404);
+  return res;
+});
+
 export default app;
