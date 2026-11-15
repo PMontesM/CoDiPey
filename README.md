@@ -31,11 +31,11 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 
 ### Cómo demoea el jurado (2 min, sin Sandbox)
 1. Abrir la [consola](https://cobro-codi.inomali.workers.dev/admin).
-2. **+ Simular Cobro WhatsApp** → aparece orden pendiente con QR.
-3. Abrir el ticket → **Simular Webhook Pago pey** → liquidación + timbrado CFDI.
+2. **+ Simular Cobro WhatsApp** → crea orden real + QR CoDi (`POST /api/demo/simular-cobro`).
+3. Abrir el ticket → **Simular Webhook Pago pey** → liquidación + timbrado CFDI (`POST /api/demo/simular-pago/:id`).
 4. (Opcional) WhatsApp real solo si el número ya hizo `join` al Twilio Sandbox.
 
-> El Sandbox de Twilio **no permite** autorizar números por API: cada teléfono debe enviar `join …`. Para la entrega pública usamos la **simulación en consola**.
+> El Sandbox de Twilio **no permite** autorizar números por API: cada teléfono debe enviar `join …`. La consola pública simula cobro y pago sin unir números.
 
 ---
 

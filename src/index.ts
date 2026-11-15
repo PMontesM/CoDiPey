@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { buildOrdenesPayload, resolveEmisor } from "./lib/admin";
 import { getBlob } from "./lib/blobs";
 import { handleWhatsappMessage } from "./lib/chat";
+import { simularCobroDemo, simularPagoDemo } from "./lib/demo";
 import { evaluarYTimbrar } from "./lib/facturapi";
 import { nowIso, xmlEscape } from "./lib/parse";
 import { getQrExpiresInSec } from "./lib/pey";
@@ -105,6 +106,33 @@ app.post("/api/ordenes/:id/cancelar", async (c) => {
     .bind(id)
     .first<Orden>();
   return c.json({ orden: updated, message: "Orden cancelada" });
+});
+
+/** Demo pública sin Twilio Sandbox: crea cobro + QR CoDi. */
+app.post("/api/demo/simular-cobro", async (c) => {
+  try {
+    const result = await simularCobroDemo(c.env);
+    return c.json(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ detail: msg }, 502);
+  }
+});
+
+/** Demo pública: liquida como pey webhook + timbra CFDI si hay datos. */
+app.post("/api/demo/simular-pago/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id) || id <= 0) {
+    return c.json({ detail: "id inválido" }, 400);
+  }
+  try {
+    const result = await simularPagoDemo(c.env, publicUrl(c), id);
+    return c.json(result);
+  } catch (err) {
+    const status = (err as Error & { status?: number }).status || 500;
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ detail: msg }, status as 400 | 404 | 409 | 500);
+  }
 });
 
 app.post("/whatsapp/webhook", async (c) => {

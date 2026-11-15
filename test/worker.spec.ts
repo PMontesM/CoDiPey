@@ -637,4 +637,32 @@ describe("Worker HTTP", () => {
     expect(orden?.facturapi_id).toBe("inv_test_1");
     expect(orden?.estado_chat).toBe("COMPLETADO");
   });
+
+  it("POST /api/demo/simular-cobro creates pending order with QR", async () => {
+    const res = await call("/api/demo/simular-cobro", { method: "POST" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.orden.pago_estado).toBe("PENDIENTE");
+    expect(body.orden.pey_qr_id).toBe("qr_test_1");
+    expect(body.orden.requiere_factura).toBe(1);
+    expect(body.qr_url).toMatch(/^\/files\/qr_\d+\.png$/);
+
+    const blob = await env.DB.prepare(
+      "SELECT key FROM blobs WHERE key LIKE 'qr_%'",
+    ).first();
+    expect(blob).toBeTruthy();
+  });
+
+  it("POST /api/demo/simular-pago/:id liquidates and stamps CFDI", async () => {
+    const created = await call("/api/demo/simular-cobro", { method: "POST" });
+    const { orden } = await created.json();
+    const res = await call(`/api/demo/simular-pago/${orden.id}`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.orden.pago_estado).toBe("PAGADO");
+    expect(body.orden.facturapi_id).toBe("inv_test_1");
+    expect(body.message).toMatch(/timbrado/i);
+  });
 });
