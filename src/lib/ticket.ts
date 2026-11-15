@@ -3,7 +3,9 @@ import resvgWasm from "../wasm/resvg.wasm";
 import type { Item } from "../types";
 
 const DEFAULT_VIGENCIA_MIN = 10;
-const FONT_FAMILY = "Plus Jakarta Sans";
+const SANS = "Plus Jakarta Sans";
+const SERIF = "Newsreader";
+const MONO = "JetBrains Mono";
 
 let wasmReady: Promise<void> | null = null;
 let fontCache: ArrayBuffer[] | null = null;
@@ -22,13 +24,17 @@ function ensureWasm(): Promise<void> {
 async function loadFonts(): Promise<ArrayBuffer[]> {
   if (fontCache) return fontCache;
   const urls = [
+    "https://cdn.jsdelivr.net/fontsource/fonts/plus-jakarta-sans@5.2.5/latin-500-normal.ttf",
     "https://cdn.jsdelivr.net/fontsource/fonts/plus-jakarta-sans@5.2.5/latin-600-normal.ttf",
     "https://cdn.jsdelivr.net/fontsource/fonts/plus-jakarta-sans@5.2.5/latin-700-normal.ttf",
+    "https://cdn.jsdelivr.net/fontsource/fonts/newsreader@5.2.6/latin-600-normal.ttf",
+    "https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono@5.2.5/latin-500-normal.ttf",
+    "https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono@5.2.5/latin-700-normal.ttf",
   ];
   const buffers = await Promise.all(
     urls.map(async (url) => {
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Font HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`Font HTTP ${res.status} ${url}`);
       return res.arrayBuffer();
     }),
   );
@@ -62,13 +68,18 @@ export type TicketMeta = {
   items: Item[];
   concepto?: string;
   vigenciaMin?: number;
+  peyQrId?: string | null;
 };
 
+/**
+ * Ticket al estilo del comprobante del panel (hoja blanca, serif editorial,
+ * cajas anidadas, total en verde) + QR CoDi grande abajo.
+ */
 function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
   const vigencia = meta.vigenciaMin ?? DEFAULT_VIGENCIA_MIN;
   const items =
     meta.items.length > 0
-      ? meta.items.slice(0, 6)
+      ? meta.items.slice(0, 5)
       : [
           {
             cantidad: "1",
@@ -78,59 +89,101 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
           },
         ];
 
-  const rowH = 36;
-  const itemsBlock = items.length * rowH;
-  const width = 720;
-  const height = 210 + itemsBlock + 420 + 90;
-  const qrSize = 340;
-  const qrX = (width - qrSize) / 2;
-  const qrY = 210 + itemsBlock + 36;
+  const width = 680;
+  const pad = 36;
+  const cardX = pad;
+  const cardW = width - pad * 2;
+  const innerX = cardX + 28;
+  const innerW = cardW - 56;
+
+  const itemH = 28;
+  const itemsH = items.length * itemH;
+  const totalsH = 78;
+  const conceptsBlockH = 18 + itemsH + 12 + totalsH;
+
+  const qrSize = 280;
+  const qrBoxPad = 18;
+  const qrBoxH = qrSize + qrBoxPad * 2 + 52;
+
+  // Layout Y positions inside white card
+  const yRibbon = 56;
+  const yTitle = 92;
+  const yCards = 122;
+  const cardBoxH = 72;
+  const yConcepts = yCards + cardBoxH + 18;
+  const yMeta = yConcepts + conceptsBlockH + 22;
+  const metaH = 96;
+  const yQr = yMeta + metaH + 18;
+  const cardH = yQr + qrBoxH + 28;
+  const height = pad + cardH + pad;
 
   const itemRows = items
     .map((it, i) => {
-      const y = 188 + i * rowH;
-      const label = truncate(`${it.cantidad} × ${it.concepto}`, 34);
+      const y = yConcepts + 22 + i * itemH;
+      const label = truncate(`${it.cantidad}×  ${it.concepto}`, 36);
       return `
-        <text x="48" y="${y}" font-family="${FONT_FAMILY}" font-size="22" fill="#1A1814">${esc(label)}</text>
-        <text x="672" y="${y}" text-anchor="end" font-family="${FONT_FAMILY}" font-size="22" font-weight="700" fill="#16302B">$${esc(money(it.subtotal))}</text>
+        <text x="${innerX}" y="${y}" font-family="${SANS}" font-size="15" font-weight="500" fill="#1C1917">${esc(label)}</text>
+        <text x="${innerX + innerW}" y="${y}" text-anchor="end" font-family="${MONO}" font-size="14" font-weight="500" fill="#1C1917">$${esc(money(it.subtotal))}</text>
       `;
     })
     .join("");
 
+  const totalsY = yConcepts + 22 + itemsH + 18;
+  const ref = meta.peyQrId
+    ? truncate(String(meta.peyQrId), 22)
+    : String(meta.ordenId);
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FBF8F1"/>
-      <stop offset="100%" stop-color="#F3EEE3"/>
-    </linearGradient>
-  </defs>
-  <rect width="${width}" height="${height}" rx="28" fill="url(#bg)"/>
-  <rect x="24" y="24" width="${width - 48}" height="${height - 48}" rx="20" fill="#FFFFFF" stroke="#D9D2C4" stroke-width="2"/>
+  <rect width="${width}" height="${height}" fill="#F7F4EC"/>
+  <rect x="${cardX}" y="${pad}" width="${cardW}" height="${cardH}" rx="16" fill="#FFFFFF" stroke="#D8D1C2" stroke-width="1.5"/>
 
-  <text x="48" y="78" font-family="${FONT_FAMILY}" font-size="34" font-weight="700" fill="#16302B">CoDiPey</text>
-  <text x="48" y="108" font-family="${FONT_FAMILY}" font-size="18" fill="#2F5C4F">Ticket de cobro · $0 comisión</text>
+  <!-- Ribbon -->
+  <circle cx="${innerX + 5}" cy="${yRibbon - 4}" r="4" fill="#15803D"/>
+  <text x="${innerX + 16}" y="${yRibbon}" font-family="${SANS}" font-size="11" font-weight="700" fill="#15803D" letter-spacing="1.2">COMPROBANTE DE COBRO · CODI · $0 COMISIÓN</text>
+  <rect x="${innerX + innerW - 108}" y="${yRibbon - 18}" width="108" height="24" rx="6" fill="#E8EFEC" stroke="rgba(22,48,43,0.2)" stroke-width="1"/>
+  <text x="${innerX + innerW - 54}" y="${yRibbon - 2}" text-anchor="middle" font-family="${MONO}" font-size="11" font-weight="700" fill="#16302B">PENDIENTE</text>
 
-  <rect x="480" y="52" width="168" height="54" rx="14" fill="#F3E2B8"/>
-  <text x="564" y="74" text-anchor="middle" font-family="${FONT_FAMILY}" font-size="14" font-weight="700" fill="#8A6A1A">ORDEN</text>
-  <text x="564" y="96" text-anchor="middle" font-family="${FONT_FAMILY}" font-size="24" font-weight="700" fill="#16302B">#${meta.ordenId}</text>
+  <!-- Title -->
+  <text x="${innerX}" y="${yTitle}" font-family="${SERIF}" font-size="28" font-weight="600" fill="#1C1917">Ticket de cobro CoDiPey</text>
 
-  <line x1="48" y1="136" x2="672" y2="136" stroke="#E4DFD3" stroke-width="2" stroke-dasharray="8 8"/>
+  <!-- Info cards row -->
+  <rect x="${innerX}" y="${yCards}" width="${(innerW - 12) / 2}" height="${cardBoxH}" rx="10" fill="#FCFBF8" stroke="#E4DFD3" stroke-width="1"/>
+  <text x="${innerX + 14}" y="${yCards + 22}" font-family="${MONO}" font-size="10" font-weight="700" fill="#686158" letter-spacing="1">ORDEN</text>
+  <text x="${innerX + 14}" y="${yCards + 46}" font-family="${SANS}" font-size="18" font-weight="700" fill="#1C1917">#${meta.ordenId}</text>
 
-  <text x="48" y="168" font-family="${FONT_FAMILY}" font-size="14" font-weight="700" fill="#5E584F" letter-spacing="2">CONCEPTOS</text>
+  <rect x="${innerX + (innerW - 12) / 2 + 12}" y="${yCards}" width="${(innerW - 12) / 2}" height="${cardBoxH}" rx="10" fill="#FCFBF8" stroke="#E4DFD3" stroke-width="1"/>
+  <text x="${innerX + (innerW - 12) / 2 + 26}" y="${yCards + 22}" font-family="${MONO}" font-size="10" font-weight="700" fill="#686158" letter-spacing="1">VIGENCIA QR</text>
+  <text x="${innerX + (innerW - 12) / 2 + 26}" y="${yCards + 46}" font-family="${SANS}" font-size="18" font-weight="700" fill="#B45309">${vigencia} min</text>
+
+  <!-- Concepts dashed block -->
+  <line x1="${innerX}" y1="${yConcepts}" x2="${innerX + innerW}" y2="${yConcepts}" stroke="#D8D1C2" stroke-width="1.5" stroke-dasharray="5 5"/>
   ${itemRows}
+  <line x1="${innerX}" y1="${totalsY - 10}" x2="${innerX + innerW}" y2="${totalsY - 10}" stroke="#E4DFD3" stroke-width="1"/>
 
-  <line x1="48" y1="${188 + itemsBlock}" x2="672" y2="${188 + itemsBlock}" stroke="#E4DFD3" stroke-width="2"/>
+  <text x="${innerX}" y="${totalsY + 8}" font-family="${MONO}" font-size="13" fill="#686158">Comisión CoDi</text>
+  <text x="${innerX + innerW}" y="${totalsY + 8}" text-anchor="end" font-family="${MONO}" font-size="13" font-weight="700" fill="#15803D">$0.00</text>
 
-  <text x="48" y="${228 + itemsBlock}" font-family="${FONT_FAMILY}" font-size="20" fill="#5E584F">Total a pagar</text>
-  <text x="672" y="${228 + itemsBlock}" text-anchor="end" font-family="${FONT_FAMILY}" font-size="40" font-weight="700" fill="#16302B">$${esc(money(meta.monto))}</text>
-  <text x="672" y="${256 + itemsBlock}" text-anchor="end" font-family="${FONT_FAMILY}" font-size="16" fill="#2F5C4F">MXN · CoDi</text>
+  <text x="${innerX}" y="${totalsY + 36}" font-family="${SANS}" font-size="16" font-weight="700" fill="#1C1917">Total MXN</text>
+  <text x="${innerX + innerW}" y="${totalsY + 36}" text-anchor="end" font-family="${SANS}" font-size="22" font-weight="700" fill="#15803D">$${esc(money(meta.monto))} MXN</text>
 
-  <rect x="${qrX - 16}" y="${qrY - 16}" width="${qrSize + 32}" height="${qrSize + 32}" rx="18" fill="#FCFBF8" stroke="#E4DFD3" stroke-width="2"/>
-  <image href="data:image/png;base64,${qrPngBase64}" x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}" />
+  <line x1="${innerX}" y1="${yConcepts + conceptsBlockH}" x2="${innerX + innerW}" y2="${yConcepts + conceptsBlockH}" stroke="#D8D1C2" stroke-width="1.5" stroke-dasharray="5 5"/>
 
-  <text x="${width / 2}" y="${qrY + qrSize + 52}" text-anchor="middle" font-family="${FONT_FAMILY}" font-size="20" font-weight="700" fill="#16302B">Escanea con tu app bancaria</text>
-  <text x="${width / 2}" y="${qrY + qrSize + 80}" text-anchor="middle" font-family="${FONT_FAMILY}" font-size="16" fill="#5E584F">Válido ${vigencia} min · Banxico CoDi</text>
+  <!-- Payment metadata (panel-style grid) -->
+  <text x="${innerX}" y="${yMeta + 14}" font-family="${MONO}" font-size="10" font-weight="700" fill="#686158" letter-spacing="1">FORMA DE PAGO</text>
+  <text x="${innerX}" y="${yMeta + 34}" font-family="${SANS}" font-size="14" font-weight="600" fill="#1C1917">CoDi · Transferencia</text>
+
+  <text x="${innerX + innerW / 2}" y="${yMeta + 14}" font-family="${MONO}" font-size="10" font-weight="700" fill="#686158" letter-spacing="1">MÉTODO</text>
+  <text x="${innerX + innerW / 2}" y="${yMeta + 34}" font-family="${SANS}" font-size="14" font-weight="600" fill="#1C1917">Banxico · $0 comisión</text>
+
+  <text x="${innerX}" y="${yMeta + 62}" font-family="${MONO}" font-size="10" font-weight="700" fill="#686158" letter-spacing="1">REFERENCIA PEY</text>
+  <text x="${innerX}" y="${yMeta + 82}" font-family="${MONO}" font-size="13" font-weight="700" fill="#15803D">${esc(ref)}</text>
+
+  <!-- QR box (folio-style footer) -->
+  <rect x="${innerX}" y="${yQr}" width="${innerW}" height="${qrBoxH}" rx="12" fill="#F7F4EC" stroke="#E4DFD3" stroke-width="1"/>
+  <text x="${innerX + 18}" y="${yQr + 24}" font-family="${MONO}" font-size="10" font-weight="700" fill="#686158" letter-spacing="1">QR CODI · ESCANEA CON TU APP BANCARIA</text>
+  <image href="data:image/png;base64,${qrPngBase64}" x="${innerX + (innerW - qrSize) / 2}" y="${yQr + 38}" width="${qrSize}" height="${qrSize}" />
+  <text x="${innerX + innerW / 2}" y="${yQr + qrBoxH - 14}" text-anchor="middle" font-family="${SANS}" font-size="13" font-weight="600" fill="#686158">Válido ${vigencia} min · Banxico CoDi</text>
 </svg>`;
 }
 
@@ -144,7 +197,7 @@ function arrayBufferToBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
-/** Renderiza un ticket térmico con QR embebido. */
+/** Renderiza ticket estilo panel con QR embebido. */
 export async function renderTicketPng(
   qrPngBytes: ArrayBuffer,
   meta: TicketMeta,
@@ -153,10 +206,10 @@ export async function renderTicketPng(
   const fonts = await loadFonts();
   const svg = buildTicketSvg(meta, arrayBufferToBase64(qrPngBytes));
   const resvg = new Resvg(svg, {
-    fitTo: { mode: "width", value: 720 },
+    fitTo: { mode: "width", value: 680 },
     font: {
       fontBuffers: fonts.map((f) => new Uint8Array(f)),
-      defaultFontFamily: FONT_FAMILY,
+      defaultFontFamily: SANS,
     },
   });
   const png = resvg.render().asPng();
@@ -191,7 +244,7 @@ export function formatTicketCaption(
     )
     .join("\n");
   return (
-    `🧾 *Ticket CoDiPey* · orden #${meta.ordenId}\n` +
+    `🧾 *Ticket de cobro CoDiPey* · orden #${meta.ordenId}\n` +
     `${lines}\n` +
     `*Total $${money(meta.monto)} MXN* · $0 de comisión\n` +
     `Válido ${vigencia} min — escanea el QR del ticket con tu banca.\n` +

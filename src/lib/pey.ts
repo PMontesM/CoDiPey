@@ -76,6 +76,7 @@ export type StoreQrOptions = {
   items?: Item[];
   monto?: string;
   concepto?: string;
+  peyQrId?: string | null;
 };
 
 /**
@@ -102,6 +103,7 @@ export async function storeQrPng(
       items: opts.items || [],
       concepto: opts.concepto,
       vigenciaMin: Math.floor(QR_TTL_SEC / 60),
+      peyQrId: opts.peyQrId,
     };
     try {
       bytes = await renderTicketPng(qrBytes, meta);

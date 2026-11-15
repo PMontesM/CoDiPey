@@ -631,6 +631,7 @@ async function emitirQr(
     items,
     monto: String(orden.monto),
     concepto,
+    peyQrId,
   });
   await env.DB.prepare(
     `UPDATE ordenes SET pey_qr_id = ?, concepto_pey = ?, estado_chat = 'ESPERANDO_PAGO', updated_at = ? WHERE id = ?`,
@@ -646,6 +647,7 @@ async function emitirQr(
       items,
       concepto,
       vigenciaMin: Math.floor(QR_TTL_SEC / 60),
+      peyQrId,
     },
     media,
   );

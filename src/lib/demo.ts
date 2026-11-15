@@ -104,6 +104,7 @@ export async function simularCobroDemo(
     items: DEMO_ITEMS,
     monto,
     concepto,
+    peyQrId,
   });
   await env.DB.prepare(
     `UPDATE ordenes SET pey_qr_id = ?, updated_at = ? WHERE id = ?`,
