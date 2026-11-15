@@ -306,29 +306,32 @@ async def timbrar_facturapi(
     fiscal: dict[str, Any],
     items: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    # Facturapi v2: zip solo dentro de address (customer.zip no está permitido)
     customer = {
         "legal_name": fiscal["razon_social"],
         "tax_id": fiscal["rfc"],
         "tax_system": fiscal["regimen"],
-        "zip": fiscal["codigo_postal"],
         "address": {"zip": fiscal["codigo_postal"]},
     }
-    products = []
+    # Facturapi v2: cada ítem lleva quantity + product anidado
+    invoice_items = []
     for it in items:
-        products.append(
+        invoice_items.append(
             {
-                "description": it["concepto"][:100],
-                "product_key": "01010101",
                 "quantity": float(Decimal(it["cantidad"])),
-                "price": float(Decimal(it["precio_unitario"])),
-                "tax_included": True,
-                "taxes": [{"type": "IVA", "rate": 0.16}],
+                "product": {
+                    "description": it["concepto"][:100],
+                    "product_key": "01010101",
+                    "price": float(Decimal(it["precio_unitario"])),
+                    "tax_included": True,
+                    "taxes": [{"type": "IVA", "rate": 0.16}],
+                },
             }
         )
 
     payload = {
         "customer": customer,
-        "items": products,
+        "items": invoice_items,
         "payment_form": "03",  # Transferencia electrónica (CoDi)
         "payment_method": "PUE",
         "use": fiscal["uso_cfdi"],
