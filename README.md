@@ -16,7 +16,7 @@ Pensado para mostrador: botones, menús y pasos guiados (no tecnicismos del SAT)
 | **App / consola** | https://cobro-codi.inomali.workers.dev/admin |
 | **Health** | https://cobro-codi.inomali.workers.dev/health |
 | **Demo sin WhatsApp** | En la consola: **+ Simular Cobro WhatsApp** → abrir orden → **Simular Webhook Pago pey** (flujo completo sin unir números al Sandbox) |
-
+| **Video demo** | Adjuntar `codipey-demo-hackathon.mp4` (consola: cobro → QR → liquidación + CFDI) |
 ### Problema
 En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a mano es lento y confuso. CoDi es gratis para el comercio, pero el flujo (QR + datos fiscales + CFDI) no está pensado para cajero.
 
