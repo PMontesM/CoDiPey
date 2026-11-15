@@ -131,14 +131,26 @@
     .pulse-dot {
       animation: pulseLive 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+
+    #stickyChrome {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(243, 239, 230, 0.97);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid #D6CFC0;
+      box-shadow: 0 8px 20px rgba(28, 25, 23, 0.06);
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-[#16302B] selection:text-[#FCFBF8]">
 
   <!-- ===================================================================== -->
-  <!-- 1. EXECUTIVE HEADER & UNIFIED TREASURY RIBBON                         -->
+  <!-- 1. STICKY CHROME: header + KPIs + filtros                             -->
   <!-- ===================================================================== -->
-  <header class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-4">
+  <div id="stickyChrome">
+  <header class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-3">
     <!-- Top Executive Bar -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
       <div>
@@ -270,10 +282,62 @@
     </div>
   </header>
 
+  <!-- Filtros + búsqueda (también fijos) -->
+  <div class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+    <div class="p-3 sm:px-4 bg-[#FCFBF8] border border-[#D6CFC0] rounded-xl shadow-warm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" role="tablist">
+        <button
+          type="button"
+          data-filter="ALL"
+          onclick="setFilter('ALL')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
+        >
+          Todas <span id="countAll" class="tabular-mono text-[11px] opacity-80 ml-1">4</span>
+        </button>
+        <button
+          type="button"
+          data-filter="LIQUIDADAS"
+          onclick="setFilter('LIQUIDADAS')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+        >
+          Liquidadas <span id="countLiquidadas" class="tabular-mono text-[11px] ml-1">3</span>
+        </button>
+        <button
+          type="button"
+          data-filter="PENDIENTES"
+          onclick="setFilter('PENDIENTES')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+        >
+          Pendientes <span id="countPendientes" class="tabular-mono text-[11px] ml-1">1</span>
+        </button>
+        <button
+          type="button"
+          data-filter="FISCAL"
+          onclick="setFilter('FISCAL')"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+        >
+          Atención Fiscal <span id="countFiscal" class="tabular-mono text-[11px] ml-1">1</span>
+        </button>
+      </div>
+
+      <div class="relative w-full xl:w-64">
+        <i data-lucide="search" class="w-3.5 h-3.5 text-[#686158] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input
+          id="searchInput"
+          type="text"
+          oninput="handleSearch(this.value)"
+          placeholder="Buscar orden, teléfono o RFC..."
+          class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#F6F3EC] border border-[#E4DFD3] text-xs text-[#1C1917] placeholder:text-[#8C8377] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#16302B] transition"
+        />
+      </div>
+    </div>
+  </div>
+  </div>
+
   <!-- ===================================================================== -->
   <!-- 2. MAIN SPLIT-PANE WORKSTATION (62% LEFT LEDGER / 38% RIGHT INSPECTOR)-->
   <!-- ===================================================================== -->
-  <main class="flex-1 w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+  <main class="flex-1 w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-4">
     <div class="flex flex-col gap-5 items-stretch">
 
       <!-- ================================================================= -->
@@ -281,61 +345,10 @@
       <!-- ================================================================= -->
       <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden flex flex-col">
 
-        <!-- Ledger Header & Controls -->
-        <div class="p-4 sm:px-5 border-b border-[#E4DFD3] flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-[#FCFBF8]">
-          <!-- Segmented Warm Filter Pills -->
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" role="tablist">
-            <button
-              type="button"
-              data-filter="ALL"
-              onclick="setFilter('ALL')"
-              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
-            >
-              Todas <span id="countAll" class="tabular-mono text-[11px] opacity-80 ml-1">4</span>
-            </button>
-            <button
-              type="button"
-              data-filter="LIQUIDADAS"
-              onclick="setFilter('LIQUIDADAS')"
-              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
-            >
-              Liquidadas <span id="countLiquidadas" class="tabular-mono text-[11px] ml-1">3</span>
-            </button>
-            <button
-              type="button"
-              data-filter="PENDIENTES"
-              onclick="setFilter('PENDIENTES')"
-              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
-            >
-              Pendientes <span id="countPendientes" class="tabular-mono text-[11px] ml-1">1</span>
-            </button>
-            <button
-              type="button"
-              data-filter="FISCAL"
-              onclick="setFilter('FISCAL')"
-              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
-            >
-              Atención Fiscal <span id="countFiscal" class="tabular-mono text-[11px] ml-1">1</span>
-            </button>
-          </div>
-
-          <!-- Quick Search Input -->
-          <div class="relative w-full xl:w-64">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-[#686158] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-            <input
-              id="searchInput"
-              type="text"
-              oninput="handleSearch(this.value)"
-              placeholder="Buscar orden, teléfono o RFC..."
-              class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#F6F3EC] border border-[#E4DFD3] text-xs text-[#1C1917] placeholder:text-[#8C8377] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#16302B] transition"
-            />
-          </div>
-        </div>
-
         <!-- Desktop High-Density Table -->
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
-            <thead>
+            <thead class="sticky top-0 z-10">
               <tr class="border-b-2 border-[#D6CFC0] bg-[#EFEAE0] text-[11px] uppercase tracking-wide text-[#3F3A34]">
                 <th class="py-3.5 pl-5 pr-3 font-bold">Orden &amp; hora</th>
                 <th class="py-3.5 px-3 font-bold">Cliente / WhatsApp</th>
