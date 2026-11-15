@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Consola de Tesorería · CoDi &amp; CFDI 4.0</title>
+  <title>Consola Operativa CoDi · CFDI 4.0</title>
 
-  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans, Newsreader & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,64 +22,24 @@
         extend: {
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+            serif: ['"Newsreader"', 'Georgia', 'serif'],
             mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
           },
           colors: {
-            canvas: '#F6F5F1',
-            ink: {
-              primary: '#14211C',
-              secondary: '#5E665F',
-              muted: '#737A73',
+            oat: '#F6F3EC',
+            ivory: '#FCFBF8',
+            espresso: '#1C1917',
+            taupe: '#686158',
+            forest: {
+              DEFAULT: '#16302B',
+              hover: '#1F423B',
+              soft: '#E8EFECE6',
             },
-            /* Remapeo cálido: JS/badges que usan slate heredan el look */
-            slate: {
-              50: '#FAF9F6',
-              100: '#F3F1EC',
-              200: '#E6E3DA',
-              300: '#D2CEC2',
-              400: '#737A73',
-              500: '#5E665F',
-              600: '#4A524C',
-              700: '#353C37',
-              800: '#222924',
-              900: '#14211C',
-              950: '#0C1410',
-            },
-            /* Liquidado / éxito */
-            treasury: {
-              50: '#EAF6F0',
-              100: '#EAF6F0',
-              200: '#A9DCC3',
-              600: '#12805C',
-              700: '#0B6B49',
-            },
-            emerald: {
-              50: '#EAF6F0',
-              100: '#EAF6F0',
-              200: '#A9DCC3',
-              400: '#12805C',
-              500: '#12805C',
-              600: '#0B6B49',
-              700: '#0B6B49',
-            },
-            /* CFDI / info (acento único) */
-            cobalt: {
-              50: '#EEF1FF',
-              100: '#EEF1FF',
-              200: '#C3CCFF',
-              600: '#26338F',
-              700: '#26338F',
-              800: '#26338F',
-              900: '#26338F',
-            },
+            hairline: '#E4DFD3',
           },
           boxShadow: {
-            card: 'none',
-            drawer: 'none',
-          },
-          maxWidth: {
-            console: '1280px',
-            drawer: '540px',
+            warm: '0 2px 8px rgba(28, 25, 23, 0.04)',
+            sheet: '0 6px 24px rgba(28, 25, 23, 0.06)',
           }
         }
       }
@@ -87,11 +47,19 @@
   </script>
 
   <style>
+    :root {
+      --bg-oat: #F6F3EC;
+      --bg-ivory: #FCFBF8;
+      --border-hairline: #E4DFD3;
+      --ink-espresso: #1C1917;
+      --ink-taupe: #686158;
+      --brand-forest: #16302B;
+    }
+
     body {
-      background-color: #F6F5F1;
-      color: #14211C;
+      background-color: var(--bg-oat);
+      color: var(--ink-espresso);
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      font-size: 14px;
     }
 
     .tabular-mono {
@@ -99,493 +67,319 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* Custom subtle scrollbars */
+    .editorial-serif {
+      font-family: 'Newsreader', Georgia, serif;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Warm subtle scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: transparent;
+      background: #F6F3EC;
     }
     ::-webkit-scrollbar-thumb {
-      background: #D2CEC2;
+      background: #D5CEBF;
       border-radius: 9999px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #737A73;
+      background: #B8AFA0;
     }
 
-    /* Slide-over drawer transitions */
-    .drawer-backdrop {
-      transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    @keyframes pulseLive {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.9); }
     }
-    .drawer-panel {
-      transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes pulseSubtle {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.45; }
-    }
-    .animate-pulse-subtle {
-      animation: pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-
-    /* ========== SOBREESCRITURA VISUAL (look financiero cálido) ========== */
-    .api-chip { display: none !important; }
-
-    /* KPI: ocultar cuadros de ícono decorativos */
-    .kpi-icon { display: none !important; }
-
-    /* Cifras de indicadores */
-    .kpi-figure {
-      font-size: 34px !important;
-      font-weight: 500 !important;
-      letter-spacing: -0.03em !important;
-      line-height: 1.1 !important;
-    }
-
-    /* Píldora de filtro activa (JS pone bg-white text-slate-900) */
-    .filter-pill {
-      min-height: 40px;
-      padding-left: 14px !important;
-      padding-right: 14px !important;
-      border-radius: 9999px !important;
-      display: inline-flex !important;
-      align-items: center;
-    }
-    .filter-pill.bg-white {
-      background-color: #14211C !important;
-      color: #FFFFFF !important;
-      box-shadow: none !important;
-    }
-    .filter-pill.bg-white .tabular-mono,
-    .filter-pill.bg-white span {
-      color: #D2CEC2 !important;
-    }
-
-    /* Badges tipo píldora generados por JS */
-    #ordersTableBody .rounded-full,
-    #drawerHeaderBadge .rounded-full,
-    #drawerBody .rounded-full {
-      padding: 5px 12px !important;
-    }
-
-    /* Botones PDF/XML / acciones de fila */
-    #ordersTableBody button.inline-flex {
-      min-height: 38px;
-      border-radius: 10px !important;
-      padding-left: 12px !important;
-      padding-right: 12px !important;
-    }
-
-    /* Importe de fila: jerarquía */
-    #ordersTableBody td.text-right .tabular-mono.text-xs {
-      font-size: 14px !important;
-      font-weight: 500 !important;
-    }
-
-    /* Drawer ancho y radio */
-    #drawerPanel {
-      max-width: 540px !important;
-      border-top-left-radius: 28px;
-      border-bottom-left-radius: 28px;
-      border-left-color: #E6E3DA !important;
-    }
-
-    #drawerBody { padding: 28px !important; }
-    #drawerFooter button {
-      min-height: 40px;
-      border-radius: 10px !important;
-    }
-
-    /* Total del resumen financiero en drawer */
-    #drawerBody .tabular-mono.text-base.font-bold {
-      font-size: 26px !important;
-      font-weight: 500 !important;
-      letter-spacing: -0.03em;
-    }
-
-    /* Toasts */
-    #toastContainer > div {
-      border-radius: 14px !important;
-      border-color: #E6E3DA !important;
-      box-shadow: none !important;
-    }
-
-    /* Tabla: hover filas */
-    #ordersTableBody tr:hover {
-      background-color: #FAF9F6 !important;
-    }
-
-    /* Encabezados de columna 12px, sin tracking agresivo */
-    thead th {
-      font-size: 12px !important;
-      font-weight: 500 !important;
-      letter-spacing: 0 !important;
-      text-transform: none !important;
-      color: #5E665F !important;
-      background: #FFFFFF !important;
-    }
-
-    /* Filas: padding vertical ~22px */
-    #ordersTableBody td {
-      padding-top: 22px !important;
-      padding-bottom: 22px !important;
-      font-size: 14px;
-    }
-
-    /* Buscador */
-    #searchInput {
-      min-height: 44px;
-      background-color: #FAF9F6 !important;
-      border-radius: 14px !important;
-      border-color: #E6E3DA !important;
-      font-size: 14px !important;
-      padding-left: 2.5rem !important;
-    }
-
-    /* Objetivos táctiles mínimos */
-    header button,
-    #demoCallout button,
-    .filter-pill {
-      min-height: 40px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-      }
-      .animate-ping,
-      .animate-pulse-subtle,
-      .animate-spin {
-        animation: none !important;
-      }
+    .pulse-dot {
+      animation: pulseLive 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-cobalt-100 selection:text-cobalt-900 bg-canvas text-ink-primary">
+<body class="min-h-screen flex flex-col selection:bg-[#16302B] selection:text-[#FCFBF8]">
 
-  <!-- TOP EXECUTIVE NAVIGATION BAR -->
-  <header class="sticky top-0 z-30 bg-white border-b border-slate-200">
-    <div class="max-w-console mx-auto px-8 sm:px-10 h-20 flex items-center justify-between gap-4">
-      <!-- Left: Brand & Channel Context -->
-      <div class="flex items-center gap-3.5 min-w-0">
-        <!-- Geometric Institutional Emblem -->
-        <div class="w-10 h-10 rounded-lg bg-ink-primary flex items-center justify-center shrink-0 border border-ink-primary">
-          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 7h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="19" cy="7" r="2" fill="#12805C" stroke="none"/>
-            <circle cx="5" cy="19" r="2" fill="#26338F" stroke="none"/>
-          </svg>
-        </div>
-
-        <div class="min-w-0">
-          <div class="flex items-center gap-2.5 flex-wrap">
-            <h1 class="text-[18px] font-semibold tracking-tight text-ink-primary truncate">
-              Consola de Tesorería · CoDi &amp; CFDI 4.0
-            </h1>
-            <span class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-50 text-ink-secondary border border-slate-200">
-              WhatsApp Business API · Banxico CoDi
-            </span>
-          </div>
-          <p class="text-[13px] text-ink-muted hidden sm:block">
-            Conciliación instantánea pey y emisión automatizada de comprobantes fiscales
-          </p>
-        </div>
-      </div>
-
-      <!-- Right: Telemetry & Connection Mode -->
-      <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
-        <!-- Connection Mode Pill -->
-        <div id="modeBadge" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/90 min-h-[40px]">
-          <span id="modeDot" class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span id="modeLabel">Verificando API...</span>
-        </div>
-
-        <!-- Live Polling Telemetry -->
-        <div class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full bg-slate-50 border border-slate-200 text-xs text-ink-secondary min-h-[40px]">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+  <!-- ===================================================================== -->
+  <!-- 1. EXECUTIVE HEADER & UNIFIED TREASURY RIBBON                         -->
+  <!-- ===================================================================== -->
+  <header class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-4">
+    <!-- Top Executive Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ECE7DC] border border-[#DFD8C8] text-[11px] font-semibold tracking-wider uppercase text-[#4A443D]">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#16302B]"></span>
+            TESORERÍA &amp; FACTURACIÓN INSTANTÁNEA
           </span>
-          <span class="font-medium text-ink-secondary">Telemetría activa · 2.5s</span>
-          <span class="text-slate-300">|</span>
-          <span id="lastUpdatedClock" class="tabular-mono text-[11px] text-ink-muted">--:--:--</span>
+
+          <!-- Live Backend / Demo Mode Pill -->
+          <div id="connectionPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[11px] font-medium text-[#B45309]">
+            <span id="connectionDot" class="w-1.5 h-1.5 rounded-full bg-[#B45309] pulse-dot"></span>
+            <span id="connectionLabel">Modo Demo Interactivo</span>
+          </div>
+
+          <span id="lastSyncText" class="tabular-mono text-[11px] text-[#686158] hidden sm:inline">
+            Sincronizado · --:--:--
+          </span>
         </div>
+
+        <h1 class="editorial-serif text-2xl sm:text-[30px] font-semibold tracking-tight text-[#1C1917] leading-tight">
+          Consola Operativa CoDi <span class="text-[#9A9083] font-normal">·</span> CFDI 4.0
+        </h1>
       </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <button
+          type="button"
+          onclick="pollOrders(true)"
+          class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#FCFBF8] hover:bg-[#F3EFE6] text-[#1C1917] border border-[#E4DFD3] shadow-warm text-xs font-medium transition cursor-pointer"
+          title="Forzar consulta a GET /api/ordenes"
+        >
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#686158]"></i>
+          <span class="hidden sm:inline">Actualizar</span>
+        </button>
+
+        <button
+          id="btnSimularCobro"
+          type="button"
+          onclick="simulateIncomingWhatsappOrder()"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#16302B] hover:bg-[#1F423B] text-[#FCFBF8] shadow-warm text-xs font-semibold tracking-wide transition cursor-pointer"
+        >
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>+ Simular Cobro WhatsApp</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Unified Horizontal Treasury Strip (Replaces 4 bulky separate cards) -->
+    <div class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E4DFD3]">
+
+      <!-- Metric 1: Volumen Liquidado (CoDi) -->
+      <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-[#686158]">Volumen Liquidado (CoDi)</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] text-[10px] font-semibold tracking-wide">
+            BANXICO SPEI
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="kpiVolumen" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#1C1917] leading-none">
+            $2,270.00
+          </span>
+          <span class="tabular-mono text-[11px] font-medium text-[#686158]">MXN</span>
+        </div>
+        <p id="kpiVolumenSub" class="text-[11px] text-[#686158] mt-1.5">
+          3 operaciones liquidadas al instante
+        </p>
+      </div>
+
+      <!-- Metric 2: Comisiones Ahorradas -->
+      <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-[#686158]">Comisiones Ahorradas</span>
+          <span class="tabular-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#F3EFE6] text-[#16302B] border border-[#E4DFD3]">
+            $0.00 COSTO CODI
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="kpiAhorro" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#15803D] leading-none">
+            $79.45
+          </span>
+          <span class="tabular-mono text-[11px] font-medium text-[#686158]">MXN</span>
+        </div>
+        <p class="text-[11px] text-[#686158] mt-1.5">
+          vs. tasa promedio tarjeta <span class="tabular-mono font-medium text-[#1C1917]">3.50%</span>
+        </p>
+      </div>
+
+      <!-- Metric 3: CFDIs 4.0 Timbrados -->
+      <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-[#686158]">CFDIs 4.0 Timbrados</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E8EFECE6] text-[#16302B] text-[10px] font-semibold">
+            SAT · PAC ACTIVO
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="kpiTimbrados" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#1C1917] leading-none">
+            1
+          </span>
+          <span class="text-xs text-[#686158]">comprobantes fiscales</span>
+        </div>
+        <p class="text-[11px] text-[#686158] mt-1.5">
+          Forma de pago <span class="tabular-mono font-medium text-[#1C1917]">03 · PUE</span> automática
+        </p>
+      </div>
+
+      <!-- Metric 4: Órdenes en Curso -->
+      <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-[#686158]">Órdenes en Curso</span>
+          <span id="kpiAlertBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] text-[10px] font-semibold">
+            2 REQUIEREN ACCIÓN
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="kpiEnCurso" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#1C1917] leading-none">
+            2
+          </span>
+          <span class="text-xs text-[#686158]">en seguimiento</span>
+        </div>
+        <p id="kpiEnCursoSub" class="text-[11px] text-[#686158] mt-1.5">
+          1 por liquidar · 1 atención fiscal
+        </p>
+      </div>
+
     </div>
   </header>
 
-  <!-- MAIN CONTENT WORKSPACE -->
-  <main class="flex-1 max-w-console w-full mx-auto px-8 sm:px-10 py-8 space-y-8 overflow-x-hidden">
+  <!-- ===================================================================== -->
+  <!-- 2. MAIN SPLIT-PANE WORKSTATION (62% LEFT LEDGER / 38% RIGHT INSPECTOR)-->
+  <!-- ===================================================================== -->
+  <main class="flex-1 w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+    <div class="flex flex-col lg:flex-row gap-5 items-start">
 
-    <!-- DEMO BANNER (Only visible when standalone mock fallback is active) -->
-    <div id="demoCallout" class="hidden bg-white border border-slate-200 rounded-2xl p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="flex items-start sm:items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-cobalt-50 border border-cobalt-200 text-cobalt-700 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>
-        </div>
-        <div>
-          <p class="text-xs sm:text-sm font-medium text-ink-primary">
-            Entorno de Demostración Interactivo Activo
-          </p>
-          <p class="text-xs text-ink-muted">
-            Endpoint <code class="tabular-mono text-[11px] bg-slate-50 px-1.5 py-0.5 rounded text-ink-secondary">/api/ordenes</code> no detectado localmente. Usa <span class="font-medium text-ink-secondary">Simular pago</span> en cualquier orden pendiente o crea una nueva solicitud para probar el flujo en vivo.
-          </p>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <button onclick="simulateNewWhatsAppOrder()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] text-xs font-medium bg-ink-primary hover:bg-slate-800 text-white transition min-h-[40px]">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          Nueva Orden WhatsApp
-        </button>
-        <button onclick="resetDemoState()" class="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-[10px] text-xs font-medium bg-white hover:bg-slate-50 text-ink-secondary border border-slate-200 transition min-h-[40px]" title="Restaurar órdenes iniciales">
-          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-        </button>
-      </div>
-    </div>
+      <!-- ================================================================= -->
+      <!-- LEFT PANE (62%): LIBRO MAYOR DE OPERACIONES                       -->
+      <!-- ================================================================= -->
+      <section aria-label="Libro Mayor de Operaciones" class="w-full lg:w-[62%] bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden flex flex-col">
 
-    <!-- EXECUTIVE KPI GRID: una sola tarjeta, 4 celdas -->
-    <section aria-label="Indicadores Clave de Tesorería" class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
-        <!-- KPI 1: Volumen Liquidado (CoDi) -->
-        <div class="p-6 sm:p-7 flex flex-col justify-between gap-3">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-normal text-ink-secondary">Volumen Liquidado (CoDi)</span>
-            <div class="kpi-icon w-8 h-8 rounded-lg bg-treasury-50 border border-treasury-200/70 text-treasury-600 flex items-center justify-center shrink-0">
-              <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
-            </div>
-          </div>
-          <div class="flex items-baseline gap-1.5">
-            <span id="kpiTotalCobrado" class="kpi-figure tabular-mono text-ink-primary">$0.01</span>
-            <span class="tabular-mono text-xs font-medium text-ink-muted">MXN</span>
-          </div>
-          <p class="text-[13px] text-ink-muted flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-            Liquidación SPEI/CoDi sin contracargos
-          </p>
-        </div>
-
-        <!-- KPI 2: Comprobantes CFDI 4.0 -->
-        <div class="p-6 sm:p-7 flex flex-col justify-between gap-3">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-normal text-ink-secondary">Comprobantes CFDI 4.0</span>
-            <div class="kpi-icon w-8 h-8 rounded-lg bg-cobalt-50 border border-cobalt-100 text-cobalt-700 flex items-center justify-center shrink-0">
-              <i data-lucide="file-check-2" class="w-4 h-4"></i>
-            </div>
-          </div>
-          <div class="flex items-baseline gap-2">
-            <span id="kpiFacturasTimbradas" class="kpi-figure tabular-mono text-ink-primary">1</span>
-            <span class="text-xs font-medium text-cobalt-700 bg-cobalt-50 px-1.5 py-0.5 rounded border border-cobalt-200">PUE · Forma 03</span>
-          </div>
-          <p class="text-[13px] text-ink-muted">
-            Timbrado automático vía PAC autorizado
-          </p>
-        </div>
-
-        <!-- KPI 3: Ahorro en Adquirencia -->
-        <div class="p-6 sm:p-7 flex flex-col justify-between gap-3">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-normal text-ink-secondary">Ahorro en Adquirencia</span>
-            <div class="kpi-icon w-8 h-8 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0">
-              <i data-lucide="piggy-bank" class="w-4 h-4"></i>
-            </div>
-          </div>
-          <div class="flex items-baseline gap-1.5">
-            <span id="kpiComisionesAhorradas" class="kpi-figure tabular-mono text-ink-primary">$0.00</span>
-            <span class="tabular-mono text-xs font-medium text-ink-muted">MXN</span>
-          </div>
-          <p class="text-[13px] text-ink-muted">
-            Tasa CoDi 0.00% vs. 3.50% + IVA tarjeta
-          </p>
-        </div>
-
-        <!-- KPI 4: Operaciones en Curso -->
-        <div class="p-6 sm:p-7 flex flex-col justify-between gap-3">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-normal text-ink-secondary">Operaciones en Curso</span>
-            <div class="kpi-icon w-8 h-8 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-700 flex items-center justify-center shrink-0">
-              <i data-lucide="clock" class="w-4 h-4"></i>
-            </div>
-          </div>
-          <div class="flex items-baseline gap-2">
-            <span id="kpiOrdenesPendientes" class="kpi-figure tabular-mono text-ink-primary">2</span>
-            <span class="text-[13px] text-ink-muted">órdenes activas</span>
-          </div>
-          <p class="text-[13px] text-ink-muted">
-            En espera de autorización o datos RFC
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- OPERATIONS LEDGER CARD -->
-    <section aria-label="Libro de Operaciones y Facturación" class="bg-white rounded-[24px] border border-slate-200 overflow-hidden">
-      <!-- Ledger Header & Controls -->
-      <div class="px-7 sm:px-8 py-7 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div>
-          <div class="flex items-center gap-2.5">
-            <h2 class="text-xl font-semibold text-ink-primary">Libro de Operaciones y Facturación</h2>
-            <span class="api-chip tabular-mono text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/70">
-              GET /api/ordenes
-            </span>
-          </div>
-          <p class="text-[13px] text-ink-muted mt-1">
-            Haz clic en cualquier operación para inspeccionar el desglose fiscal, trazabilidad Banxico y XML/PDF.
-          </p>
-        </div>
-
-        <!-- Filter Pills & Search -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <!-- Filter Tabs -->
-          <div class="inline-flex p-1 rounded-full bg-slate-50 border border-slate-200 overflow-x-auto" role="tablist">
-            <button type="button" data-filter="ALL" onclick="setFilter('ALL')" class="filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap bg-white text-slate-900 shadow-sm">
-              Todas <span id="countAll" class="tabular-mono ml-1 text-slate-500">3</span>
+        <!-- Ledger Header & Controls -->
+        <div class="p-4 sm:px-5 border-b border-[#E4DFD3] flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-[#FCFBF8]">
+          <!-- Segmented Warm Filter Pills -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" role="tablist">
+            <button
+              type="button"
+              data-filter="ALL"
+              onclick="setFilter('ALL')"
+              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
+            >
+              Todas <span id="countAll" class="tabular-mono text-[11px] opacity-80 ml-1">4</span>
             </button>
-            <button type="button" data-filter="PAGADO" onclick="setFilter('PAGADO')" class="filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap text-slate-600 hover:text-slate-900">
-              Liquidadas <span id="countPagado" class="tabular-mono ml-1 text-slate-400">1</span>
+            <button
+              type="button"
+              data-filter="LIQUIDADAS"
+              onclick="setFilter('LIQUIDADAS')"
+              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+            >
+              Liquidadas <span id="countLiquidadas" class="tabular-mono text-[11px] ml-1">3</span>
             </button>
-            <button type="button" data-filter="PENDIENTE" onclick="setFilter('PENDIENTE')" class="filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap text-slate-600 hover:text-slate-900">
-              Pendientes <span id="countPendiente" class="tabular-mono ml-1 text-slate-400">2</span>
+            <button
+              type="button"
+              data-filter="PENDIENTES"
+              onclick="setFilter('PENDIENTES')"
+              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+            >
+              Pendientes <span id="countPendientes" class="tabular-mono text-[11px] ml-1">1</span>
             </button>
-            <button type="button" data-filter="INCIDENCIA" onclick="setFilter('INCIDENCIA')" class="filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap text-slate-600 hover:text-slate-900">
-              Incidencia Fiscal <span id="countIncidencia" class="tabular-mono ml-1 text-slate-400">0</span>
+            <button
+              type="button"
+              data-filter="FISCAL"
+              onclick="setFilter('FISCAL')"
+              class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+            >
+              Atención Fiscal <span id="countFiscal" class="tabular-mono text-[11px] ml-1">1</span>
             </button>
           </div>
 
-          <!-- Search Input -->
-          <div class="relative">
-            <i data-lucide="search" class="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <!-- Quick Search Input -->
+          <div class="relative w-full xl:w-64">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-[#686158] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
             <input
               id="searchInput"
               type="text"
               oninput="handleSearch(this.value)"
-              placeholder="Buscar folio, teléfono, RFC..."
-              class="w-full sm:w-64 pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-[14px] text-ink-primary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-ink-primary/10 focus:border-slate-300 transition"
+              placeholder="Buscar orden, teléfono o RFC..."
+              class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#F6F3EC] border border-[#E4DFD3] text-xs text-[#1C1917] placeholder:text-[#8C8377] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#16302B] transition"
             />
           </div>
         </div>
-      </div>
 
-      <!-- Responsive Table Wrapper -->
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[880px]">
-          <thead>
-            <tr class="bg-white border-b border-slate-200 text-xs font-medium text-ink-secondary">
-              <th class="py-3 pl-8 pr-3">Folio</th>
-              <th class="py-3 px-3">Cliente / WhatsApp</th>
-              <th class="py-3 px-3">Conceptos</th>
-              <th class="py-3 px-3 text-right">Importe</th>
-              <th class="py-3 px-3">Liquidación CoDi</th>
-              <th class="py-3 px-3">Estatus CFDI 4.0</th>
-              <th class="py-3 pl-3 pr-8 text-right">Documentos / Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="ordersTableBody" class="divide-y divide-slate-200 text-sm">
-            <!-- Rows injected dynamically via JS -->
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop High-Density Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[#E4DFD3] bg-[#F7F4EC] text-[10px] tabular-mono uppercase tracking-wider text-[#686158]">
+                <th class="py-2.5 pl-5 pr-3 font-semibold">Orden &amp; Hora</th>
+                <th class="py-2.5 px-3 font-semibold">Cliente / WhatsApp</th>
+                <th class="py-2.5 px-3 font-semibold">Conceptos</th>
+                <th class="py-2.5 px-3 font-semibold text-right">Importe (MXN)</th>
+                <th class="py-2.5 px-3 font-semibold">Liquidación CoDi</th>
+                <th class="py-2.5 pl-3 pr-5 font-semibold text-right">Estatus CFDI 4.0</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerTableBody" class="divide-y divide-[#E4DFD3]/80 text-xs">
+              <!-- Rows dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
 
-      <!-- Empty State -->
-      <div id="emptyState" class="hidden py-14 px-4 text-center">
-        <div class="w-10 h-10 rounded-full bg-slate-100 text-ink-muted flex items-center justify-center mx-auto mb-3">
-          <i data-lucide="inbox" class="w-5 h-5"></i>
+        <!-- Empty Search State -->
+        <div id="ledgerEmptyState" class="hidden py-14 px-6 text-center">
+          <div class="w-10 h-10 rounded-full bg-[#F3EFE6] border border-[#E4DFD3] flex items-center justify-center mx-auto mb-3 text-[#686158]">
+            <i data-lucide="file-search" class="w-4 h-4"></i>
+          </div>
+          <p class="text-sm font-semibold text-[#1C1917]">No hay operaciones que coincidan</p>
+          <p class="text-xs text-[#686158] mt-1">Ajusta el filtro superior o limpia el término de búsqueda.</p>
         </div>
-        <p class="text-sm font-medium text-ink-primary">Sin operaciones que coincidan con el filtro</p>
-        <p class="text-xs text-ink-muted mt-1">Ajusta los criterios de búsqueda o cambia la pestaña de estado.</p>
-      </div>
 
-      <!-- Table Footer -->
-      <div class="px-8 py-4 bg-white border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px] text-ink-muted">
-        <div class="flex items-center gap-2">
-          <span>Mostrando <strong id="visibleCount" class="font-semibold text-ink-secondary tabular-mono">3</strong> operaciones</span>
-          <span>·</span>
-          <span>Riel de liquidación: <strong class="font-medium text-ink-secondary">Banxico CoDi (pey)</strong></span>
+        <!-- Ledger Footer -->
+        <div class="px-5 py-2.5 bg-[#F7F4EC] border-t border-[#E4DFD3] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#686158]">
+          <span class="inline-flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#16302B]"></i>
+            <span>Conciliación automática vía <strong class="font-semibold text-[#1C1917]">pey CoDi</strong> &amp; <strong class="font-semibold text-[#1C1917]">Facturapi</strong></span>
+          </span>
+          <span class="tabular-mono text-[10px]">POLLING: GET /api/ordenes · 2.5s</span>
         </div>
-        <div class="tabular-mono text-[11px] text-ink-muted">
-          CFDI 4.0 · Forma Pago 03 · Método PUE
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- RIGHT PANE (38%): INSPECTOR DE AUDITORÍA Y COMPROBANTE            -->
+      <!-- ================================================================= -->
+      <aside aria-label="Inspector de Auditoría y Comprobante" class="w-full lg:w-[38%] flex flex-col gap-4 lg:sticky lg:top-5">
+
+        <!-- Main Inspector Sheet -->
+        <div id="inspectorSheet" class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-sheet overflow-hidden">
+          <!-- Dynamically rendered based on selected order -->
         </div>
-      </div>
-    </section>
+
+        <!-- Bottom Compact Real-Time Webhook Log Drawer -->
+        <div class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden">
+          <div class="px-4 py-2.5 bg-[#F7F4EC] border-b border-[#E4DFD3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#15803D] pulse-dot"></span>
+              <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#1C1917]">
+                Bitácora de Webhooks en Vivo
+              </span>
+            </div>
+            <span class="tabular-mono text-[10px] text-[#686158]">ÚLTIMOS 3 EVENTOS</span>
+          </div>
+          <div id="webhookLogList" class="divide-y divide-[#E4DFD3]/70 bg-[#FCFBF8]">
+            <!-- Webhook events injected via JS -->
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
   </main>
 
-  <!-- SLIDE-OVER ORDER INSPECTOR DRAWER -->
-  <div id="drawerContainer" class="fixed inset-0 z-50 hidden" aria-labelledby="drawerTitle" role="dialog" aria-modal="true">
-    <!-- Backdrop -->
-    <div id="drawerBackdrop" onclick="closeDrawer()" class="drawer-backdrop fixed inset-0 bg-ink-primary/20 opacity-0"></div>
-
-    <!-- Right Slide-Over Panel -->
-    <div class="fixed inset-y-0 right-0 max-w-full flex pl-10 pointer-events-none">
-      <div id="drawerPanel" class="drawer-panel pointer-events-auto w-screen max-w-drawer bg-white border-l border-slate-200 flex flex-col translate-x-full">
-        <!-- Drawer Header -->
-        <div class="px-7 py-5 border-b border-slate-200 flex items-center justify-between gap-4 bg-white">
-          <div>
-            <div class="flex items-center gap-2.5">
-              <span id="drawerFolio" class="tabular-mono text-base font-semibold text-ink-primary">#3</span>
-              <span id="drawerHeaderBadge"></span>
-            </div>
-            <p id="drawerTimestamp" class="text-[13px] text-ink-muted mt-0.5">Registrada hace 2 minutos</p>
-          </div>
-          <button onclick="closeDrawer()" class="p-2 rounded-[10px] text-ink-muted hover:text-ink-primary hover:bg-slate-50 transition min-h-[40px] min-w-[40px] inline-flex items-center justify-center" aria-label="Cerrar panel">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-        </div>
-
-        <!-- Drawer Scrollable Body -->
-        <div id="drawerBody" class="flex-1 overflow-y-auto p-7 space-y-6">
-          <!-- Content populated dynamically -->
-        </div>
-
-        <!-- Drawer Footer Actions -->
-        <div id="drawerFooter" class="px-7 py-4 border-t border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3">
-          <!-- Actions populated dynamically -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATION CONTAINER -->
-  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+  <!-- TOAST NOTIFICATION CONTAINER (Non-blocking, zero alert()) -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
   <script>
     // =========================================================================
-    // 1. INITIAL MOCK DATA (Matches user's exact orders + executive metadata)
+    // 1. DEMO DATA & INITIAL WEBHOOK TELEMETRY
     // =========================================================================
-    const INITIAL_MOCK_ORDERS = [
+    const DEMO_ORDERS = [
       {
-        id: 3,
+        id: "ORD-8F2A1C",
         telefono: "whatsapp:+5215510076571",
         conceptos: [
           { quantity: 1, description: "Prueba CoDi", price: 0.01, importe: 0.01 }
         ],
         total: 0.01,
-        requiere_factura: 1,
-        datos_fiscales_ok: 0,
-        pago_estado: "PENDIENTE",
-        pey_transaction_id: null,
-        facturapi_id: null,
-        cfdi_uuid: null,
-        estado_chat: "ESPERANDO_DATOS_FISCALES",
-        error_fiscal: null,
-        rfc: null,
-        razon_social: null,
-        cp: null,
-        regimen: null,
-        uso_cfdi: "G03",
-        created_relative: "Hace 2 min"
-      },
-      {
-        id: 2,
-        telefono: "whatsapp:+5215522222222",
-        conceptos: [
-          { quantity: 2, description: "Cafe", price: 45.00, importe: 90.00 }
-        ],
-        total: 90.00,
         requiere_factura: 1,
         datos_fiscales_ok: 1,
         pago_estado: "PENDIENTE",
@@ -599,174 +393,217 @@
         cp: "86991",
         regimen: "601",
         uso_cfdi: "G03",
-        created_relative: "Hace 8 min"
+        creado_en: "Hoy · 20:11",
+        expires_in_sec: 540
       },
       {
-        id: 1,
-        telefono: "whatsapp:+5215511111111",
+        id: "ORD-7C19E0",
+        telefono: "whatsapp:+5215548192034",
         conceptos: [
-          { quantity: 1, description: "Prueba CoDi", price: 0.01, importe: 0.01 }
+          { quantity: 2, description: "Café de especialidad", price: 65.00, importe: 130.00 },
+          { quantity: 1, description: "Pan artesanal", price: 55.00, importe: 55.00 }
         ],
-        total: 0.01,
+        total: 185.00,
         requiere_factura: 1,
         datos_fiscales_ok: 1,
         pago_estado: "PAGADO",
-        pey_transaction_id: "tx_demo_1",
-        facturapi_id: "inv_demo_1",
-        cfdi_uuid: "8F4E2A19-6C3B-4D1E-9A72-1B5C8E4D0F31",
+        pey_transaction_id: "tx_banxico_904812",
+        facturapi_id: "inv_6734a19e0f21",
+        cfdi_uuid: "8D3A19F0-4C2B-4E91-9A08-7B12E4C901DF",
         estado_chat: "COMPLETADO",
         error_fiscal: null,
-        rfc: "EKU9003173C9",
-        razon_social: "ESCUELA KEMPER URGATE",
+        rfc: "URE180429TM6",
+        razon_social: "UNIVERSIDAD ROBOTICA ESPAÑOLA",
         cp: "86991",
         regimen: "601",
         uso_cfdi: "G03",
-        created_relative: "Hace 14 min"
+        creado_en: "Hoy · 19:54",
+        expires_in_sec: 0
+      },
+      {
+        id: "ORD-5B40D2",
+        telefono: "whatsapp:+5215583920145",
+        conceptos: [
+          { quantity: 2, description: "Servicio de soporte", price: 500.00, importe: 1000.00 },
+          { quantity: 1, description: "Configuración de red", price: 850.00, importe: 850.00 }
+        ],
+        total: 1850.00,
+        requiere_factura: 1,
+        datos_fiscales_ok: 1,
+        pago_estado: "PAGADO",
+        pey_transaction_id: "tx_banxico_883109",
+        facturapi_id: null,
+        cfdi_uuid: null,
+        estado_chat: "ERROR_FISCAL",
+        error_fiscal: "CFDI40147: El campo DomicilioFiscalReceptor (06600) no coincide con el código postal registrado ante el SAT para el RFC URE180429TM6.",
+        rfc: "URE180429TM6",
+        razon_social: "UNIVERSIDAD ROBOTICA ESPAÑOLA",
+        cp: "06600",
+        regimen: "601",
+        uso_cfdi: "G03",
+        creado_en: "Hoy · 19:41",
+        expires_in_sec: 0
+      },
+      {
+        id: "ORD-3A11B9",
+        telefono: "whatsapp:+5215529018473",
+        conceptos: [
+          { quantity: 3, description: "Pase diario coworking", price: 140.00, importe: 420.00 }
+        ],
+        total: 420.00,
+        requiere_factura: 0,
+        datos_fiscales_ok: 0,
+        pago_estado: "PAGADO",
+        pey_transaction_id: "tx_banxico_771204",
+        facturapi_id: null,
+        cfdi_uuid: null,
+        estado_chat: "COMPLETADO",
+        error_fiscal: null,
+        rfc: null,
+        razon_social: null,
+        cp: null,
+        regimen: null,
+        uso_cfdi: "G03",
+        creado_en: "Hoy · 19:18",
+        expires_in_sec: 0
       }
     ];
 
-    const REGIMENES_SAT = {
-      "601": "General de Ley Personas Morales",
-      "603": "Personas Morales con Fines no Lucrativos",
-      "605": "Sueldos y Salarios e Ingresos Asimilados",
-      "606": "Arrendamiento",
-      "612": "Personas Físicas con Actividades Empresariales y Profesionales",
-      "621": "Incorporación Fiscal",
-      "625": "Actividades Empresariales con ingresos a través de Plataformas Tecnológicas",
-      "626": "Régimen Simplificado de Confianza (RESICO)"
-    };
+    const INITIAL_WEBHOOK_LOGS = [
+      {
+        time: "20:11:04",
+        event: "codi.qr.created",
+        ref: "ORD-8F2A1C",
+        status: "200 OK",
+        tone: "amber"
+      },
+      {
+        time: "19:54:29",
+        event: "facturapi.invoice.stamped",
+        ref: "ORD-7C19E0",
+        status: "CFDI 4.0",
+        tone: "forest"
+      },
+      {
+        time: "19:54:26",
+        event: "codi.qr.payment_received",
+        ref: "ORD-7C19E0",
+        status: "$185.00",
+        tone: "emerald"
+      }
+    ];
 
     // =========================================================================
     // 2. APPLICATION STATE
     // =========================================================================
-    let state = {
+    const state = {
       isLiveApi: false,
-      apiChecked: false,
-      orders: JSON.parse(JSON.stringify(INITIAL_MOCK_ORDERS)),
+      orders: JSON.parse(JSON.stringify(DEMO_ORDERS)),
       kpis: null,
-      filter: "ALL",
-      search: "",
-      selectedOrderId: null,
-      simulatingIds: new Set()
+      activeFilter: "ALL",
+      searchQuery: "",
+      selectedId: "ORD-8F2A1C",
+      webhookLogs: JSON.parse(JSON.stringify(INITIAL_WEBHOOK_LOGS)),
+      busyOrderIds: new Set(),
+      qrImageFailedIds: new Set()
     };
 
     // =========================================================================
-    // 3. DATA NORMALIZATION & FORMATTING HELPERS
+    // 3. DATA NORMALIZATION & METRICS
     // =========================================================================
-    function relativeTime(iso) {
-      if (!iso) return "Reciente";
-      const t = Date.parse(iso);
-      if (Number.isNaN(t)) return "Reciente";
-      const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
-      if (mins < 1) return "Hace unos segundos";
-      if (mins < 60) return `Hace ${mins} min`;
-      const hrs = Math.round(mins / 60);
-      if (hrs < 24) return `Hace ${hrs} h`;
-      return `Hace ${Math.round(hrs / 24)} d`;
-    }
-
     function normalizeOrder(raw) {
-      // API FastAPI: conceptos_parseados [{cantidad, concepto, precio_unitario, subtotal}]
-      // o conceptos JSON string / array mock
-      let source = raw.conceptos_parseados;
-      if (!Array.isArray(source)) {
-        if (Array.isArray(raw.conceptos)) {
-          source = raw.conceptos;
-        } else if (typeof raw.conceptos === "string" && raw.conceptos.trim().startsWith("[")) {
-          try { source = JSON.parse(raw.conceptos); } catch (_) { source = []; }
-        } else {
-          source = [];
-        }
+      let conceptos = [];
+      if (Array.isArray(raw.conceptos)) {
+        conceptos = raw.conceptos;
+      } else if (typeof raw.conceptos_json === "string") {
+        try { conceptos = JSON.parse(raw.conceptos_json); } catch (_) { conceptos = []; }
+      } else if (typeof raw.conceptos === "string" && raw.conceptos.trim()) {
+        conceptos = [{
+          quantity: 1,
+          description: raw.conceptos,
+          price: Number(raw.total || 0),
+          importe: Number(raw.total || 0)
+        }];
       }
 
-      const conceptos = (source || []).map((c) => ({
-        quantity: Number(c.quantity ?? c.cantidad ?? 1),
-        description: c.description || c.concepto || "Concepto",
-        price: Number(c.price ?? c.precio_unitario ?? 0),
-        importe: Number(c.importe ?? c.subtotal ?? 0),
-      }));
-
-      const total = Number(
-        raw.total ?? raw.monto ?? conceptos.reduce((s, c) => s + Number(c.importe || 0), 0)
-      );
-
       return {
-        id: raw.id,
+        id: String(raw.id),
         telefono: raw.telefono || "whatsapp:+5215500000000",
         conceptos,
-        total,
-        requiere_factura: Number(raw.requiere_factura || 0),
-        datos_fiscales_ok: Number(raw.datos_fiscales_ok || 0),
-        pago_estado: (raw.pago_estado || "PENDIENTE").toUpperCase(),
+        total: Number(raw.total || 0),
+        requiere_factura: Number(raw.requiere_factura ?? 0),
+        datos_fiscales_ok: Number(raw.datos_fiscales_ok ?? 0),
+        pago_estado: String(raw.pago_estado || "PENDIENTE").toUpperCase(),
         pey_transaction_id: raw.pey_transaction_id || null,
         facturapi_id: raw.facturapi_id || null,
-        cfdi_uuid: raw.cfdi_uuid || raw.uuid || null,
+        cfdi_uuid: raw.cfdi_uuid || raw.uuid || raw.facturapi_id || null,
         estado_chat: raw.estado_chat || "",
         error_fiscal: raw.error_fiscal || null,
-        fiscal_badge: raw.fiscal_badge || null,
         rfc: raw.rfc || null,
         razon_social: raw.razon_social || null,
-        cp: raw.cp || raw.codigo_postal || null,
-        regimen: raw.regimen || null,
+        cp: raw.cp || null,
+        regimen: raw.regimen || "601",
         uso_cfdi: raw.uso_cfdi || "G03",
-        created_relative: raw.created_relative || relativeTime(raw.created_at || raw.updated_at)
+        creado_en: raw.creado_en || raw.created_at || "Reciente",
+        expires_in_sec: typeof raw.expires_in_sec === "number" ? raw.expires_in_sec : 540
       };
     }
 
-    function formatCurrency(val) {
-      const num = Number(val || 0);
-      return "$" + num.toLocaleString("es-MX", {
+    function calculateMetrics(orders) {
+      let totalCobrado = 0;
+      let paidCount = 0;
+      let facturasTimbradas = 0;
+      let pendientesPago = 0;
+      let atencionFiscal = 0;
+
+      for (const o of orders) {
+        if (o.pago_estado === "PAGADO") {
+          totalCobrado += o.total;
+          paidCount += 1;
+        } else {
+          pendientesPago += 1;
+        }
+
+        if (o.facturapi_id) {
+          facturasTimbradas += 1;
+        } else if (o.error_fiscal || (o.pago_estado === "PAGADO" && o.requiere_factura === 1)) {
+          atencionFiscal += 1;
+        }
+      }
+
+      return {
+        total_cobrado: totalCobrado,
+        paid_count: paidCount,
+        comisiones_ahorradas: totalCobrado * 0.035,
+        facturas_timbradas: facturasTimbradas,
+        pendientes_pago: pendientesPago,
+        atencion_fiscal: atencionFiscal,
+        en_curso: pendientesPago + atencionFiscal
+      };
+    }
+
+    function formatMXN(value) {
+      return "$" + Number(value || 0).toLocaleString("es-MX", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
     }
 
-    function formatFolio(id) {
-      const str = String(id);
-      return str.startsWith("#") ? str : `#${str}`;
+    function formatTimer(seconds) {
+      const s = Math.max(0, Math.floor(seconds || 0));
+      const mm = String(Math.floor(s / 60)).padStart(2, "0");
+      const ss = String(s % 60).padStart(2, "0");
+      return `${mm}:${ss}`;
     }
 
-    function formatPhone(rawPhone) {
-      const clean = String(rawPhone || "").replace(/^whatsapp:/i, "").trim();
-      // Format Mexican +5215510076571 -> +52 55 1007 6571
-      const mxMatch = clean.match(/^\+521?(\d{2})(\d{4})(\d{4})$/);
-      if (mxMatch) {
-        return `+52 ${mxMatch[1]} ${mxMatch[2]} ${mxMatch[3]}`;
-      }
-      return clean || "Sin teléfono";
-    }
-
-    function computeKpisFromOrders(orders) {
-      let totalCobrado = 0;
-      let facturasTimbradas = 0;
-      let ordenesPendientes = 0;
-
-      for (const o of orders) {
-        if (o.pago_estado === "PAGADO") {
-          totalCobrado += o.total;
-        } else if (o.pago_estado === "PENDIENTE") {
-          ordenesPendientes += 1;
-        }
-        if (o.facturapi_id) {
-          facturasTimbradas += 1;
-        }
-      }
-
-      // Traditional card acquiring fee ~3.5% + IVA (4.06%) vs 0% CoDi
-      const comisionesAhorradas = totalCobrado * 0.035;
-      return {
-        total_cobrado: totalCobrado,
-        facturas_timbradas: facturasTimbradas,
-        comisiones_ahorradas: comisionesAhorradas,
-        ordenes_pendientes: ordenesPendientes
-      };
+    function nowTimeStr() {
+      return new Date().toLocaleTimeString("es-MX", { hour12: false });
     }
 
     // =========================================================================
-    // 4. DUAL-MODE POLLING (LIVE FASTAPI <-> STANDALONE DEMO FALLBACK)
+    // 4. BACKEND POLLING (GET /api/ordenes every 2.5s) + DEMO FALLBACK
     // =========================================================================
-    async function fetchOrders() {
-      updateClock();
+    async function pollOrders(manual = false) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 1800);
@@ -779,141 +616,184 @@
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.ordenes || []);
 
-        const rawList = Array.isArray(data) ? data : (data.ordenes || []);
-        state.orders = rawList.map(normalizeOrder);
-        state.kpis = data.kpis || computeKpisFromOrders(state.orders);
-        setConnectionMode(true);
-      } catch (_err) {
-        // Backend unavailable -> preserve or initialize standalone interactive demo data
-        if (state.isLiveApi || !state.apiChecked) {
-          if (state.isLiveApi) {
-            state.orders = JSON.parse(JSON.stringify(INITIAL_MOCK_ORDERS));
+        const prevMap = new Map(state.orders.map(o => [o.id, o]));
+        state.orders = list.map(normalizeOrder);
+
+        // Detect live transitions to append to the Webhook Log
+        if (state.isLiveApi) {
+          for (const ord of state.orders) {
+            const old = prevMap.get(ord.id);
+            if (old && old.pago_estado !== "PAGADO" && ord.pago_estado === "PAGADO") {
+              pushWebhookLog("codi.qr.payment_received", ord.id, formatMXN(ord.total), "emerald");
+            }
+            if (old && !old.facturapi_id && ord.facturapi_id) {
+              pushWebhookLog("facturapi.invoice.stamped", ord.id, "CFDI 4.0", "forest");
+            }
           }
-          setConnectionMode(false);
         }
-        state.kpis = computeKpisFromOrders(state.orders);
+
+        const computed = calculateMetrics(state.orders);
+        state.kpis = {
+          ...computed,
+          ...(data.kpis || {})
+        };
+
+        setConnectionStatus(true);
+        if (manual) showToast("Sincronizado con GET /api/ordenes", "success");
+      } catch (_err) {
+        if (state.isLiveApi) {
+          state.orders = JSON.parse(JSON.stringify(DEMO_ORDERS));
+        }
+        setConnectionStatus(false);
+        state.kpis = calculateMetrics(state.orders);
+        if (manual) showToast("Backend local no detectado · Operando en Modo Demo Interactivo", "info");
       }
 
-      state.apiChecked = true;
+      // Preserve active selection or select first order
+      if (state.orders.length > 0) {
+        if (!state.orders.some(o => o.id === state.selectedId)) {
+          state.selectedId = state.orders[0].id;
+        }
+      } else {
+        state.selectedId = null;
+      }
+
+      document.getElementById("lastSyncText").textContent = `Sincronizado · ${nowTimeStr()}`;
       renderAll();
     }
 
-    function setConnectionMode(isLive) {
-      state.isLiveApi = isLive;
-      const badge = document.getElementById("modeBadge");
-      const dot = document.getElementById("modeDot");
-      const label = document.getElementById("modeLabel");
-      const demoCallout = document.getElementById("demoCallout");
+    function setConnectionStatus(live) {
+      state.isLiveApi = live;
+      const pill = document.getElementById("connectionPill");
+      const dot = document.getElementById("connectionDot");
+      const label = document.getElementById("connectionLabel");
 
-      if (isLive) {
-        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-treasury-50 text-treasury-700 border border-treasury-200";
-        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
-        label.textContent = "Conectado a API";
-        demoCallout.classList.add("hidden");
+      if (live) {
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DCFCE7] border border-[#BBF7D0] text-[11px] font-semibold text-[#15803D]";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-[#15803D] pulse-dot";
+        label.textContent = "Conectado a FastAPI";
       } else {
-        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200";
-        dot.className = "w-1.5 h-1.5 rounded-full bg-amber-500";
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[11px] font-semibold text-[#B45309]";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-[#B45309] pulse-dot";
         label.textContent = "Modo Demo Interactivo";
-        demoCallout.classList.remove("hidden");
       }
     }
 
-    function updateClock() {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString("es-MX", { hour12: false });
-      const el = document.getElementById("lastUpdatedClock");
-      if (el) el.textContent = timeStr;
-    }
+    // Live QR expiration ticker every second
+    setInterval(() => {
+      let needsTimerUpdate = false;
+      for (const o of state.orders) {
+        if (o.pago_estado === "PENDIENTE" && o.expires_in_sec > 0) {
+          o.expires_in_sec -= 1;
+          if (o.id === state.selectedId) needsTimerUpdate = true;
+        }
+      }
+      if (needsTimerUpdate) {
+        const el = document.getElementById("qrCountdownTimer");
+        const selected = state.orders.find(o => o.id === state.selectedId);
+        if (el && selected) el.textContent = formatTimer(selected.expires_in_sec);
+      }
+    }, 1000);
 
     // =========================================================================
     // 5. FILTERING & SEARCH
     // =========================================================================
     function setFilter(filterKey) {
-      state.filter = filterKey;
+      state.activeFilter = filterKey;
       document.querySelectorAll(".filter-pill").forEach(btn => {
         const active = btn.getAttribute("data-filter") === filterKey;
-        if (active) {
-          btn.className = "filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap bg-white text-slate-900 shadow-sm";
-        } else {
-          btn.className = "filter-pill px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap text-slate-600 hover:text-slate-900";
-        }
+        btn.className = active
+          ? "filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
+          : "filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer";
       });
-      renderTable();
+      renderLedger();
     }
 
     function handleSearch(val) {
-      state.search = val.trim().toLowerCase();
-      renderTable();
+      state.searchQuery = val.trim().toLowerCase();
+      renderLedger();
     }
 
     function getFilteredOrders() {
       return state.orders.filter(o => {
-        // Tab filter
-        if (state.filter === "PAGADO" && o.pago_estado !== "PAGADO") return false;
-        if (state.filter === "PENDIENTE" && o.pago_estado !== "PENDIENTE") return false;
-        if (state.filter === "INCIDENCIA" && !hasFiscalIncident(o)) return false;
+        if (state.activeFilter === "LIQUIDADAS" && o.pago_estado !== "PAGADO") return false;
+        if (state.activeFilter === "PENDIENTES" && o.pago_estado !== "PENDIENTE") return false;
+        if (state.activeFilter === "FISCAL") {
+          const needsFiscalAttention = Boolean(o.error_fiscal) || (o.pago_estado === "PAGADO" && o.requiere_factura === 1 && !o.facturapi_id);
+          if (!needsFiscalAttention) return false;
+        }
 
-        // Search query
-        if (state.search) {
-          const conceptosText = o.conceptos.map(c => c.description).join(" ").toLowerCase();
-          const haystack = [
-            formatFolio(o.id),
-            String(o.id),
+        if (state.searchQuery) {
+          const conceptsText = o.conceptos.map(c => c.description).join(" ").toLowerCase();
+          const searchable = [
+            o.id,
             o.telefono,
-            formatPhone(o.telefono),
             o.rfc || "",
             o.razon_social || "",
             o.pey_transaction_id || "",
-            conceptosText
+            conceptsText
           ].join(" ").toLowerCase();
-
-          if (!haystack.includes(state.search)) return false;
+          if (!searchable.includes(state.searchQuery)) return false;
         }
         return true;
       });
     }
 
-    function hasFiscalIncident(o) {
-      return Boolean(o.error_fiscal) || (o.pago_estado === "PAGADO" && o.requiere_factura === 1 && !o.facturapi_id);
+    function selectOrder(id) {
+      state.selectedId = id;
+      renderLedger();
+      renderInspector();
     }
 
     // =========================================================================
-    // 6. RENDERING: KPIs, TABLE & SLIDE-OVER DRAWER
+    // 6. RENDERING: TREASURY RIBBON, LEDGER TABLE, INSPECTOR & LOGS
     // =========================================================================
     function renderAll() {
-      renderKpis();
-      renderFilterCounts();
-      renderTable();
-      if (state.selectedOrderId !== null) {
-        const current = state.orders.find(o => String(o.id) === String(state.selectedOrderId));
-        if (current) renderDrawerContent(current);
+      renderTreasuryRibbon();
+      renderLedger();
+      renderInspector();
+      renderWebhookLogs();
+    }
+
+    function renderTreasuryRibbon() {
+      const m = state.kpis || calculateMetrics(state.orders);
+      const computed = calculateMetrics(state.orders);
+
+      document.getElementById("kpiVolumen").textContent = formatMXN(m.total_cobrado);
+      document.getElementById("kpiVolumenSub").textContent = `${computed.paid_count} ${computed.paid_count === 1 ? "operación liquidada" : "operaciones liquidadas"} al instante`;
+      document.getElementById("kpiAhorro").textContent = formatMXN(m.comisiones_ahorradas);
+      document.getElementById("kpiTimbrados").textContent = String(m.facturas_timbradas);
+
+      const enCurso = m.ordenes_pendientes !== undefined ? m.ordenes_pendientes : computed.en_curso;
+      document.getElementById("kpiEnCurso").textContent = String(enCurso);
+
+      const alertBadge = document.getElementById("kpiAlertBadge");
+      if (enCurso > 0) {
+        alertBadge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] text-[10px] font-semibold";
+        alertBadge.textContent = `${enCurso} EN SEGUIMIENTO`;
+      } else {
+        alertBadge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] text-[10px] font-semibold";
+        alertBadge.textContent = "AL DÍA";
       }
-    }
 
-    function renderKpis() {
-      const k = state.kpis || computeKpisFromOrders(state.orders);
-      document.getElementById("kpiTotalCobrado").textContent = formatCurrency(k.total_cobrado);
-      document.getElementById("kpiFacturasTimbradas").textContent = String(k.facturas_timbradas ?? 0);
-      document.getElementById("kpiComisionesAhorradas").textContent = formatCurrency(k.comisiones_ahorradas);
-      document.getElementById("kpiOrdenesPendientes").textContent = String(k.ordenes_pendientes ?? 0);
-    }
+      document.getElementById("kpiEnCursoSub").textContent =
+        `${computed.pendientes_pago} por liquidar · ${computed.atencion_fiscal} atención fiscal`;
 
-    function renderFilterCounts() {
+      // Update Filter Counters
       document.getElementById("countAll").textContent = state.orders.length;
-      document.getElementById("countPagado").textContent = state.orders.filter(o => o.pago_estado === "PAGADO").length;
-      document.getElementById("countPendiente").textContent = state.orders.filter(o => o.pago_estado === "PENDIENTE").length;
-      document.getElementById("countIncidencia").textContent = state.orders.filter(hasFiscalIncident).length;
+      document.getElementById("countLiquidadas").textContent = computed.paid_count;
+      document.getElementById("countPendientes").textContent = computed.pendientes_pago;
+      document.getElementById("countFiscal").textContent = computed.atencion_fiscal;
     }
 
-    function renderTable() {
-      const tbody = document.getElementById("ordersTableBody");
-      const emptyState = document.getElementById("emptyState");
-      const filtered = getFilteredOrders();
+    function renderLedger() {
+      const tbody = document.getElementById("ledgerTableBody");
+      const emptyState = document.getElementById("ledgerEmptyState");
+      const rows = getFilteredOrders();
 
-      document.getElementById("visibleCount").textContent = filtered.length;
-
-      if (filtered.length === 0) {
+      if (rows.length === 0) {
         tbody.innerHTML = "";
         emptyState.classList.remove("hidden");
         lucide.createIcons();
@@ -922,103 +802,82 @@
 
       emptyState.classList.add("hidden");
 
-      tbody.innerHTML = filtered.map(order => {
-        const isSimulating = state.simulatingIds.has(String(order.id));
-        const folio = formatFolio(order.id);
-        const phoneFormatted = formatPhone(order.telefono);
+      tbody.innerHTML = rows.map(order => {
+        const isSelected = order.id === state.selectedId;
+        const phoneClean = order.telefono.replace(/^whatsapp:/i, "");
+        const conceptSummary = order.conceptos
+          .map(c => `${c.quantity}× ${c.description}`)
+          .join(", ") || "Cobro general";
 
-        // Concepts summary
-        const conceptsHtml = order.conceptos.length > 0
-          ? order.conceptos.map(c => `
-              <div class="text-xs text-slate-800 font-medium truncate max-w-[210px]">
-                <span class="tabular-mono text-slate-500">${c.quantity}×</span> ${escapeHtml(c.description)}
-              </div>
-            `).join("")
-          : `<span class="text-xs text-slate-400">Sin conceptos</span>`;
-
-        // Fiscal subtitle under phone
-        const fiscalSubHtml = order.rfc
-          ? `<div class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500 truncate max-w-[230px]">
-               <span class="tabular-mono font-medium text-slate-700">${escapeHtml(order.rfc)}</span>
-               <span>·</span>
-               <span class="truncate">${escapeHtml(order.razon_social || "")}</span>
-             </div>`
-          : `<div class="mt-0.5 text-[11px] text-slate-400">
-               ${order.requiere_factura === 1 ? "Sin perfil fiscal registrado" : "Operación público en general"}
-             </div>`;
-
-        // Payment Badge
+        // CoDi Settlement Badge
         const paymentHtml = order.pago_estado === "PAGADO"
-          ? `<div class="inline-flex flex-col items-start gap-1">
-               <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-treasury-50 text-treasury-700 border border-treasury-200">
-                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                 Liquidado
-               </span>
-               ${order.pey_transaction_id ? `
-                 <button type="button" onclick="event.stopPropagation(); copyText('${escapeHtml(order.pey_transaction_id)}', 'Referencia Banxico copiada')"
-                   class="group inline-flex items-center gap-1 tabular-mono text-[11px] text-slate-500 hover:text-slate-800 bg-slate-100/80 hover:bg-slate-200/70 px-1.5 py-0.5 rounded transition"
-                   title="Copiar referencia Banxico">
-                   <span>${escapeHtml(order.pey_transaction_id)}</span>
-                   <i data-lucide="copy" class="w-2.5 h-2.5 text-slate-400 group-hover:text-slate-700"></i>
-                 </button>
-               ` : ""}
-             </div>`
-          : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/90">
-               <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse-subtle"></span>
-               Pendiente
-             </span>`;
+          ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DCFCE7] text-[#15803D] font-semibold text-[11px]">
+               <span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>
+               <span>Liquidado</span>
+             </div>
+             ${order.pey_transaction_id ? `<div class="tabular-mono text-[10px] text-[#686158] mt-1 truncate max-w-[130px]">${escapeHtml(order.pey_transaction_id)}</div>` : ""}`
+          : `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] font-semibold text-[11px]">
+               <span class="w-1.5 h-1.5 rounded-full bg-[#B45309]"></span>
+               <span>Pendiente QR</span>
+             </div>
+             <div class="tabular-mono text-[10px] text-[#686158] mt-1">Expira ${formatTimer(order.expires_in_sec)}</div>`;
 
-        // Fiscal CFDI 4.0 Badge
-        const cfdiBadgeHtml = getCfdiStatusBadge(order);
-
-        // Actions / Documents Column
-        const actionsHtml = getRowActionsHtml(order, isSimulating);
+        // CFDI 4.0 Status Badge
+        const fiscalHtml = getLedgerFiscalBadge(order);
 
         return `
-          <tr onclick="openDrawer('${escapeHtml(String(order.id))}')" class="group hover:bg-slate-50/90 transition-colors cursor-pointer">
-            <td class="py-3.5 pl-5 pr-3 align-top">
-              <div class="tabular-mono text-xs font-semibold text-slate-900 group-hover:text-cobalt-700 transition-colors">
-                ${escapeHtml(folio)}
+          <tr
+            onclick="selectOrder('${escapeHtml(order.id)}')"
+            class="transition-colors cursor-pointer ${
+              isSelected
+                ? "bg-[#F7F4EC] border-l-4 border-l-[#16302B]"
+                : "bg-[#FCFBF8] hover:bg-[#F3EFE6] border-l-4 border-l-transparent"
+            }"
+          >
+            <!-- Orden & Hora -->
+            <td class="py-3.5 pl-4 pr-3 align-top whitespace-nowrap">
+              <div class="tabular-mono font-semibold text-xs ${isSelected ? "text-[#16302B]" : "text-[#1C1917]"}">
+                ${escapeHtml(order.id)}
               </div>
-              <div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(order.created_relative)}</div>
+              <div class="text-[11px] text-[#686158] mt-0.5">${escapeHtml(order.creado_en)}</div>
             </td>
 
+            <!-- Cliente / WhatsApp -->
             <td class="py-3.5 px-3 align-top">
-              <div class="flex items-center gap-1.5">
-                <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-emerald-50 text-emerald-600 border border-emerald-200/70 shrink-0" title="WhatsApp Business">
-                  <i data-lucide="message-circle" class="w-2.5 h-2.5"></i>
-                </span>
-                <span class="tabular-mono text-xs font-medium text-slate-800">${escapeHtml(phoneFormatted)}</span>
+              <div class="tabular-mono text-xs text-[#1C1917] font-medium whitespace-nowrap">
+                ${escapeHtml(phoneClean)}
               </div>
-              ${fiscalSubHtml}
+              <div class="tabular-mono text-[10px] text-[#686158] mt-0.5 truncate max-w-[170px]">
+                ${order.rfc ? `${escapeHtml(order.rfc)} · CP ${escapeHtml(order.cp || "—")}` : "Sin RFC asociado"}
+              </div>
             </td>
 
+            <!-- Conceptos -->
             <td class="py-3.5 px-3 align-top">
-              ${conceptsHtml}
+              <div class="text-xs font-medium text-[#1C1917] line-clamp-1 max-w-[200px]" title="${escapeHtml(conceptSummary)}">
+                ${escapeHtml(conceptSummary)}
+              </div>
+              <div class="text-[11px] text-[#686158] mt-0.5">
+                ${order.conceptos.length} ${order.conceptos.length === 1 ? "partida" : "partidas"}
+              </div>
             </td>
 
+            <!-- Importe MXN -->
             <td class="py-3.5 px-3 align-top text-right whitespace-nowrap">
-              <span class="tabular-mono text-xs font-semibold text-slate-900">${formatCurrency(order.total)}</span>
-              <span class="tabular-mono text-[10px] text-slate-400 ml-0.5">MXN</span>
+              <span class="tabular-mono text-xs font-bold text-[#1C1917]">
+                ${formatMXN(order.total)}
+              </span>
+              <span class="block tabular-mono text-[10px] text-[#15803D] mt-0.5">$0.00 fee</span>
             </td>
 
+            <!-- Liquidación CoDi -->
             <td class="py-3.5 px-3 align-top whitespace-nowrap">
               ${paymentHtml}
             </td>
 
-            <td class="py-3.5 px-3 align-top whitespace-nowrap">
-              ${cfdiBadgeHtml}
-            </td>
-
-            <td class="py-3.5 pl-3 pr-5 align-top text-right whitespace-nowrap" onclick="event.stopPropagation()">
-              <div class="inline-flex items-center justify-end gap-1.5">
-                ${actionsHtml}
-                <button type="button" onclick="openDrawer('${escapeHtml(String(order.id))}')"
-                  class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition"
-                  title="Inspeccionar operación">
-                  <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                </button>
-              </div>
+            <!-- Estatus CFDI 4.0 -->
+            <td class="py-3.5 pl-3 pr-5 align-top text-right whitespace-nowrap">
+              ${fiscalHtml}
             </td>
           </tr>
         `;
@@ -1027,479 +886,605 @@
       lucide.createIcons();
     }
 
-    function getCfdiStatusBadge(order) {
+    function getLedgerFiscalBadge(order) {
       if (order.facturapi_id) {
-        const shortUuid = order.cfdi_uuid ? order.cfdi_uuid.slice(0, 8) + "…" : "CFDI 4.0";
         return `
-          <div class="inline-flex flex-col items-start gap-1">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-cobalt-50 text-cobalt-800 border border-cobalt-200/80">
-              <i data-lucide="shield-check" class="w-3 h-3 text-cobalt-600"></i>
-              Timbrado 4.0
-            </span>
-            <span class="tabular-mono text-[10px] text-slate-400 pl-0.5">UUID ${escapeHtml(shortUuid)}</span>
-          </div>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E8EFECE6] text-[#16302B] border border-[#16302B]/20 font-semibold text-[11px]">
+            <i data-lucide="badge-check" class="w-3 h-3 text-[#16302B]"></i>
+            <span>CFDI Timbrado</span>
+          </span>
+          <div class="tabular-mono text-[10px] text-[#686158] mt-1">PDF · XML listos</div>
         `;
       }
-
       if (order.error_fiscal) {
         return `
-          <div class="inline-flex flex-col items-start gap-1">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200" title="${escapeHtml(order.error_fiscal)}">
-              <i data-lucide="alert-circle" class="w-3 h-3"></i>
-              Error SAT
-            </span>
-            <span class="text-[10px] text-rose-600 max-w-[140px] truncate">${escapeHtml(order.error_fiscal)}</span>
-          </div>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFEDD5] text-[#C2410C] border border-[#FDBA74] font-semibold text-[11px]">
+            <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+            <span>Error Fiscal</span>
+          </span>
+          <div class="text-[10px] font-medium text-[#C2410C] mt-1">Requiere reintento</div>
         `;
       }
-
       if (order.requiere_factura === 0) {
         return `
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-            Solo Recibo
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#686158] text-[11px] font-medium">
+            Sin factura
           </span>
+          <div class="text-[10px] text-[#8C8377] mt-1">Solo recibo</div>
         `;
       }
-
       if (order.datos_fiscales_ok === 0) {
         return `
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50/80 text-amber-800 border border-amber-200/80">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            Datos Pendientes
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] text-[11px] font-medium">
+            Falta RFC
           </span>
+          <div class="text-[10px] text-[#686158] mt-1">Esperando en chat</div>
         `;
       }
-
       return `
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-          <i data-lucide="file-clock" class="w-3 h-3 text-slate-500"></i>
-          Listo para timbrar
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#16302B] border border-[#E4DFD3] text-[11px] font-semibold">
+          RFC Validado
         </span>
+        <div class="text-[10px] text-[#686158] mt-1">Timbra al pagar</div>
       `;
-    }
-
-    function getRowActionsHtml(order, isSimulating) {
-      // 1. Stamped invoice -> PDF & XML buttons
-      if (order.facturapi_id) {
-        return `
-          <button type="button" onclick="downloadDocument('${escapeHtml(String(order.id))}', 'pdf')"
-            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition"
-            title="Descargar Representación Impresa PDF">
-            <i data-lucide="file-text" class="w-3 h-3 text-rose-600"></i>
-            PDF
-          </button>
-          <button type="button" onclick="downloadDocument('${escapeHtml(String(order.id))}', 'xml')"
-            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition"
-            title="Descargar Comprobante Fiscal XML">
-            <i data-lucide="file-code-2" class="w-3 h-3 text-cobalt-600"></i>
-            XML
-          </button>
-        `;
-      }
-
-      // 2. Paid + requires invoice + not stamped -> Retry Stamping button
-      if (order.pago_estado === "PAGADO" && order.requiere_factura === 1 && !order.facturapi_id) {
-        return `
-          <button type="button" onclick="retryStamping('${escapeHtml(String(order.id))}')"
-            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-cobalt-600 hover:bg-cobalt-800 text-white transition shadow-2xs">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-            Reintentar
-          </button>
-        `;
-      }
-
-      // 3. Pending in Demo Mode -> Simulate Webhook Payment button
-      if (!state.isLiveApi && order.pago_estado === "PENDIENTE") {
-        if (isSimulating) {
-          return `
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>
-              Procesando...
-            </span>
-          `;
-        }
-        return `
-          <button type="button" onclick="simulateWebhookPayment('${escapeHtml(String(order.id))}')"
-            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 transition">
-            <i data-lucide="zap" class="w-3 h-3 text-emerald-600"></i>
-            Simular pago
-          </button>
-        `;
-      }
-
-      return `<span class="text-xs text-slate-300 px-2">—</span>`;
     }
 
     // =========================================================================
-    // 7. SLIDE-OVER ORDER INSPECTOR DRAWER
+    // 7. RIGHT PANE: AUDIT & CFDI 4.0 INSPECTOR
     // =========================================================================
-    function openDrawer(orderId) {
-      const order = state.orders.find(o => String(o.id) === String(orderId));
-      if (!order) return;
+    function renderInspector() {
+      const container = document.getElementById("inspectorSheet");
+      const order = state.orders.find(o => o.id === state.selectedId);
 
-      state.selectedOrderId = order.id;
-      renderDrawerContent(order);
-
-      const container = document.getElementById("drawerContainer");
-      const backdrop = document.getElementById("drawerBackdrop");
-      const panel = document.getElementById("drawerPanel");
-
-      container.classList.remove("hidden");
-      requestAnimationFrame(() => {
-        backdrop.classList.remove("opacity-0");
-        panel.classList.remove("translate-x-full");
-      });
-    }
-
-    function closeDrawer() {
-      state.selectedOrderId = null;
-      const container = document.getElementById("drawerContainer");
-      const backdrop = document.getElementById("drawerBackdrop");
-      const panel = document.getElementById("drawerPanel");
-
-      backdrop.classList.add("opacity-0");
-      panel.classList.add("translate-x-full");
-      setTimeout(() => {
-        container.classList.add("hidden");
-      }, 250);
-    }
-
-    function renderDrawerContent(order) {
-      document.getElementById("drawerFolio").textContent = `Operación ${formatFolio(order.id)}`;
-      document.getElementById("drawerTimestamp").textContent = `${formatPhone(order.telefono)} · ${order.created_relative}`;
-
-      // Header badge
-      document.getElementById("drawerHeaderBadge").innerHTML = order.pago_estado === "PAGADO"
-        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-treasury-50 text-treasury-700 border border-treasury-200">Liquidado CoDi</span>`
-        : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">Pendiente de Pago</span>`;
-
-      // Tax breakdown (assuming prices include 16% VAT as configured in Facturapi tax_included: true)
-      const total = order.total;
-      const subtotal = total / 1.16;
-      const iva = total - subtotal;
-
-      // Stepper state
-      const step1Done = true;
-      const step2Done = true;
-      const step3Done = order.pago_estado === "PAGADO";
-      const step4Done = Boolean(order.facturapi_id);
-
-      const bodyHtml = `
-        <!-- 1. Financial Breakdown Card -->
-        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Resumen Financiero</span>
-            <span class="tabular-mono text-[11px] text-slate-500">Moneda: MXN</span>
+      if (!order) {
+        container.innerHTML = `
+          <div class="p-10 text-center">
+            <p class="text-sm font-medium text-[#686158]">Selecciona una operación en el libro mayor para auditarla.</p>
           </div>
-
-          <div class="space-y-1.5 border-b border-slate-200/80 pb-3">
-            ${order.conceptos.map(c => `
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-slate-700"><span class="tabular-mono text-slate-500">${c.quantity}×</span> ${escapeHtml(c.description)}</span>
-                <span class="tabular-mono font-medium text-slate-900">${formatCurrency(c.importe ?? (c.quantity * c.price))}</span>
-              </div>
-            `).join("")}
-          </div>
-
-          <div class="space-y-1 text-xs">
-            <div class="flex justify-between text-slate-500">
-              <span>Subtotal (Base gravable)</span>
-              <span class="tabular-mono">${formatCurrency(subtotal)}</span>
-            </div>
-            <div class="flex justify-between text-slate-500">
-              <span>IVA Trasladado (16%)</span>
-              <span class="tabular-mono">${formatCurrency(iva)}</span>
-            </div>
-            <div class="flex justify-between items-baseline pt-2 border-t border-slate-200/80">
-              <span class="font-semibold text-slate-900">Total Operación</span>
-              <span class="tabular-mono text-base font-bold text-slate-900">${formatCurrency(total)} <span class="text-xs font-normal text-slate-500">MXN</span></span>
-            </div>
-          </div>
-
-          ${order.pey_transaction_id ? `
-            <div class="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
-              <span class="text-slate-500">Referencia Banxico (pey):</span>
-              <button type="button" onclick="copyText('${escapeHtml(order.pey_transaction_id)}', 'Referencia Banxico copiada')"
-                class="inline-flex items-center gap-1.5 tabular-mono font-medium text-slate-800 bg-white px-2 py-1 rounded border border-slate-200 hover:border-slate-300">
-                ${escapeHtml(order.pey_transaction_id)}
-                <i data-lucide="copy" class="w-3 h-3 text-slate-400"></i>
-              </button>
-            </div>
-          ` : ""}
-        </div>
-
-        <!-- 2. Visual Stepper Timeline -->
-        <div>
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Trazabilidad de Liquidación y Timbrado</h3>
-          <ol class="relative border-l border-slate-200 ml-2.5 space-y-4">
-            <!-- Step 1 -->
-            <li class="pl-5 relative">
-              <span class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white">
-                <i data-lucide="check" class="w-2.5 h-2.5"></i>
-              </span>
-              <p class="text-xs font-semibold text-slate-900">1. Solicitud recibida por WhatsApp</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">Conceptos parseados y orden ${escapeHtml(formatFolio(order.id))} registrada en ledger.</p>
-            </li>
-
-            <!-- Step 2 -->
-            <li class="pl-5 relative">
-              <span class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white">
-                <i data-lucide="check" class="w-2.5 h-2.5"></i>
-              </span>
-              <p class="text-xs font-semibold text-slate-900">2. QR CoDi dinámico generado vía pey</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">Mensaje de cobro enviado a <span class="tabular-mono">${escapeHtml(formatPhone(order.telefono))}</span>.</p>
-            </li>
-
-            <!-- Step 3 -->
-            <li class="pl-5 relative">
-              ${step3Done ? `
-                <span class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white">
-                  <i data-lucide="check" class="w-2.5 h-2.5"></i>
-                </span>
-                <p class="text-xs font-semibold text-slate-900">3. Confirmación Banxico CoDi</p>
-                <p class="text-[11px] text-emerald-700 mt-0.5">Webhook <code class="tabular-mono">codi.qr.payment_received</code> liquidado al instante.</p>
-              ` : `
-                <span class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-amber-100 border-2 border-amber-500 ring-4 ring-white"></span>
-                <p class="text-xs font-semibold text-slate-800">3. Confirmación Banxico CoDi</p>
-                <p class="text-[11px] text-amber-700 mt-0.5">Esperando autorización biométrica en la app bancaria del cliente.</p>
-              `}
-            </li>
-
-            <!-- Step 4 -->
-            <li class="pl-5 relative">
-              ${step4Done ? `
-                <span class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-cobalt-600 text-white flex items-center justify-center ring-4 ring-white">
-                  <i data-lucide="check" class="w-2.5 h-2.5"></i>
-                </span>
-                <p class="text-xs font-semibold text-slate-900">4. Timbrado CFDI 4.0 automático</p>
-                <p class="text-[11px] text-cobalt-700 mt-0.5">UUID Fiscal: <span class="tabular-mono">${escapeHtml(order.cfdi_uuid || order.facturapi_id)}</span></p>
-              ` : `
-                <span class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-slate-100 border-2 border-slate-300 ring-4 ring-white"></span>
-                <p class="text-xs font-semibold text-slate-700">4. Timbrado CFDI 4.0 automático</p>
-                <p class="text-[11px] text-slate-500 mt-0.5">
-                  ${order.requiere_factura === 0
-                    ? "Cliente indicó que no requiere comprobante fiscal."
-                    : (order.datos_fiscales_ok === 0
-                        ? "En espera de envío de RFC y Constancia Fiscal por WhatsApp."
-                        : "Listo para timbrar en cuanto se liquide el pago CoDi.")}
-                </p>
-              `}
-            </li>
-          </ol>
-        </div>
-
-        <!-- 3. Receptor Fiscal Details -->
-        <div class="rounded-xl border border-slate-200 p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Receptor Fiscal (CFDI 4.0)</h3>
-            ${order.datos_fiscales_ok === 1
-              ? `<span class="text-[11px] font-medium text-emerald-700 bg-treasury-50 px-2 py-0.5 rounded border border-treasury-200">Validado</span>`
-              : `<span class="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Pendiente</span>`
-            }
-          </div>
-
-          ${order.datos_fiscales_ok === 1 && order.rfc ? `
-            <dl class="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <dt class="text-slate-400 text-[11px]">RFC</dt>
-                <dd class="tabular-mono font-semibold text-slate-900 mt-0.5">${escapeHtml(order.rfc)}</dd>
-              </div>
-              <div>
-                <dt class="text-slate-400 text-[11px]">Código Postal</dt>
-                <dd class="tabular-mono font-medium text-slate-900 mt-0.5">${escapeHtml(order.cp || "—")}</dd>
-              </div>
-              <div class="col-span-2">
-                <dt class="text-slate-400 text-[11px]">Razón Social</dt>
-                <dd class="font-medium text-slate-900 mt-0.5">${escapeHtml(order.razon_social || "—")}</dd>
-              </div>
-              <div>
-                <dt class="text-slate-400 text-[11px]">Régimen Fiscal</dt>
-                <dd class="text-slate-800 mt-0.5">
-                  <span class="tabular-mono font-medium">${escapeHtml(order.regimen || "601")}</span>
-                  <span class="text-slate-500 block text-[11px]">${escapeHtml(REGIMENES_SAT[order.regimen] || "Régimen autorizado SAT")}</span>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-slate-400 text-[11px]">Uso de CFDI</dt>
-                <dd class="text-slate-800 mt-0.5">
-                  <span class="tabular-mono font-medium">${escapeHtml(order.uso_cfdi || "G03")}</span>
-                  <span class="text-slate-500 block text-[11px]">Gastos en general</span>
-                </dd>
-              </div>
-            </dl>
-          ` : `
-            <div class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200/70">
-              <p>El cliente aún no ha enviado su cadena fiscal por WhatsApp.</p>
-              ${!state.isLiveApi && order.requiere_factura === 1 ? `
-                <button type="button" onclick="simulateFiscalDataReceived('${escapeHtml(String(order.id))}')"
-                  class="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-white hover:bg-cobalt-50 text-cobalt-700 border border-slate-200 hover:border-cobalt-200 transition">
-                  <i data-lucide="file-plus-2" class="w-3.5 h-3.5"></i>
-                  Simular recepción de datos fiscales (RFC)
-                </button>
-              ` : ""}
-            </div>
-          `}
-        </div>
-      `;
-
-      document.getElementById("drawerBody").innerHTML = bodyHtml;
-
-      // Drawer Footer Actions
-      let footerHtml = `
-        <button type="button" onclick="closeDrawer()" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition">
-          Cerrar
-        </button>
-        <div class="flex items-center gap-2">
-      `;
-
-      if (order.facturapi_id) {
-        footerHtml += `
-          <button type="button" onclick="downloadDocument('${escapeHtml(String(order.id))}', 'xml')"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition">
-            <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-cobalt-600"></i>
-            Descargar XML
-          </button>
-          <button type="button" onclick="downloadDocument('${escapeHtml(String(order.id))}', 'pdf')"
-            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-cobalt-600 hover:bg-cobalt-800 text-white shadow-2xs transition">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            Descargar PDF
-          </button>
         `;
-      } else if (order.pago_estado === "PAGADO" && order.requiere_factura === 1) {
-        footerHtml += `
-          <button type="button" onclick="retryStamping('${escapeHtml(String(order.id))}')"
-            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-cobalt-600 hover:bg-cobalt-800 text-white shadow-2xs transition">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            Reintentar Timbrado CFDI
-          </button>
-        `;
-      } else if (!state.isLiveApi && order.pago_estado === "PENDIENTE") {
-        footerHtml += `
-          <button type="button" onclick="simulateWebhookPayment('${escapeHtml(String(order.id))}')"
-            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition">
-            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-            Simular Confirmación CoDi
-          </button>
-        `;
+        return;
       }
 
-      footerHtml += `</div>`;
-      document.getElementById("drawerFooter").innerHTML = footerHtml;
+      const isPaid = order.pago_estado === "PAGADO";
+      const isStamped = Boolean(order.facturapi_id);
+      const hasFiscalError = Boolean(order.error_fiscal);
+      const isBusy = state.busyOrderIds.has(order.id);
+      const phoneClean = order.telefono.replace(/^whatsapp:/i, "");
+
+      // Determine Contextual Body (State A, State B, or State C)
+      let contextualHtml = "";
+      if (!isPaid) {
+        // STATE A: Pending Payment (QR CoDi Card + Countdown + Demo Webhook Trigger)
+        contextualHtml = renderStateAPendingQr(order, isBusy);
+      } else if (isStamped) {
+        // STATE B: Paid & Stamped CFDI 4.0 Executive Document Sheet
+        contextualHtml = renderStateBStampedCfdi(order);
+      } else if (hasFiscalError || (order.requiere_factura === 1 && order.datos_fiscales_ok === 0)) {
+        // STATE C: Paid with Fiscal Error or Pending RFC Data
+        contextualHtml = renderStateCFiscalAttention(order, isBusy);
+      } else {
+        // Paid without invoice requested (Recibo Digital Banxico)
+        contextualHtml = renderPaidSimpleReceipt(order);
+      }
+
+      container.innerHTML = `
+        <!-- Inspector Top Header -->
+        <div class="px-5 py-4 bg-[#F7F4EC] border-b border-[#E4DFD3] flex items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#686158]">
+                AUDITORÍA DE OPERACIÓN
+              </span>
+              <span class="text-[#C8BFA8]">•</span>
+              <span class="tabular-mono text-xs font-bold text-[#16302B]">${escapeHtml(order.id)}</span>
+            </div>
+            <h2 class="editorial-serif text-xl font-semibold text-[#1C1917] mt-0.5">
+              ${escapeHtml(phoneClean)}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onclick="copyText('${escapeHtml(order.id)}', 'Referencia ${escapeHtml(order.id)} copiada')"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FCFBF8] hover:bg-[#F3EFE6] border border-[#E4DFD3] tabular-mono text-[11px] text-[#1C1917] transition cursor-pointer"
+            title="Copiar referencia numRef"
+          >
+            <span>numRef</span>
+            <i data-lucide="copy" class="w-3 h-3 text-[#686158]"></i>
+          </button>
+        </div>
+
+        <!-- 4-Step Horizontal Settlement Stepper -->
+        <div class="px-5 py-3.5 bg-[#FCFBF8] border-b border-[#E4DFD3]">
+          <div class="grid grid-cols-4 gap-2">
+            ${renderStepperNode("1", "WhatsApp", "done")}
+            ${renderStepperNode("2", "QR pey", "done")}
+            ${renderStepperNode("3", "Pago Banxico", isPaid ? "done" : "active")}
+            ${renderStepperNode(
+              "4",
+              "CFDI 4.0",
+              isStamped ? "done" : (hasFiscalError ? "error" : (order.requiere_factura === 0 && isPaid ? "skipped" : "idle"))
+            )}
+          </div>
+        </div>
+
+        <!-- Contextual Detail Content -->
+        <div class="p-5">
+          ${contextualHtml}
+        </div>
+      `;
 
       lucide.createIcons();
     }
 
-    // =========================================================================
-    // 8. INTERACTIVE ACTIONS (LIVE API & DEMO SIMULATOR)
-    // =========================================================================
-    async function retryStamping(orderId) {
-      if (state.isLiveApi) {
-        showToast("Solicitando timbrado CFDI 4.0 al PAC...", "info");
-        try {
-          const res = await fetch(`/api/ordenes/${encodeURIComponent(orderId)}/reintentar-timbrado`, {
-            method: "POST"
-          });
-          if (!res.ok) throw new Error("Error al reintentar timbrado");
-          showToast(`Timbrado procesado para ${formatFolio(orderId)}`, "success");
-          await fetchOrders();
-        } catch (err) {
-          showToast("No se pudo completar el timbrado. Revisa los datos fiscales.", "error");
-        }
-        return;
+    function renderStepperNode(num, label, status) {
+      let badgeStyle = "bg-[#F3EFE6] text-[#686158] border-[#E4DFD3]";
+      let textStyle = "text-[#686158]";
+      let icon = num;
+
+      if (status === "done") {
+        badgeStyle = "bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0]";
+        textStyle = "text-[#1C1917] font-semibold";
+        icon = "✓";
+      } else if (status === "active") {
+        badgeStyle = "bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]";
+        textStyle = "text-[#B45309] font-semibold";
+      } else if (status === "error") {
+        badgeStyle = "bg-[#FFEDD5] text-[#C2410C] border-[#FDBA74]";
+        textStyle = "text-[#C2410C] font-semibold";
+        icon = "!";
+      } else if (status === "skipped") {
+        badgeStyle = "bg-[#F3EFE6] text-[#8C8377] border-[#E4DFD3]";
+        textStyle = "text-[#8C8377]";
+        icon = "—";
       }
 
-      // Demo mode retry
-      const order = state.orders.find(o => String(o.id) === String(orderId));
-      if (!order) return;
-      if (order.datos_fiscales_ok === 0) {
-        showToast("Faltan datos fiscales del cliente para timbrar.", "error");
-        return;
-      }
-      order.error_fiscal = null;
-      order.facturapi_id = `inv_demo_${order.id}`;
-      order.cfdi_uuid = generateDemoUuid();
-      order.estado_chat = "COMPLETADO";
-      state.kpis = computeKpisFromOrders(state.orders);
-      renderAll();
-      showToast(`CFDI 4.0 timbrado para ${formatFolio(order.id)}`, "success");
+      return `
+        <div class="flex flex-col items-center text-center p-2 rounded-lg bg-[#F7F4EC]/70 border border-[#E4DFD3]/80">
+          <span class="w-5 h-5 rounded-full border ${badgeStyle} tabular-mono text-[10px] font-bold flex items-center justify-center mb-1">
+            ${icon}
+          </span>
+          <span class="text-[10px] leading-tight ${textStyle}">${label}</span>
+        </div>
+      `;
     }
 
-    function simulateWebhookPayment(orderId) {
-      const key = String(orderId);
-      if (state.simulatingIds.has(key)) return;
+    // --- STATE A: PENDING PAYMENT (QR CODI CARD) ---
+    function renderStateAPendingQr(order, isBusy) {
+      const useLiveQrImg = state.isLiveApi && !state.qrImageFailedIds.has(order.id);
+      const qrVisual = useLiveQrImg
+        ? `<img
+             src="/files/qr_${encodeURIComponent(order.id)}.png"
+             alt="QR CoDi ${escapeHtml(order.id)}"
+             onerror="handleQrImgError('${escapeHtml(order.id)}')"
+             class="w-32 h-32 object-contain rounded"
+           />`
+        : buildWarmCoDiQrSvg(`${order.id}|${order.total}|${order.telefono}`);
 
-      const order = state.orders.find(o => String(o.id) === key);
-      if (!order || order.pago_estado === "PAGADO") return;
+      return `
+        <div class="space-y-4">
+          <!-- Tactile QR CoDi Payment Card -->
+          <div class="bg-[#FFFFFF] border border-[#E4DFD3] rounded-xl p-4 shadow-warm">
+            <div class="flex items-center justify-between border-b border-[#E4DFD3] pb-3 mb-3.5">
+              <div>
+                <span class="text-[10px] font-semibold uppercase tracking-wider text-[#B45309]">
+                  SOLICITUD CODI ACTIVA · POST /codi/qr
+                </span>
+                <h3 class="text-sm font-semibold text-[#1C1917] mt-0.5">
+                  Esperando autorización bancaria
+                </h3>
+              </div>
+              <div class="text-right bg-[#FEF3C7] border border-[#FDE68A] px-2.5 py-1 rounded-lg">
+                <span class="block text-[9px] font-semibold uppercase tracking-wider text-[#B45309]">VIGENCIA</span>
+                <span id="qrCountdownTimer" class="tabular-mono text-xs font-bold text-[#B45309]">
+                  ${formatTimer(order.expires_in_sec)}
+                </span>
+              </div>
+            </div>
 
-      state.simulatingIds.add(key);
-      renderAll();
-      showToast(`Recibiendo webhook pey (codi.qr.payment_received) para ${formatFolio(order.id)}...`, "info");
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+              <div class="w-36 h-36 p-2 bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl flex items-center justify-center shrink-0">
+                ${qrVisual}
+              </div>
 
-      // Step 1: CoDi Payment Settled (600ms)
-      setTimeout(() => {
-        order.pago_estado = "PAGADO";
-        order.pey_transaction_id = `tx_banxico_${Math.floor(100000 + Math.random() * 900000)}`;
-        order.created_relative = "Ahora mismo";
-        state.kpis = computeKpisFromOrders(state.orders);
-        renderAll();
+              <div class="flex-1 w-full space-y-2 text-xs">
+                <div class="pb-2 border-b border-[#E4DFD3]">
+                  <span class="text-[11px] text-[#686158] block">Monto a liquidar</span>
+                  <span class="editorial-serif text-2xl font-semibold text-[#1C1917]">
+                    ${formatMXN(order.total)} <span class="tabular-mono text-xs font-normal text-[#686158]">MXN</span>
+                  </span>
+                </div>
 
-        // Step 2: Automatic CFDI 4.0 Stamping if fiscal data is complete (750ms later)
-        setTimeout(() => {
-          state.simulatingIds.delete(key);
-          if (order.requiere_factura === 1 && order.datos_fiscales_ok === 1) {
-            order.facturapi_id = `inv_cfdi_${order.id}_${Date.now().toString().slice(-4)}`;
-            order.cfdi_uuid = generateDemoUuid();
-            order.estado_chat = "COMPLETADO";
-            state.kpis = computeKpisFromOrders(state.orders);
-            renderAll();
-            showToast(`Liquidado y timbrado CFDI 4.0 automáticamente (${formatFolio(order.id)})`, "success");
+                <div class="flex justify-between">
+                  <span class="text-[#686158]">Referencia (numRef)</span>
+                  <span class="tabular-mono font-semibold text-[#1C1917]">${escapeHtml(order.id)}</span>
+                </div>
+
+                <div class="flex justify-between">
+                  <span class="text-[#686158]">Comisión CoDi</span>
+                  <span class="tabular-mono font-semibold text-[#15803D]">$0.00 MXN</span>
+                </div>
+
+                <div class="flex justify-between">
+                  <span class="text-[#686158]">Perfil Fiscal SAT</span>
+                  <span class="tabular-mono font-medium text-[#16302B]">
+                    ${order.requiere_factura === 0
+                      ? "No solicitado"
+                      : (order.datos_fiscales_ok === 1 ? `${escapeHtml(order.rfc)} ✓` : "Pendiente en chat")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Itemized Concepts -->
+          <div class="space-y-1.5">
+            <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#686158]">
+              DETALLE DE CONCEPTOS
+            </span>
+            ${order.conceptos.map(c => `
+              <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3] text-xs">
+                <span class="text-[#1C1917]"><strong class="tabular-mono font-semibold">${c.quantity}×</strong> ${escapeHtml(c.description)}</span>
+                <span class="tabular-mono font-semibold text-[#1C1917]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
+              </div>
+            `).join("")}
+          </div>
+
+          <!-- Interactive Demo Webhook Trigger -->
+          ${!state.isLiveApi ? `
+            <div class="pt-1">
+              <button
+                type="button"
+                onclick="simulatePeyPaymentWebhook('${escapeHtml(order.id)}')"
+                ${isBusy ? "disabled" : ""}
+                class="w-full py-2.5 px-4 rounded-lg bg-[#16302B] hover:bg-[#1F423B] disabled:opacity-50 text-[#FCFBF8] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <i data-lucide="${isBusy ? "loader-2" : "zap"}" class="w-4 h-4 ${isBusy ? "animate-spin" : ""}"></i>
+                <span>${isBusy ? "Procesando codi.qr.payment_received..." : "Simular Webhook Pago pey"}</span>
+              </button>
+              <p class="text-[11px] text-[#686158] text-center mt-1.5">
+                Simula la confirmación instantánea de Banxico y dispara el timbrado CFDI 4.0.
+              </p>
+            </div>
+          ` : `
+            <div class="p-3 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3] text-[11px] text-[#686158] flex items-center gap-2">
+              <i data-lucide="radio" class="w-3.5 h-3.5 text-[#15803D] shrink-0"></i>
+              <span>Escucha activa en <code class="tabular-mono text-[#1C1917]">POST /pey/webhook</code> para liquidación automática.</span>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    // --- STATE B: PAID & STAMPED CFDI 4.0 EXECUTIVE DOCUMENT SHEET ---
+    function renderStateBStampedCfdi(order) {
+      const total = order.total;
+      const subtotal = total / 1.16;
+      const iva = total - subtotal;
+      const uuid = order.cfdi_uuid || order.facturapi_id || "8D3A19F0-4C2B-4E91-9A08-7B12E4C901DF";
+      const txId = order.pey_transaction_id || "tx_banxico_confirmada";
+
+      return `
+        <div class="space-y-4">
+          <!-- Crisp Mexican Fiscal Document Sheet -->
+          <div class="bg-[#FFFFFF] border border-[#D8D1C2] rounded-xl p-4 shadow-warm space-y-3.5 relative">
+            <!-- Top Fiscal Document Ribbon -->
+            <div class="flex items-start justify-between gap-2 border-b border-[#E4DFD3] pb-3">
+              <div>
+                <div class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#15803D]">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>
+                  <span>COMPROBANTE FISCAL DIGITAL · CFDI 4.0</span>
+                </div>
+                <h3 class="editorial-serif text-lg font-semibold text-[#1C1917] mt-0.5">
+                  Factura Electrónica Timbrada
+                </h3>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-[#E8EFECE6] border border-[#16302B]/20 tabular-mono text-[10px] font-bold text-[#16302B]">
+                INGRESO (I)
+              </span>
+            </div>
+
+            <!-- Emisor & Receptor Blocks -->
+            <div class="grid grid-cols-1 gap-2.5 text-xs">
+              <div class="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E4DFD3]">
+                <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">EMISOR</span>
+                <div class="font-semibold text-[#1C1917] mt-0.5">ESCUELA KEMPER URGATE</div>
+                <div class="tabular-mono text-[11px] text-[#686158]">RFC: EKU9003173C9 · Régimen: 601</div>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E4DFD3]">
+                <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">RECEPTOR</span>
+                <div class="font-semibold text-[#1C1917] mt-0.5">${escapeHtml(order.razon_social || "UNIVERSIDAD ROBOTICA ESPAÑOLA")}</div>
+                <div class="tabular-mono text-[11px] text-[#686158]">
+                  RFC: ${escapeHtml(order.rfc || "URE180429TM6")} · Régimen: ${escapeHtml(order.regimen || "601")} · CP: ${escapeHtml(order.cp || "86991")}
+                </div>
+              </div>
+            </div>
+
+            <!-- Item Breakdown + Subtotal & IVA 16% Desglosado -->
+            <div class="border-t border-b border-dashed border-[#D8D1C2] py-3 space-y-2 text-xs">
+              <div class="space-y-1">
+                ${order.conceptos.map(c => `
+                  <div class="flex justify-between text-[11px]">
+                    <span class="text-[#1C1917]"><span class="tabular-mono text-[#686158]">${c.quantity}×</span> ${escapeHtml(c.description)}</span>
+                    <span class="tabular-mono font-medium text-[#1C1917]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
+                  </div>
+                `).join("")}
+              </div>
+
+              <div class="pt-2 border-t border-[#E4DFD3]/70 space-y-1 tabular-mono text-[11px]">
+                <div class="flex justify-between text-[#686158]">
+                  <span>Subtotal</span>
+                  <span>${formatMXN(subtotal)}</span>
+                </div>
+                <div class="flex justify-between text-[#686158]">
+                  <span>IVA Trasladado (16.00%)</span>
+                  <span>${formatMXN(iva)}</span>
+                </div>
+                <div class="flex justify-between text-xs font-bold text-[#1C1917] pt-1">
+                  <span>Total MXN</span>
+                  <span class="text-[#15803D]">${formatMXN(total)} MXN</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment & SAT Metadata -->
+            <div class="grid grid-cols-2 gap-2 text-[11px] tabular-mono">
+              <div>
+                <span class="text-[9px] uppercase text-[#686158] block">FORMA DE PAGO</span>
+                <span class="font-semibold text-[#1C1917]">03 · Transferencia</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-[#686158] block">MÉTODO / USO</span>
+                <span class="font-semibold text-[#1C1917]">PUE · ${escapeHtml(order.uso_cfdi || "G03")}</span>
+              </div>
+              <div class="col-span-2 pt-1">
+                <span class="text-[9px] uppercase text-[#686158] block">REFERENCIA BANXICO (PEY)</span>
+                <button
+                  type="button"
+                  onclick="copyText('${escapeHtml(txId)}', 'Referencia Banxico copiada')"
+                  class="inline-flex items-center gap-1.5 text-[#15803D] font-medium hover:underline cursor-pointer"
+                >
+                  <span>${escapeHtml(txId)}</span>
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Folio Fiscal UUID -->
+            <div class="p-2.5 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3]">
+              <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">
+                FOLIO FISCAL (UUID SAT)
+              </span>
+              <button
+                type="button"
+                onclick="copyText('${escapeHtml(uuid)}', 'Folio Fiscal UUID copiado')"
+                class="mt-1 w-full flex items-center justify-between gap-2 text-left tabular-mono text-[11px] font-semibold text-[#16302B] hover:opacity-80 cursor-pointer"
+              >
+                <span class="truncate">${escapeHtml(uuid)}</span>
+                <i data-lucide="copy" class="w-3.5 h-3.5 text-[#686158] shrink-0"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Download PDF & XML Buttons -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onclick="openFiscalFile('${escapeHtml(order.id)}', 'pdf')"
+              class="py-2.5 px-3 rounded-lg bg-[#16302B] hover:bg-[#1F423B] text-[#FCFBF8] font-semibold text-xs shadow-warm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Abrir PDF</span>
+            </button>
+            <button
+              type="button"
+              onclick="openFiscalFile('${escapeHtml(order.id)}', 'xml')"
+              class="py-2.5 px-3 rounded-lg bg-[#FCFBF8] hover:bg-[#F3EFE6] text-[#1C1917] border border-[#E4DFD3] font-semibold text-xs shadow-warm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-[#16302B]"></i>
+              <span>Descargar XML</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- STATE C: PAID WITH FISCAL ERROR OR PENDING DATA ---
+    function renderStateCFiscalAttention(order, isBusy) {
+      const isError = Boolean(order.error_fiscal);
+      const txId = order.pey_transaction_id || "tx_banxico_verificada";
+
+      return `
+        <div class="space-y-4">
+          <!-- Confirmed Payment Banner -->
+          <div class="p-3.5 rounded-xl bg-[#DCFCE7]/70 border border-[#BBF7D0] flex items-center justify-between gap-3">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-[#15803D]">
+                PAGO LIQUIDADO EN BANXICO
+              </div>
+              <div class="tabular-mono text-xs font-semibold text-[#1C1917] mt-0.5">
+                ${formatMXN(order.total)} MXN · Ref: ${escapeHtml(txId)}
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-[#15803D] shrink-0"></i>
+          </div>
+
+          <!-- Warm Terracotta Alert Box -->
+          <div class="p-4 rounded-xl bg-[#FFEDD5] border border-[#FDBA74] space-y-2.5">
+            <div class="flex items-center gap-2 text-[#C2410C]">
+              <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+              <h3 class="text-xs font-bold uppercase tracking-wider">
+                ${isError ? "Rechazo de Timbrado CFDI 4.0" : "Datos Fiscales Pendientes en Chat"}
+              </h3>
+            </div>
+
+            <p class="text-xs text-[#7C2D12] leading-relaxed">
+              ${isError
+                ? escapeHtml(order.error_fiscal)
+                : "El pago ya fue liquidado sin comisiones, pero el cliente aún no envía su RFC y Código Postal por WhatsApp."}
+            </p>
+
+            ${order.rfc ? `
+              <div class="p-2.5 rounded-lg bg-[#FCFBF8]/90 border border-[#FDBA74] tabular-mono text-[11px] text-[#1C1917]">
+                <div><strong>RFC:</strong> ${escapeHtml(order.rfc)} · <strong>CP:</strong> ${escapeHtml(order.cp || "—")}</div>
+                <div class="truncate"><strong>Razón Social:</strong> ${escapeHtml(order.razon_social || "—")}</div>
+              </div>
+            ` : ""}
+          </div>
+
+          <!-- Prominent Retry Stamping Button -->
+          <button
+            type="button"
+            onclick="retryFiscalStamping('${escapeHtml(order.id)}')"
+            ${isBusy ? "disabled" : ""}
+            class="w-full py-2.5 px-4 rounded-lg bg-[#C2410C] hover:bg-[#9A3412] disabled:opacity-50 text-[#FCFBF8] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <i data-lucide="${isBusy ? "loader-2" : "refresh-cw"}" class="w-3.5 h-3.5 ${isBusy ? "animate-spin" : ""}"></i>
+            <span>${isBusy ? "Timbrando contra PAC..." : "Reintentar Timbrado CFDI"}</span>
+          </button>
+        </div>
+      `;
+    }
+
+    // --- PAID WITHOUT INVOICE (SIMPLE DIGITAL RECEIPT) ---
+    function renderPaidSimpleReceipt(order) {
+      const txId = order.pey_transaction_id || "tx_banxico_confirmada";
+      return `
+        <div class="bg-[#FFFFFF] border border-[#E4DFD3] rounded-xl p-4 shadow-warm space-y-3.5">
+          <div class="flex items-center justify-between border-b border-[#E4DFD3] pb-3">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-[#15803D]">OPERACIÓN LIQUIDADA</span>
+              <h3 class="editorial-serif text-lg font-semibold text-[#1C1917] mt-0.5">Comprobante Digital CoDi</h3>
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#686158] text-[11px] font-medium">Sin factura</span>
+          </div>
+
+          <div class="space-y-1.5 text-xs">
+            ${order.conceptos.map(c => `
+              <div class="flex justify-between py-1">
+                <span class="text-[#1C1917]"><strong class="tabular-mono">${c.quantity}×</strong> ${escapeHtml(c.description)}</span>
+                <span class="tabular-mono font-semibold text-[#1C1917]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="pt-2.5 border-t border-[#E4DFD3] flex justify-between items-baseline">
+            <span class="text-xs font-medium text-[#686158]">Total Liquidado</span>
+            <span class="editorial-serif text-2xl font-semibold text-[#15803D]">${formatMXN(order.total)} MXN</span>
+          </div>
+
+          <div class="p-2.5 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3] tabular-mono text-[11px] flex items-center justify-between">
+            <span class="text-[#686158]">Ref. Banxico:</span>
+            <span class="font-semibold text-[#1C1917]">${escapeHtml(txId)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- BOTTOM COMPACT WEBHOOK LOG ---
+    function renderWebhookLogs() {
+      const list = document.getElementById("webhookLogList");
+      const recent = state.webhookLogs.slice(0, 3);
+
+      list.innerHTML = recent.map(item => {
+        const badgeStyle = item.tone === "emerald"
+          ? "bg-[#DCFCE7] text-[#15803D]"
+          : (item.tone === "forest" ? "bg-[#E8EFECE6] text-[#16302B]" : "bg-[#FEF3C7] text-[#B45309]");
+
+        return `
+          <div class="px-4 py-2 flex items-center justify-between gap-2 tabular-mono text-[11px]">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-[#8C8377] shrink-0">${escapeHtml(item.time)}</span>
+              <span class="font-medium text-[#1C1917] truncate">${escapeHtml(item.event)}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[#686158]">${escapeHtml(item.ref)}</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${badgeStyle}">${escapeHtml(item.status)}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function pushWebhookLog(event, ref, status, tone = "emerald") {
+      state.webhookLogs.unshift({
+        time: nowTimeStr(),
+        event,
+        ref,
+        status,
+        tone
+      });
+      if (state.webhookLogs.length > 10) state.webhookLogs.length = 10;
+    }
+
+    // =========================================================================
+    // 8. WARM BESPOKE VECTOR QR GENERATOR (Fallback / Demo Mode)
+    // =========================================================================
+    function handleQrImgError(orderId) {
+      state.qrImageFailedIds.add(orderId);
+      renderInspector();
+    }
+
+    function buildWarmCoDiQrSvg(seed) {
+      let h = 2166136261;
+      for (let i = 0; i < seed.length; i++) {
+        h ^= seed.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+
+      const size = 21;
+      let rects = "";
+      const isFinder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= size - 7) || (r >= size - 7 && c < 7);
+      const isFinderDark = (r, c) => {
+        const lr = r >= size - 7 ? r - (size - 7) : r;
+        const lc = c >= size - 7 ? c - (size - 7) : c;
+        return lr === 0 || lr === 6 || lc === 0 || lc === 6 || (lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4);
+      };
+
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          let on = false;
+          if (isFinder(r, c)) {
+            on = isFinderDark(r, c);
+          } else if (r >= 8 && r <= 12 && c >= 8 && c <= 12) {
+            on = (r === 8 || r === 12 || c === 8 || c === 12);
           } else {
-            renderAll();
-            showToast(`Pago CoDi confirmado (${formatFolio(order.id)}). En espera de RFC del cliente.`, "success");
+            h = (Math.imul(h ^ (r * 37 + c), 1103515245) + 12345) >>> 0;
+            on = (h & 1) === 1;
           }
-        }, 750);
-      }, 600);
-    }
-
-    function simulateFiscalDataReceived(orderId) {
-      const order = state.orders.find(o => String(o.id) === String(orderId));
-      if (!order) return;
-
-      order.datos_fiscales_ok = 1;
-      order.rfc = "XAXX010101000";
-      order.razon_social = "COMERCIALIZADORA TECNOLOGICA DEL CENTRO SA DE CV";
-      order.cp = "06600";
-      order.regimen = "601";
-      order.uso_cfdi = "G03";
-
-      if (order.pago_estado === "PAGADO" && !order.facturapi_id) {
-        order.facturapi_id = `inv_cfdi_${order.id}_${Date.now().toString().slice(-4)}`;
-        order.cfdi_uuid = generateDemoUuid();
-        order.estado_chat = "COMPLETADO";
-        showToast(`Datos fiscales recibidos y CFDI 4.0 timbrado (${formatFolio(order.id)})`, "success");
-      } else {
-        order.estado_chat = "ESPERANDO_PAGO";
-        showToast(`Datos fiscales guardados para ${formatFolio(order.id)}. Listo para timbrar al pagar.`, "success");
+          if (on) {
+            rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="#1C1917"/>`;
+          }
+        }
       }
 
-      state.kpis = computeKpisFromOrders(state.orders);
-      renderAll();
+      return `
+        <svg viewBox="0 0 ${size} ${size}" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <rect width="${size}" height="${size}" fill="#FCFBF8"/>
+          ${rects}
+          <rect x="9" y="9" width="3" height="3" rx="0.5" fill="#16302B"/>
+        </svg>
+      `;
     }
 
-    function simulateNewWhatsAppOrder() {
-      const maxId = state.orders.reduce((max, o) => Math.max(max, Number(o.id) || 0), 0);
-      const nextId = maxId + 1;
-      const sampleCatalog = [
-        { desc: "Consultoría Implementación API", price: 1250.00, qty: 1 },
-        { desc: "Licencia Mensual Terminal CoDi", price: 349.00, qty: 1 },
-        { desc: "Servicio Soporte Express", price: 450.00, qty: 2 }
+    // =========================================================================
+    // 9. INTERACTIVE DEMO & LIVE RETRY ACTIONS
+    // =========================================================================
+    function simulateIncomingWhatsappOrder() {
+      const randomHex = Math.floor(0x100000 + Math.random() * 0x8FFFFF).toString(16).toUpperCase();
+      const newId = `ORD-${randomHex}`;
+      const samples = [
+        { desc: "Consultoría Fiscal Express", qty: 1, price: 350.00 },
+        { desc: "Kit Café de Altura", qty: 2, price: 125.00 },
+        { desc: "Suscripción Mensual Pro", qty: 1, price: 499.00 }
       ];
-      const pick = sampleCatalog[nextId % sampleCatalog.length];
-      const total = Number((pick.price * pick.qty).toFixed(2));
+      const pick = samples[Math.floor(Math.random() * samples.length)];
+      const total = Number((pick.qty * pick.price).toFixed(2));
 
-      const newOrder = {
-        id: nextId,
-        telefono: "whatsapp:+5215584920194",
+      const order = {
+        id: newId,
+        telefono: "whatsapp:+5215567439821",
         conceptos: [{ quantity: pick.qty, description: pick.desc, price: pick.price, importe: total }],
         total,
         requiere_factura: 1,
@@ -1510,100 +1495,167 @@
         cfdi_uuid: null,
         estado_chat: "ESPERANDO_PAGO",
         error_fiscal: null,
-        rfc: "CTC210514AB9",
-        razon_social: "CORPORATIVO TECH MX SAPI DE CV",
-        cp: "11560",
+        rfc: "URE180429TM6",
+        razon_social: "UNIVERSIDAD ROBOTICA ESPAÑOLA",
+        cp: "86991",
         regimen: "601",
         uso_cfdi: "G03",
-        created_relative: "Ahora mismo"
+        creado_en: `Hoy · ${nowTimeStr().slice(0, 5)}`,
+        expires_in_sec: 600
       };
 
-      state.orders.unshift(newOrder);
-      state.kpis = computeKpisFromOrders(state.orders);
+      state.orders.unshift(order);
+      state.selectedId = newId;
+      state.kpis = calculateMetrics(state.orders);
+      pushWebhookLog("codi.qr.created", newId, formatMXN(total), "amber");
       renderAll();
-      showToast(`Orden ${formatFolio(nextId)} recibida desde WhatsApp`, "info");
+      showToast(`Nueva orden ${newId} generada desde WhatsApp (${formatMXN(total)} MXN)`, "info");
     }
 
-    function resetDemoState() {
-      state.orders = JSON.parse(JSON.stringify(INITIAL_MOCK_ORDERS));
-      state.kpis = computeKpisFromOrders(state.orders);
-      state.simulatingIds.clear();
-      if (state.selectedOrderId !== null) closeDrawer();
-      renderAll();
-      showToast("Estado inicial de demostración restaurado", "info");
+    function simulatePeyPaymentWebhook(orderId) {
+      if (state.busyOrderIds.has(orderId)) return;
+      const order = state.orders.find(o => o.id === orderId);
+      if (!order || order.pago_estado === "PAGADO") return;
+
+      state.busyOrderIds.add(orderId);
+      renderInspector();
+      showToast(`Recibiendo webhook codi.qr.payment_received para ${orderId}...`, "info");
+
+      setTimeout(() => {
+        order.pago_estado = "PAGADO";
+        order.pey_transaction_id = `tx_banxico_${Math.floor(100000 + Math.random() * 900000)}`;
+        pushWebhookLog("codi.qr.payment_received", order.id, formatMXN(order.total), "emerald");
+
+        if (order.requiere_factura === 1) {
+          order.datos_fiscales_ok = 1;
+          order.rfc = order.rfc || "URE180429TM6";
+          order.razon_social = order.razon_social || "UNIVERSIDAD ROBOTICA ESPAÑOLA";
+          order.cp = order.cp || "86991";
+          order.facturapi_id = `inv_${order.id.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+          order.cfdi_uuid = generateUuid();
+          order.estado_chat = "COMPLETADO";
+          pushWebhookLog("facturapi.invoice.stamped", order.id, "CFDI 4.0", "forest");
+        } else {
+          order.estado_chat = "COMPLETADO";
+        }
+
+        state.busyOrderIds.delete(orderId);
+        state.kpis = calculateMetrics(state.orders);
+        renderAll();
+        showToast(`Pago liquidado y CFDI 4.0 timbrado (${order.id})`, "success");
+      }, 650);
     }
 
-    function downloadDocument(orderId, ext) {
-      const cleanId = String(orderId).replace(/^#/, "");
+    async function retryFiscalStamping(orderId) {
+      if (state.busyOrderIds.has(orderId)) return;
+      state.busyOrderIds.add(orderId);
+      renderInspector();
+
       if (state.isLiveApi) {
-        window.open(`/files/factura_${cleanId}.${ext}`, "_blank", "noopener");
+        try {
+          const res = await fetch(`/api/ordenes/${encodeURIComponent(orderId)}/reintentar-timbrado`, {
+            method: "POST"
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          pushWebhookLog("facturapi.invoice.stamped", orderId, "CFDI 4.0", "forest");
+          showToast(`Timbrado CFDI 4.0 exitoso para ${orderId}`, "success");
+          state.busyOrderIds.delete(orderId);
+          await pollOrders();
+          return;
+        } catch (_err) {
+          state.busyOrderIds.delete(orderId);
+          renderInspector();
+          showToast(`No se pudo timbrar ${orderId}. Revisa los datos fiscales.`, "error");
+          return;
+        }
+      }
+
+      // Demo Mode Recovery Simulation
+      setTimeout(() => {
+        const order = state.orders.find(o => o.id === orderId);
+        if (order) {
+          order.error_fiscal = null;
+          order.datos_fiscales_ok = 1;
+          order.rfc = order.rfc || "URE180429TM6";
+          order.razon_social = order.razon_social || "UNIVERSIDAD ROBOTICA ESPAÑOLA";
+          order.cp = "86991";
+          order.facturapi_id = `inv_${order.id.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+          order.cfdi_uuid = generateUuid();
+          order.estado_chat = "COMPLETADO";
+          pushWebhookLog("facturapi.invoice.stamped", order.id, "CFDI 4.0", "forest");
+        }
+        state.busyOrderIds.delete(orderId);
+        state.kpis = calculateMetrics(state.orders);
+        renderAll();
+        showToast(`Código postal corregido (86991) y CFDI 4.0 timbrado (${orderId})`, "success");
+      }, 650);
+    }
+
+    function openFiscalFile(orderId, ext) {
+      if (state.isLiveApi) {
+        window.open(`/files/factura_${encodeURIComponent(orderId)}.${ext}`, "_blank", "noopener");
         return;
       }
 
-      // In standalone demo mode, generate a real downloadable XML or formatted CFDI summary file
-      const order = state.orders.find(o => String(o.id) === cleanId);
+      const order = state.orders.find(o => o.id === orderId);
       if (!order) return;
 
       if (ext === "xml") {
         const total = order.total.toFixed(2);
         const sub = (order.total / 1.16).toFixed(2);
         const iva = (order.total - Number(sub)).toFixed(2);
-        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Folio="${cleanId}" Fecha="${new Date().toISOString()}" FormaPago="03" SubTotal="${sub}" Moneda="MXN" Total="${total}" TipoDeComprobante="I" MetodoPago="PUE" LugarExpedicion="${order.cp || "86991"}">
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Folio="${order.id}" Fecha="${new Date().toISOString()}" FormaPago="03" SubTotal="${sub}" Moneda="MXN" Total="${total}" TipoDeComprobante="I" MetodoPago="PUE" LugarExpedicion="${order.cp || "86991"}">
   <cfdi:Emisor Rfc="EKU9003173C9" Nombre="ESCUELA KEMPER URGATE" RegimenFiscal="601"/>
-  <cfdi:Receptor Rfc="${order.rfc || "XAXX010101000"}" Nombre="${order.razon_social || "PUBLICO EN GENERAL"}" DomicilioFiscalReceptor="${order.cp || "86991"}" RegimenFiscalReceptor="${order.regimen || "601"}" UsoCFDI="${order.uso_cfdi || "G03"}"/>
+  <cfdi:Receptor Rfc="${order.rfc || "URE180429TM6"}" Nombre="${order.razon_social || "UNIVERSIDAD ROBOTICA ESPAÑOLA"}" DomicilioFiscalReceptor="${order.cp || "86991"}" RegimenFiscalReceptor="${order.regimen || "601"}" UsoCFDI="${order.uso_cfdi || "G03"}"/>
   <cfdi:Impuestos TotalImpuestosTrasladados="${iva}">
     <cfdi:Traslados>
       <cfdi:Traslado Base="${sub}" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="${iva}"/>
     </cfdi:Traslados>
   </cfdi:Impuestos>
   <cfdi:Complemento>
-    <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="1.1" UUID="${order.cfdi_uuid || generateDemoUuid()}" FechaTimbrado="${new Date().toISOString()}"/>
+    <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="1.1" UUID="${order.cfdi_uuid || generateUuid()}" FechaTimbrado="${new Date().toISOString()}"/>
   </cfdi:Complemento>
 </cfdi:Comprobante>`;
-        triggerBlobDownload(xmlContent, `factura_${cleanId}.xml`, "application/xml");
-        showToast(`Descargando factura_${cleanId}.xml (CFDI 4.0)`, "success");
+        const blob = new Blob([xml], { type: "application/xml" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `factura_${order.id}.xml`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(`XML CFDI 4.0 descargado (factura_${order.id}.xml)`, "success");
       } else {
-        showToast(`Representación impresa factura_${cleanId}.pdf lista (UUID ${order.cfdi_uuid?.slice(0, 8) || "CFDI"})`, "info");
+        showToast(`Representación impresa lista en /files/factura_${order.id}.pdf`, "info");
       }
     }
 
-    function triggerBlobDownload(content, filename, mimeType) {
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function generateDemoUuid() {
-      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    function generateUuid() {
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, ch => {
         const r = (Math.random() * 16) | 0;
-        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        const v = ch === "x" ? r : (r & 0x3) | 0x8;
         return v.toString(16).toUpperCase();
       });
     }
 
     // =========================================================================
-    // 9. UTILITIES: CLIPBOARD, TOASTS, ESCAPING
+    // 10. CLIPBOARD & WARM TOAST NOTIFICATIONS
     // =========================================================================
     function copyText(text, successMsg) {
       try {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
         document.execCommand("copy");
-        document.body.removeChild(textarea);
+        document.body.removeChild(ta);
         showToast(successMsg || "Copiado al portapapeles", "success");
       } catch (_) {
-        showToast("No se pudo copiar el texto", "error");
+        showToast("No se pudo copiar al portapapeles", "error");
       }
     }
 
@@ -1611,26 +1663,18 @@
       const container = document.getElementById("toastContainer");
       const toast = document.createElement("div");
 
-      const styles = {
-        success: "bg-slate-900 text-white border-slate-800",
-        info: "bg-white text-slate-900 border-slate-200",
-        error: "bg-rose-950 text-white border-rose-800"
-      };
-      const iconName = type === "success" ? "check-circle-2" : (type === "error" ? "alert-circle" : "info");
-      const iconColor = type === "success" ? "text-emerald-400" : (type === "error" ? "text-rose-400" : "text-cobalt-600");
+      const badgeColor = type === "success"
+        ? "bg-[#15803D]"
+        : (type === "error" ? "bg-[#C2410C]" : "bg-[#16302B]");
 
-      toast.className = `pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border shadow-lg text-xs font-medium transition-all duration-200 translate-y-2 opacity-0 ${styles[type] || styles.info}`;
+      toast.className = "pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E4DFD3] shadow-sheet text-xs text-[#1C1917] transition-all duration-200 translate-y-2 opacity-0";
       toast.innerHTML = `
-        <i data-lucide="${iconName}" class="w-4 h-4 shrink-0 ${iconColor}"></i>
-        <span class="flex-1 leading-snug">${escapeHtml(message)}</span>
+        <span class="w-2 h-2 rounded-full ${badgeColor} shrink-0"></span>
+        <span class="flex-1 font-medium leading-snug">${escapeHtml(message)}</span>
       `;
 
       container.appendChild(toast);
-      lucide.createIcons();
-
-      requestAnimationFrame(() => {
-        toast.classList.remove("translate-y-2", "opacity-0");
-      });
+      requestAnimationFrame(() => toast.classList.remove("translate-y-2", "opacity-0"));
 
       setTimeout(() => {
         toast.classList.add("opacity-0", "translate-y-1");
@@ -1647,21 +1691,14 @@
         .replace(/'/g, "&#39;");
     }
 
-    // Close drawer with Escape key
-    document.addEventListener("keydown", e => {
-      if (e.key === "Escape" && state.selectedOrderId !== null) {
-        closeDrawer();
-      }
-    });
-
     // =========================================================================
-    // 10. INITIALIZATION
+    // 11. BOOTSTRAP
     // =========================================================================
     window.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       renderAll();
-      fetchOrders();
-      setInterval(fetchOrders, 2500);
+      pollOrders();
+      setInterval(pollOrders, 2500);
     });
   </script>
 </body>
