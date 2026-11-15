@@ -142,6 +142,20 @@
       border-bottom: 1px solid #D6CFC0;
       box-shadow: 0 8px 20px rgba(28, 25, 23, 0.06);
     }
+
+    /* Tabla: scroll interno; encabezados fijos debajo del chrome */
+    #ledgerScroll {
+      max-height: calc(100vh - var(--sticky-chrome-h, 280px) - 5.5rem);
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+    #ledgerScroll thead th {
+      position: sticky;
+      top: 0;
+      z-index: 12;
+      background: #EFEAE0;
+      box-shadow: inset 0 -2px 0 #D6CFC0;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-[#16302B] selection:text-[#FCFBF8]">
@@ -343,13 +357,13 @@
       <!-- ================================================================= -->
       <!-- LIBRO MAYOR DE OPERACIONES (ancho completo; ticket a la derecha)  -->
       <!-- ================================================================= -->
-      <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden flex flex-col">
+      <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden flex flex-col min-h-0">
 
-        <!-- Desktop High-Density Table -->
-        <div class="overflow-x-auto">
+        <!-- Desktop High-Density Table (scroll + thead sticky) -->
+        <div id="ledgerScroll">
           <table class="w-full text-left border-collapse">
-            <thead class="sticky top-0 z-10">
-              <tr class="border-b-2 border-[#D6CFC0] bg-[#EFEAE0] text-[11px] uppercase tracking-wide text-[#3F3A34]">
+            <thead>
+              <tr class="text-[11px] uppercase tracking-wide text-[#3F3A34]">
                 <th class="py-3.5 pl-5 pr-3 font-bold">Orden &amp; hora</th>
                 <th class="py-3.5 px-3 font-bold">Cliente / WhatsApp</th>
                 <th class="py-3.5 px-3 font-bold">Conceptos</th>
@@ -1996,8 +2010,24 @@
       else scheduleNextPoll();
     });
 
+    function syncStickyChromeHeight() {
+      const chrome = document.getElementById("stickyChrome");
+      if (!chrome) return;
+      document.documentElement.style.setProperty(
+        "--sticky-chrome-h",
+        `${chrome.offsetHeight}px`
+      );
+    }
+
+    window.addEventListener("resize", syncStickyChromeHeight);
+
     window.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
+      syncStickyChromeHeight();
+      const chrome = document.getElementById("stickyChrome");
+      if (chrome && window.ResizeObserver) {
+        new ResizeObserver(syncStickyChromeHeight).observe(chrome);
+      }
       renderAll();
       pollOrders();
     });
