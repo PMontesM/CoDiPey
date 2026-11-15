@@ -39,6 +39,7 @@ async function migrate(db: D1Database) {
         requiere_factura INTEGER NOT NULL DEFAULT 0,
         datos_fiscales_ok INTEGER NOT NULL DEFAULT 0,
         facturapi_id TEXT,
+        cfdi_uuid TEXT,
         pey_transaction_id TEXT UNIQUE,
         pey_qr_id TEXT,
         estado_chat TEXT NOT NULL DEFAULT 'ESPERANDO_PRODUCTOS',

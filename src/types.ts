@@ -19,6 +19,7 @@ export type Orden = {
   requiere_factura: number;
   datos_fiscales_ok: number;
   facturapi_id: string | null;
+  cfdi_uuid?: string | null;
   pey_transaction_id: string | null;
   pey_qr_id: string | null;
   estado_chat: string;

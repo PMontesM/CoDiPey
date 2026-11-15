@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { buildOrdenesPayload } from "./lib/admin";
+import { buildOrdenesPayload, resolveEmisor } from "./lib/admin";
 import { getBlob } from "./lib/blobs";
 import { handleWhatsappMessage } from "./lib/chat";
 import { evaluarYTimbrar } from "./lib/facturapi";
@@ -42,18 +42,17 @@ app.get("/files/:key", async (c) => {
 app.get("/api/ordenes", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT o.*,
-            COALESCE(c.rfc, c2.rfc) AS rfc,
-            COALESCE(c.razon_social, c2.razon_social) AS razon_social,
-            COALESCE(c.codigo_postal, c2.codigo_postal) AS codigo_postal,
-            COALESCE(c.regimen, c2.regimen) AS regimen,
-            COALESCE(c.uso_cfdi, c2.uso_cfdi) AS uso_cfdi
+            c.rfc AS rfc,
+            c.razon_social AS razon_social,
+            c.codigo_postal AS codigo_postal,
+            c.regimen AS regimen,
+            c.uso_cfdi AS uso_cfdi
      FROM ordenes o
      LEFT JOIN clientes_fiscales c ON c.id = o.cliente_fiscal_id
-     LEFT JOIN clientes_fiscales c2
-       ON o.cliente_fiscal_id IS NULL AND c2.telefono = o.telefono
      ORDER BY o.id DESC`,
   ).all<Orden & Record<string, unknown>>();
-  return c.json(buildOrdenesPayload(results || []));
+  const emisor = await resolveEmisor(c.env);
+  return c.json(buildOrdenesPayload(results || [], emisor));
 });
 
 app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
@@ -136,10 +135,12 @@ app.post("/pey/webhook", async (c) => {
   }
   if (!orden) return c.json({ ok: true, ignored: "unknown numRef" });
 
+  const nextEstado =
+    Number(orden.requiere_factura) === 1 ? orden.estado_chat : "COMPLETADO";
   await c.env.DB.prepare(
-    `UPDATE ordenes SET pago_estado = 'PAGADO', pey_transaction_id = ?, updated_at = ? WHERE id = ?`,
+    `UPDATE ordenes SET pago_estado = 'PAGADO', pey_transaction_id = ?, estado_chat = ?, updated_at = ? WHERE id = ?`,
   )
-    .bind(String(txId), nowIso(), orden.id)
+    .bind(String(txId), nextEstado, nowIso(), orden.id)
     .run();
 
   await sendWhatsapp(

@@ -128,12 +128,13 @@ export async function evaluarYTimbrar(
     const invoice = await timbrarFacturapi(env, fiscal, items);
     const facturapiId = String(invoice.id || invoice._id || "");
     if (!facturapiId) throw new FacturapiError("Facturapi no devolvió id de factura");
+    const cfdiUuid = invoice.uuid ? String(invoice.uuid).toUpperCase() : null;
     await downloadToBlobs(env, facturapiId, ordenId);
     await env.DB.prepare(
-      `UPDATE ordenes SET facturapi_id = ?, estado_chat = 'COMPLETADO', error_fiscal = NULL, updated_at = ?
+      `UPDATE ordenes SET facturapi_id = ?, cfdi_uuid = COALESCE(?, cfdi_uuid), estado_chat = 'COMPLETADO', error_fiscal = NULL, updated_at = ?
        WHERE id = ? AND facturapi_id IS NULL`,
     )
-      .bind(facturapiId, nowIso(), ordenId)
+      .bind(facturapiId, cfdiUuid, nowIso(), ordenId)
       .run();
     await sendWhatsapp(
       env,

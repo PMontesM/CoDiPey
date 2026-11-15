@@ -502,6 +502,12 @@
       isLiveApi: false,
       orders: JSON.parse(JSON.stringify(DEMO_ORDERS)),
       kpis: null,
+      emisor: {
+        rfc: "XIA190128J61",
+        razon_social: "GRUPO SANDA",
+        regimen: "601",
+        codigo_postal: "06010"
+      },
       activeFilter: "ALL",
       searchQuery: "",
       selectedId: null,
@@ -513,39 +519,55 @@
     // =========================================================================
     // 3. DATA NORMALIZATION & METRICS
     // =========================================================================
-    function normalizeOrder(raw) {
-      let conceptos = [];
-      if (Array.isArray(raw.conceptos)) {
-        conceptos = raw.conceptos;
+    function normalizeConceptos(raw) {
+      let source = null;
+      if (Array.isArray(raw.conceptos_parseados)) source = raw.conceptos_parseados;
+      else if (Array.isArray(raw.conceptos)) source = raw.conceptos;
+      else if (typeof raw.conceptos === "string" && raw.conceptos.trim().startsWith("[")) {
+        try { source = JSON.parse(raw.conceptos); } catch (_) { source = []; }
       } else if (typeof raw.conceptos_json === "string") {
-        try { conceptos = JSON.parse(raw.conceptos_json); } catch (_) { conceptos = []; }
-      } else if (typeof raw.conceptos === "string" && raw.conceptos.trim()) {
-        conceptos = [{
-          quantity: 1,
-          description: raw.conceptos,
-          price: Number(raw.total || 0),
-          importe: Number(raw.total || 0)
-        }];
+        try { source = JSON.parse(raw.conceptos_json); } catch (_) { source = []; }
       }
+
+      if (!Array.isArray(source) || source.length === 0) {
+        const total = Number(raw.total || raw.monto || 0);
+        return total > 0
+          ? [{ quantity: 1, description: "Cobro general", price: total, importe: total }]
+          : [];
+      }
+
+      return source.map((c) => {
+        const quantity = Number(c.quantity ?? c.cantidad ?? 1) || 1;
+        const price = Number(c.price ?? c.precio_unitario ?? 0) || 0;
+        const importe = Number(c.importe ?? c.subtotal ?? quantity * price) || 0;
+        const description = String(c.description || c.concepto || "Concepto").trim();
+        return { quantity, description, price, importe };
+      });
+    }
+
+    function normalizeOrder(raw) {
+      const conceptos = normalizeConceptos(raw);
+      const total = Number(raw.total ?? raw.monto ?? conceptos.reduce((s, c) => s + c.importe, 0));
 
       return {
         id: String(raw.id),
         telefono: raw.telefono || "whatsapp:+5215500000000",
         conceptos,
-        total: Number(raw.total || 0),
+        total: Number.isFinite(total) ? total : 0,
         requiere_factura: Number(raw.requiere_factura ?? 0),
         datos_fiscales_ok: Number(raw.datos_fiscales_ok ?? 0),
         pago_estado: String(raw.pago_estado || "PENDIENTE").toUpperCase(),
         pey_transaction_id: raw.pey_transaction_id || null,
         facturapi_id: raw.facturapi_id || null,
-        cfdi_uuid: raw.cfdi_uuid || raw.uuid || raw.facturapi_id || null,
+        // Nunca usar facturapi_id como UUID fiscal
+        cfdi_uuid: raw.cfdi_uuid || raw.uuid || null,
         estado_chat: raw.estado_chat || "",
         error_fiscal: raw.error_fiscal || null,
         rfc: raw.rfc || null,
         razon_social: raw.razon_social || null,
-        cp: raw.cp || null,
-        regimen: raw.regimen || "601",
-        uso_cfdi: raw.uso_cfdi || "G03",
+        cp: raw.cp || raw.codigo_postal || null,
+        regimen: raw.regimen || null,
+        uso_cfdi: raw.uso_cfdi || null,
         creado_en: raw.creado_en || raw.created_at || "Reciente",
         expires_in_sec: typeof raw.expires_in_sec === "number" ? raw.expires_in_sec : 540
       };
@@ -585,10 +607,16 @@
     }
 
     function formatMXN(value) {
-      return "$" + Number(value || 0).toLocaleString("es-MX", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      const num = Number(value);
+      const safe = Number.isFinite(num) ? num : 0;
+      // Signo de pesos mexicano + cifra tabular (sin símbolo de locale duplicado)
+      return (
+        "$" +
+        safe.toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })
+      );
     }
 
     function formatTimer(seconds) {
@@ -641,6 +669,14 @@
           ...computed,
           ...(data.kpis || {})
         };
+        if (data.emisor && data.emisor.rfc) {
+          state.emisor = {
+            rfc: data.emisor.rfc,
+            razon_social: data.emisor.razon_social || "GRUPO SANDA",
+            regimen: data.emisor.regimen || "601",
+            codigo_postal: data.emisor.codigo_postal || "06010"
+          };
+        }
 
         setConnectionStatus(true);
         if (manual) showToast("Sincronizado con GET /api/ordenes", "success");
@@ -671,7 +707,7 @@
       if (live) {
         pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DCFCE7] border border-[#BBF7D0] text-[11px] font-semibold text-[#15803D]";
         dot.className = "w-1.5 h-1.5 rounded-full bg-[#15803D] pulse-dot";
-        label.textContent = "Conectado a FastAPI";
+        label.textContent = "Conectado a API";
       } else {
         pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[11px] font-semibold text-[#B45309]";
         dot.className = "w-1.5 h-1.5 rounded-full bg-[#B45309] pulse-dot";
@@ -895,7 +931,7 @@
               <span class="tabular-mono text-xs font-bold text-[#1C1917]">
                 ${formatMXN(order.total)}
               </span>
-              <span class="block tabular-mono text-[10px] text-[#15803D] mt-0.5">$0.00 fee</span>
+              <span class="block tabular-mono text-[10px] text-[#15803D] mt-0.5">Comisión $0.00</span>
             </td>
 
             <!-- Liquidación CoDi -->
@@ -1195,10 +1231,11 @@
     // --- STATE B: PAID & STAMPED CFDI 4.0 EXECUTIVE DOCUMENT SHEET ---
     function renderStateBStampedCfdi(order) {
       const total = order.total;
+      // Precios con IVA incluido (tax_included: true en Facturapi)
       const subtotal = total / 1.16;
       const iva = total - subtotal;
-      const uuid = order.cfdi_uuid || order.facturapi_id || "8D3A19F0-4C2B-4E91-9A08-7B12E4C901DF";
-      const txId = order.pey_transaction_id || "tx_banxico_confirmada";
+      const uuid = order.cfdi_uuid || null;
+      const txId = order.pey_transaction_id || "—";
 
       return `
         <div class="space-y-4">
@@ -1224,15 +1261,17 @@
             <div class="grid grid-cols-1 gap-2.5 text-xs">
               <div class="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E4DFD3]">
                 <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">EMISOR</span>
-                <div class="font-semibold text-[#1C1917] mt-0.5">ESCUELA KEMPER URGATE</div>
-                <div class="tabular-mono text-[11px] text-[#686158]">RFC: EKU9003173C9 · Régimen: 601</div>
+                <div class="font-semibold text-[#1C1917] mt-0.5">${escapeHtml(state.emisor.razon_social)}</div>
+                <div class="tabular-mono text-[11px] text-[#686158]">
+                  RFC: ${escapeHtml(state.emisor.rfc)} · Régimen: ${escapeHtml(state.emisor.regimen)} · CP: ${escapeHtml(state.emisor.codigo_postal)}
+                </div>
               </div>
 
               <div class="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E4DFD3]">
                 <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">RECEPTOR</span>
-                <div class="font-semibold text-[#1C1917] mt-0.5">${escapeHtml(order.razon_social || "UNIVERSIDAD ROBOTICA ESPAÑOLA")}</div>
+                <div class="font-semibold text-[#1C1917] mt-0.5">${escapeHtml(order.razon_social || "—")}</div>
                 <div class="tabular-mono text-[11px] text-[#686158]">
-                  RFC: ${escapeHtml(order.rfc || "URE180429TM6")} · Régimen: ${escapeHtml(order.regimen || "601")} · CP: ${escapeHtml(order.cp || "86991")}
+                  RFC: ${escapeHtml(order.rfc || "—")} · Régimen: ${escapeHtml(order.regimen || "—")} · CP: ${escapeHtml(order.cp || "—")}
                 </div>
               </div>
             </div>
@@ -1292,6 +1331,7 @@
               <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">
                 FOLIO FISCAL (UUID SAT)
               </span>
+              ${uuid ? `
               <button
                 type="button"
                 onclick="copyText('${escapeHtml(uuid)}', 'Folio Fiscal UUID copiado')"
@@ -1300,6 +1340,11 @@
                 <span class="truncate">${escapeHtml(uuid)}</span>
                 <i data-lucide="copy" class="w-3.5 h-3.5 text-[#686158] shrink-0"></i>
               </button>
+              ` : `
+              <div class="mt-1 tabular-mono text-[11px] text-[#686158]">
+                Facturapi: ${escapeHtml(order.facturapi_id || "—")} · UUID pendiente de sincronizar
+              </div>
+              `}
             </div>
           </div>
 
@@ -1642,8 +1687,8 @@
         const iva = (order.total - Number(sub)).toFixed(2);
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Folio="${order.id}" Fecha="${new Date().toISOString()}" FormaPago="03" SubTotal="${sub}" Moneda="MXN" Total="${total}" TipoDeComprobante="I" MetodoPago="PUE" LugarExpedicion="${order.cp || "86991"}">
-  <cfdi:Emisor Rfc="EKU9003173C9" Nombre="ESCUELA KEMPER URGATE" RegimenFiscal="601"/>
-  <cfdi:Receptor Rfc="${order.rfc || "URE180429TM6"}" Nombre="${order.razon_social || "UNIVERSIDAD ROBOTICA ESPAÑOLA"}" DomicilioFiscalReceptor="${order.cp || "86991"}" RegimenFiscalReceptor="${order.regimen || "601"}" UsoCFDI="${order.uso_cfdi || "G03"}"/>
+  <cfdi:Emisor Rfc="${state.emisor.rfc}" Nombre="${state.emisor.razon_social}" RegimenFiscal="${state.emisor.regimen}"/>
+  <cfdi:Receptor Rfc="${order.rfc || "XAXX010101000"}" Nombre="${order.razon_social || "PUBLICO EN GENERAL"}" DomicilioFiscalReceptor="${order.cp || state.emisor.codigo_postal}" RegimenFiscalReceptor="${order.regimen || "616"}" UsoCFDI="${order.uso_cfdi || "S01"}"/>
   <cfdi:Impuestos TotalImpuestosTrasladados="${iva}">
     <cfdi:Traslados>
       <cfdi:Traslado Base="${sub}" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="${iva}"/>
