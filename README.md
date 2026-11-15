@@ -1,67 +1,88 @@
-# Cobro WhatsApp + CoDi (pey) + CFDI 4.0 (Facturapi)
+# CoDiPey — Cobro WhatsApp + CoDi + CFDI 4.0
 
-MVP: cobro por WhatsApp con **QR CoDi** y **CFDI 4.0** automático.
+**Cobro digital para tiendas de barrio:** el cliente pide por WhatsApp, paga con **QR CoDi** (sin comisión de tarjeta) y, si lo necesita, recibe **factura CFDI 4.0** sin cadenas fiscales raras.
 
-## Producción actual
+Pensado para mostrador: botones, menús y pasos guiados (no tecnicismos del SAT).
+
+---
+
+## Pitch (para envío / hackathon)
+
+| Campo | Valor |
+|---|---|
+| **Nombre** | CoDiPey |
+| **Tagline** | Cobro CoDi + factura CFDI desde WhatsApp, listo para tienda |
+| **Repo** | https://github.com/PMontesM/CoDiPey *(público)* |
+| **App / consola** | https://cobro-codi.inomali.workers.dev/admin |
+| **Health** | https://cobro-codi.inomali.workers.dev/health |
+| **Demo sin WhatsApp** | En la consola: **+ Simular Cobro WhatsApp** → abrir orden → **Simular Webhook Pago pey** (flujo completo sin unir números al Sandbox) |
+
+### Problema
+En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a mano es lento y confuso. CoDi es gratis para el comercio, pero el flujo (QR + datos fiscales + CFDI) no está pensado para cajero.
+
+### Solución
+1. WhatsApp con **lista de productos** y botones (Sí factura / Solo pagar / Sin RFC / Cancelar).
+2. **QR CoDi** vía pey (vigencia ~10 min; se regenera o cancela desde chat o consola).
+3. Factura: **Sin RFC** en un toque, o wizard de 5 pasos; validación SAT con Facturapi.
+4. **Consola operativa** en tiempo real: liquidación, CFDI, cancelar pendientes.
+
+### Stack
+Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Facturapi CFDI 4.0
+
+### Cómo demoea el jurado (2 min, sin Sandbox)
+1. Abrir la [consola](https://cobro-codi.inomali.workers.dev/admin).
+2. **+ Simular Cobro WhatsApp** → aparece orden pendiente con QR.
+3. Abrir el ticket → **Simular Webhook Pago pey** → liquidación + timbrado CFDI.
+4. (Opcional) WhatsApp real solo si el número ya hizo `join` al Twilio Sandbox.
+
+> El Sandbox de Twilio **no permite** autorizar números por API: cada teléfono debe enviar `join …`. Para la entrega pública usamos la **simulación en consola**.
+
+---
+
+## Descripción corta (copiar/pegar)
+
+> CoDiPey es un MVP que permite a un comercio cobrar por WhatsApp con QR CoDi (pey) y emitir CFDI 4.0 (Facturapi) con un flujo pensado para tienda de barrio: botones, Sin RFC en un toque, captura fiscal guiada y consola operativa. Demo pública en `/admin` con simulación de cobro y pago, sin necesidad de unir números al Sandbox de Twilio.
+
+---
+
+## Producción
 
 | | |
 |---|---|
 | Worker | `https://cobro-codi.inomali.workers.dev` |
-| Runtime | Cloudflare Worker (TypeScript + Hono) + D1 |
 | Consola | `https://cobro-codi.inomali.workers.dev/admin` |
 | Health | `https://cobro-codi.inomali.workers.dev/health` |
-
-Stack: **Worker + D1** (órdenes, fiscales, blobs PNG/PDF/XML). URL fija `*.workers.dev` — sin tunnels.
+| Repo | https://github.com/PMontesM/CoDiPey |
 
 | Binding / secret | Uso |
 |---|---|
-| `DB` (D1 `cobro-db`) | Órdenes, datos fiscales, archivos |
+| `DB` (D1 `cobro-db`) | Órdenes, fiscales, blobs |
 | `ASSETS` | Consola `/admin` |
-| `PEY_API_KEY` | QR CoDi (`portal.mipey.mx`) |
+| `PEY_API_KEY` | QR CoDi |
 | `FACTURAPI_KEY` | Timbrado CFDI 4.0 |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` | WhatsApp |
+| `TWILIO_*` | WhatsApp |
 | `PUBLIC_URL` | Base HTTPS del Worker |
 
-### Webhooks (deben coincidir)
+### Webhooks
 
 | Proveedor | URL |
 |---|---|
-| **Twilio Sandbox** → *When a message comes in* | `https://cobro-codi.inomali.workers.dev/whatsapp/webhook` (HTTP POST) |
-| **Channels/Senders** (API) | misma URL |
-| **portal.mipey.mx** | `https://cobro-codi.inomali.workers.dev/pey/webhook` |
+| Twilio | `https://cobro-codi.inomali.workers.dev/whatsapp/webhook` |
+| pey | `https://cobro-codi.inomali.workers.dev/pey/webhook` |
 
-Si Twilio Sandbox sigue en un `*.trycloudflare.com`, los mensajes fallan con **error 11210** aunque Channels/Senders esté bien.
+## Flujo WhatsApp (real)
 
-Otros endpoints: `GET /admin`, `GET /api/ordenes`, `POST /api/ordenes/:id/reintentar-timbrado`, `GET /files/...`, `GET /health`.
+1. `hola` → productos / estado / historial / nuevo QR / cancelar  
+2. **Solo pagar** → QR inmediato  
+3. **Sí, factura** → Sin RFC o wizard → **QR al final** (no se pierde en el chat)  
+4. Pago CoDi → timbrado automático si hay datos fiscales  
 
-## Flujo WhatsApp
-
-Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de respaldo.
-
-1. Escribe `hola` → lista *Ver opciones* (productos, **Estado**, **Historial**, **Nuevo QR**)
-2. Tras el pedido → **Sí, factura** / **Solo pagar**
-3. **Solo pagar** → QR CoDi de inmediato (**vigencia ~10 min**)
-4. **Sí, factura** → primero datos (**Sin RFC** o wizard); *el QR se manda al cerrar*
-   para que no se pierda en el chat. Facturapi valida contra el SAT.
-5. Si el QR vence: Banxico ya no lo acepta; **Nuevo QR** o otro pedido desde el menú
-6. Cancelar pendiente: consola `/admin` → ticket → **Cancelar cobro**, o WhatsApp `cancelar`
-7. Revisar: WhatsApp `estado` / `historial`, o consola `/admin`
-8. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
-
-El cobro y la captura fiscal avanzan en paralelo. Timbrado solo si:
-
-1. `pago_estado == PAGADO`
-2. `datos_fiscales_ok == 1`
-3. `facturapi_id IS NULL`
-
-## Deploy / secrets
+## Deploy
 
 ```bash
 npm install
-npx wrangler login          # o: npx wrangler login --device
-# wrangler.jsonc ya apunta al D1 de producción
+npx wrangler login
 npx wrangler d1 migrations apply cobro-db --remote
-# secrets (mismo contenido que .env.example → .dev.vars)
 npx wrangler secret put PEY_API_KEY
 npx wrangler secret put FACTURAPI_KEY
 npx wrangler secret put TWILIO_ACCOUNT_SID
@@ -71,29 +92,14 @@ npx wrangler secret put PUBLIC_URL
 npm run deploy
 ```
 
-> Cuentas *preview* temporales pueden activar challenge anti-bot y romper Twilio. Usa la cuenta free real (login).
-
 ## Tests
 
 ```bash
-npm test          # Vitest en runtime Workers (parse, WhatsApp, pey idempotente, CFDI)
-npm run smoke     # Live: /health, step1, Twilio webhook, último inbound 11210
-npm run check     # test + smoke
+npm test
+npm run smoke
+npm run check
 ```
-
-Tras cada cambio relevante: `npm run check` antes de dar por bueno el deploy.
-
-## Desarrollo local (opcional)
-
-```bash
-npm install
-cp .env.example .dev.vars
-npx wrangler d1 migrations apply cobro-db --local
-npx wrangler dev
-```
-
-Hay un legado FastAPI + SQLite en el repo (histórico). El camino soportado es el Worker.
 
 ## Licencia
 
-Proyecto de hackathon — uso demo / educativo.
+Hackathon / demo educativo.
