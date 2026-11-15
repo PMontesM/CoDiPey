@@ -493,6 +493,28 @@ async function confirmFiscalDraftWithSat(
   return `${okHint}${saved}`;
 }
 
+/** Sale del wizard fiscal sin dejar la orden “atascada” en ESPERANDO_FISCAL_*. */
+async function abandonFiscalWizard(
+  env: Env,
+  telefono: string,
+  orden: Orden | null,
+): Promise<void> {
+  await clearFiscalDraft(env, telefono);
+  if (
+    orden &&
+    isFiscalWizardState(orden.estado_chat) &&
+    orden.pago_estado === "PENDIENTE"
+  ) {
+    await env.DB.prepare(
+      `UPDATE ordenes
+       SET estado_chat = 'CANCELADO', pago_estado = 'CANCELADO', updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(nowIso(), orden.id)
+      .run();
+  }
+}
+
 async function advanceFiscalWizard(
   env: Env,
   publicUrl: string,
@@ -511,7 +533,7 @@ async function advanceFiscalWizard(
     return startFiscalWizard(env, telefono, orden);
   }
   if (interactive === "MENU" || interactive === "HELP") {
-    await clearFiscalDraft(env, telefono);
+    await abandonFiscalWizard(env, telefono, orden);
     return askMenu(env, telefono);
   }
   if (interactive === "QR_RESEND" || interactive === "QR_RENEW") {
@@ -527,12 +549,64 @@ async function advanceFiscalWizard(
     );
   }
 
+  // Lista vieja de productos / carrito: no tratar el tap como RFC/nombre/CP.
+  const catalogHit = CATALOG.find((c) => c.id === interactive);
+  if (catalogHit) {
+    await clearFiscalDraft(env, telefono);
+    if (!catalogHit.line) {
+      await abandonFiscalWizard(env, telefono, orden);
+      return (
+        "Escribe tu pedido así (varios, uno por línea):\n" +
+        "`2 Cafe 45`\n`1 Agua 10`"
+      );
+    }
+    const parsed = parseProductLines(catalogHit.line);
+    if (parsed.error || !parsed.items) {
+      const preface =
+        "Primero terminamos la factura. Escribe el dato que toca, o toca *Menú*.";
+      if (estado === "ESPERANDO_FISCAL_NOMBRE") {
+        return askFiscalNombre(env, telefono, preface);
+      }
+      if (estado === "ESPERANDO_FISCAL_CP") {
+        return askFiscalCp(env, telefono, preface);
+      }
+      if (estado === "ESPERANDO_FISCAL_REGIMEN") {
+        return askFiscalRegimen(env, telefono, preface);
+      }
+      if (estado === "ESPERANDO_FISCAL_USO") {
+        return askFiscalUso(env, telefono, preface);
+      }
+      return askFiscalRfc(env, telefono, preface);
+    }
+    return addItemsToCart(env, telefono, parsed.items, orden);
+  }
+  if (interactive === "CART_ADD") {
+    await abandonFiscalWizard(env, telefono, orden);
+    return askMenu(env, telefono);
+  }
+  if (interactive === "CART_PAY") {
+    return (
+      "Todavía estamos en los datos de factura. " +
+      "Escríbelos, toca *Sin RFC*, o *Menú* para otro pedido."
+    );
+  }
+
   const draft = await loadFiscalDraft(env, telefono);
 
   if (estado === "ESPERANDO_FISCAL_RFC") {
     const err = validateRfc(text);
     if (err) {
-      return askFiscalRfc(env, telefono, err);
+      // Si pegaron un pedido por texto, no lo trates como RFC a medias.
+      const maybeProducts = parseProductLines(text);
+      if (!maybeProducts.error && maybeProducts.items) {
+        await clearFiscalDraft(env, telefono);
+        return addItemsToCart(env, telefono, maybeProducts.items, orden);
+      }
+      return askFiscalRfc(
+        env,
+        telefono,
+        `${err}\n\nSi querías armar un pedido, toca *Menú*.`,
+      );
     }
     const rfc = normalizeRfc(text);
     const efos = await checkRfcEfos(env, rfc);
@@ -1089,10 +1163,16 @@ export async function handleWhatsappMessage(
   const estado = orden?.estado_chat || "ESPERANDO_PRODUCTOS";
 
   if (interactive === "MENU" || interactive === "HELP") {
+    if (orden && isFiscalWizardState(orden.estado_chat)) {
+      await abandonFiscalWizard(env, telefono, orden);
+    }
     return askMenu(env, telefono);
   }
 
   if (interactive === "CART_ADD") {
+    if (orden && isFiscalWizardState(orden.estado_chat)) {
+      await abandonFiscalWizard(env, telefono, orden);
+    }
     return askMenu(env, telefono);
   }
 

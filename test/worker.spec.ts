@@ -813,4 +813,151 @@ describe("Worker HTTP", () => {
     ).first<{ e164: string }>();
     expect(row?.e164).toBe("+525512345678");
   });
+
+  describe("e2e WhatsApp flows", () => {
+    const phone = "whatsapp:+5215599001122";
+
+    async function wa(data: Record<string, string>) {
+      return call("/whatsapp/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formBody({ From: phone, ...data }),
+      });
+    }
+
+    async function latestOrden() {
+      return env.DB.prepare(
+        "SELECT * FROM ordenes WHERE telefono = ? ORDER BY id DESC LIMIT 1",
+      )
+        .bind(phone)
+        .first<Record<string, unknown>>();
+    }
+
+    it("e2e: producto → carrito → cobrar → solo pagar → QR (sin factura)", async () => {
+      let res = await wa({
+        Body: "Prueba CoDi $0.01 Demo de liquidación Banxico",
+        ButtonPayload: "PROD_PRUEBA_001",
+        ButtonText: "Prueba CoDi $0.01",
+      });
+      expect(await res.text()).toMatch(/Pedido en curso|Cobrar/i);
+      expect((await latestOrden())?.estado_chat).toBe("ARMAR_PEDIDO");
+
+      res = await wa({
+        Body: "Cobrar",
+        ButtonPayload: "CART_PAY",
+        ButtonText: "Cobrar",
+      });
+      expect(await res.text()).toMatch(/factura/i);
+      expect((await latestOrden())?.estado_chat).toBe("ESPERANDO_FACTURA");
+
+      res = await wa({
+        Body: "Solo pagar",
+        ButtonPayload: "FACTURA_NO",
+        ButtonText: "Solo pagar",
+      });
+      const twiml = await res.text();
+      expect(twiml).toMatch(/QR|ticket|orden #|Escanea|Pagar/i);
+      const orden = await latestOrden();
+      expect(orden?.estado_chat).toBe("ESPERANDO_PAGO");
+      expect(orden?.pey_qr_id).toBeTruthy();
+      expect(orden?.requiere_factura).toBe(0);
+    });
+
+    it("e2e: sí factura → Sin RFC → QR", async () => {
+      await startCartAndCheckout(phone);
+      let res = await wa({
+        Body: "Sí, factura",
+        ButtonPayload: "FACTURA_SI",
+      });
+      expect(await res.text()).toMatch(/Sin RFC|tengo RFC|Factura/i);
+
+      res = await wa({
+        Body: "Sin RFC",
+        ButtonPayload: "FISCAL_DEMO",
+      });
+      const twiml = await res.text();
+      expect(twiml).toMatch(/QR|ticket|orden #|Escanea|Pagar|Sin factura|datos/i);
+      const orden = await latestOrden();
+      expect(orden?.pey_qr_id).toBeTruthy();
+      expect(orden?.requiere_factura).toBe(1);
+      expect(orden?.datos_fiscales_ok).toBe(1);
+    });
+
+    it("e2e: durante RFC, tap PROD_ no se trata como RFC (abre carrito)", async () => {
+      await startCartAndCheckout(phone);
+      await wa({ Body: "Sí, factura", ButtonPayload: "FACTURA_SI" });
+      await wa({ Body: "Sí tengo RFC", ButtonPayload: "FISCAL_EDIT" });
+      expect((await latestOrden())?.estado_chat).toBe("ESPERANDO_FISCAL_RFC");
+
+      // Tap de lista vieja de productos (regresión del bug del screenshot)
+      const res = await wa({
+        Body: "Prueba CoDi $0.01 Demo de liquidación Banxico",
+        ButtonPayload: "PROD_PRUEBA_001",
+        ButtonText: "Prueba CoDi $0.01",
+      });
+      const twiml = await res.text();
+      expect(twiml).not.toMatch(/Ese RFC no se ve completo/i);
+      expect(twiml).toMatch(/Pedido en curso|Cobrar/i);
+
+      const orden = await latestOrden();
+      expect(orden?.estado_chat).toBe("ARMAR_PEDIDO");
+      expect(orden?.monto).toBe("0.01");
+    });
+
+    it("e2e: Menú en wizard cancela fiscal y muestra catálogo", async () => {
+      await startCartAndCheckout(phone);
+      await wa({ Body: "Sí, factura", ButtonPayload: "FACTURA_SI" });
+      await wa({ Body: "Sí tengo RFC", ButtonPayload: "FISCAL_EDIT" });
+
+      const res = await wa({
+        Body: "Menú",
+        ButtonPayload: "MENU",
+        ButtonText: "Menú",
+      });
+      expect(await res.text()).toMatch(/productos|Cobrar|Café|Prueba|menú|Menú/i);
+
+      const prev = await env.DB.prepare(
+        `SELECT estado_chat, pago_estado FROM ordenes
+         WHERE telefono = ? AND estado_chat = 'CANCELADO'
+         ORDER BY id DESC LIMIT 1`,
+      )
+        .bind(phone)
+        .first<{ estado_chat: string; pago_estado: string }>();
+      expect(prev?.pago_estado).toBe("CANCELADO");
+    });
+
+    it("e2e: RFC inválido re-pide RFC (no solo empezar de nuevo)", async () => {
+      await startCartAndCheckout(phone);
+      await wa({ Body: "Sí, factura", ButtonPayload: "FACTURA_SI" });
+      await wa({ Body: "Sí tengo RFC", ButtonPayload: "FISCAL_EDIT" });
+
+      const res = await wa({ Body: "ABC" });
+      const twiml = await res.text();
+      expect(twiml).toMatch(/RFC|12 o 13|Paso 1/i);
+      expect(twiml).toMatch(/Menú|Sin RFC/i);
+      expect((await latestOrden())?.estado_chat).toBe("ESPERANDO_FISCAL_RFC");
+    });
+
+    it("e2e: wizard completo con XAXX llega a QR", async () => {
+      await startCartAndCheckout(phone);
+      await wa({ Body: "Sí, factura", ButtonPayload: "FACTURA_SI" });
+      await wa({ Body: "Sí tengo RFC", ButtonPayload: "FISCAL_EDIT" });
+      await wa({ Body: "XAXX010101000" });
+      await wa({ Body: "PUBLICO EN GENERAL" });
+      await wa({ Body: "06600" });
+      await wa({
+        Body: "Sin obligaciones",
+        ButtonPayload: "REG_616",
+      });
+      const res = await wa({
+        Body: "Sin efectos fiscales",
+        ButtonPayload: "USO_S01",
+      });
+      const twiml = await res.text();
+      expect(twiml).toMatch(/QR|ticket|orden #|Escanea|Pagar|guardados|genérico/i);
+      const orden = await latestOrden();
+      expect(orden?.pey_qr_id).toBeTruthy();
+      expect(orden?.datos_fiscales_ok).toBe(1);
+    });
+  });
 });
