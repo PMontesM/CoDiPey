@@ -37,8 +37,9 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 
 **A) Sin WhatsApp (2 min)**  
 1. Abrir el [panel](https://cobro-codi.inomali.workers.dev/admin).  
-2. Con seed: orden **#8** ya está `ESPERANDO_PAGO` → **Simular Webhook Pago pey**.  
-   O bien: **+ Simular Cobro WhatsApp** → abrir la orden nueva → simular pago.
+2. Con seed: la orden más reciente (`ESPERANDO_PAGO` $25) → **Simular Webhook Pago pey**.  
+   O bien: **+ Simular Cobro WhatsApp** → abrir la orden nueva → simular pago.  
+   Filtro **Fiscal**: hay 3 órdenes de atención (error CP, RFC inválido, listo por timbrar).
 
 **B) Con su WhatsApp (auto-servicio)**  
 1. En la [landing](https://cobro-codi.inomali.workers.dev/) → *Probar en mi WhatsApp*.  
@@ -112,7 +113,7 @@ Estados útiles en panel: `ARMAR_PEDIDO`, `ESPERANDO_FACTURA`, `ESPERANDO_FISCAL
 
 ## Seed de presentación
 
-Borra `ordenes` / `blobs` / `clientes_fiscales` / `demo_whatsapp` y planta **8 escenarios** (`scripts/seed-presentacion.mjs`):
+Borra `ordenes` / `blobs` / `clientes_fiscales` / `demo_whatsapp` y planta **10 escenarios** (`scripts/seed-presentacion.mjs`):
 
 | # | Estado | Para qué |
 |---|---|---|
@@ -120,10 +121,12 @@ Borra `ordenes` / `blobs` / `clientes_fiscales` / `demo_whatsapp` y planta **8 e
 | 2 | PAGADO sin factura | Flujo Sin RFC |
 | 3 | PAGADO + CFDI $1016 | KPI $0 comisión |
 | 4 | CANCELADO | Historial / filtros |
-| 5 | PAGADO + ERROR_FISCAL | Reintentar timbrado |
-| 6 | ESPERANDO_FISCAL_RFC | Wizard a medias |
-| 7 | ARMAR_PEDIDO | Carrito en curso |
-| 8 | ESPERANDO_PAGO $25 | **Simular Webhook Pago pey** |
+| 5 | PAGADO + ERROR_FISCAL (CP) | Filtro Atención fiscal |
+| 6 | PAGADO + ERROR_FISCAL (RFC) | Filtro Atención fiscal |
+| 7 | PAGADO + listo por timbrar | Filtro Atención fiscal |
+| 8 | ESPERANDO_FISCAL_RFC | Wizard a medias |
+| 9 | ARMAR_PEDIDO | Carrito en curso |
+| 10 | ESPERANDO_PAGO $25 | **Simular Webhook Pago pey** |
 
 ```bash
 npm run db:seed:remote   # D1 de producción (panel en vivo)

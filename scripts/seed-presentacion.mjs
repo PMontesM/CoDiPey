@@ -49,6 +49,8 @@ const WA = {
   diego: "whatsapp:+5215529018473",
   sofia: "whatsapp:+5215533445566",
   pedro: "whatsapp:+5215577889900",
+  ana: "whatsapp:+5215511223344",
+  jose: "whatsapp:+5215599887766",
 };
 
 const fiscales = [
@@ -83,6 +85,22 @@ const fiscales = [
     codigo_postal: "06600",
     regimen: "601",
     uso_cfdi: "G03",
+  },
+  {
+    telefono: WA.ana,
+    rfc: "AAA010101AAA",
+    razon_social: "CLIENTE DEMO INVALIDO",
+    codigo_postal: "01000",
+    regimen: "601",
+    uso_cfdi: "G03",
+  },
+  {
+    telefono: WA.jose,
+    rfc: "XAXX010101000",
+    razon_social: "PUBLICO EN GENERAL",
+    codigo_postal: "06600",
+    regimen: "616",
+    uso_cfdi: "S01",
   },
 ];
 
@@ -172,7 +190,7 @@ const ordenes = [
     created_at: iso(55),
     updated_at: iso(50),
   },
-  // 5 — Pagado + error fiscal (mostrar Reintentar timbrado)
+  // 5 — Pagado + error fiscal CP (filtro Atención fiscal)
   {
     telefono: WA.laura,
     conceptos: items(
@@ -180,18 +198,57 @@ const ordenes = [
       [1, "Configuración de red", 850],
     ),
     monto: "1850.00",
-    concepto_pey: "Soporte · error fiscal",
+    concepto_pey: "Soporte · error CP fiscal",
     pago_estado: "PAGADO",
     requiere_factura: 1,
     datos_fiscales_ok: 1,
     facturapi_id: null,
     cfdi_uuid: null,
-    pey_transaction_id: "seed_tx_error_fiscal",
-    pey_qr_id: "seed_qr_error_fiscal",
+    pey_transaction_id: "seed_tx_error_cp",
+    pey_qr_id: "seed_qr_error_cp",
     estado_chat: "ERROR_FISCAL",
     error_fiscal:
       "CFDI40147: El campo DomicilioFiscalReceptor (06600) no coincide con el código postal registrado ante el SAT para el RFC URE180429TM6.",
     fiscalTel: WA.laura,
+    created_at: iso(48),
+    updated_at: iso(46),
+  },
+  // 5b — Pagado + RFC inválido (segunda atención fiscal)
+  {
+    telefono: WA.ana,
+    conceptos: items([5, "Tortillas kg", 22], [2, "Frijol 1kg", 38]),
+    monto: "186.00",
+    concepto_pey: "Tortillas · RFC inválido",
+    pago_estado: "PAGADO",
+    requiere_factura: 1,
+    datos_fiscales_ok: 1,
+    facturapi_id: null,
+    cfdi_uuid: null,
+    pey_transaction_id: "seed_tx_error_rfc",
+    pey_qr_id: "seed_qr_error_rfc",
+    estado_chat: "ERROR_FISCAL",
+    error_fiscal:
+      "RFC AAA010101AAA no pasó validación SAT / Facturapi. Corrige RFC o razón social y reintenta el timbrado.",
+    fiscalTel: WA.ana,
+    created_at: iso(44),
+    updated_at: iso(42),
+  },
+  // 5c — Pagado + factura pedida sin timbrar (tercera atención fiscal)
+  {
+    telefono: WA.jose,
+    conceptos: items([1, "Despensa semanal", 420], [2, "Refresco 2L", 35]),
+    monto: "490.00",
+    concepto_pey: "Despensa · listo por timbrar",
+    pago_estado: "PAGADO",
+    requiere_factura: 1,
+    datos_fiscales_ok: 1,
+    facturapi_id: null,
+    cfdi_uuid: null,
+    pey_transaction_id: "seed_tx_listo_timbrar",
+    pey_qr_id: "seed_qr_listo_timbrar",
+    estado_chat: "ESPERANDO_DATOS_FISCALES",
+    error_fiscal: null,
+    fiscalTel: WA.jose,
     created_at: iso(40),
     updated_at: iso(38),
   },
