@@ -37,7 +37,7 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 2. **+ Simular Cobro WhatsApp** → **Simular Webhook Pago pey**.
 
 **B) Con su WhatsApp (auto-servicio, sin que apruebes tú)**  
-1. En la [landing](https://cobro-codi.inomali.workers.dev/) → *Registra tu WhatsApp*.  
+1. En la [landing](https://cobro-codi.inomali.workers.dev/) → *Probar en mi WhatsApp* / `#probar-whatsapp`.  
 2. Toca **Abrir WhatsApp con el join** (o usa el SMS si configuraste `TWILIO_SMS_FROM`).  
 3. Envía el `join …` → cuando confirme, escribe `hola`.
 
@@ -57,7 +57,8 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 |---|---|
 | Worker | `https://cobro-codi.inomali.workers.dev` |
 | Landing | `https://cobro-codi.inomali.workers.dev/` |
-| Consola | `https://cobro-codi.inomali.workers.dev/admin` || Health | `https://cobro-codi.inomali.workers.dev/health` |
+| Consola | `https://cobro-codi.inomali.workers.dev/admin` |
+| Health | `https://cobro-codi.inomali.workers.dev/health` |
 | Repo | https://github.com/PMontesM/CoDiPey |
 
 | Binding / secret | Uso |
