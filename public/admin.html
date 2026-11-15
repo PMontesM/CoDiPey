@@ -343,7 +343,7 @@
             <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#16302B]"></i>
             <span>Conciliación automática vía <strong class="font-semibold text-[#1C1917]">pey CoDi</strong> &amp; <strong class="font-semibold text-[#1C1917]">Facturapi</strong></span>
           </span>
-          <span class="tabular-mono text-[10px]">POLLING: GET /api/ordenes · 2.5s</span>
+          <span id="pollingHint" class="tabular-mono text-[10px]">POLLING: GET /api/ordenes · adaptativo</span>
         </div>
       </section>
 
@@ -644,9 +644,55 @@
     }
 
     // =========================================================================
-    // 4. BACKEND POLLING (GET /api/ordenes every 2.5s) + DEMO FALLBACK
+    // 4. BACKEND POLLING adaptativo + DEMO FALLBACK
+    // Con cobros en curso: 2.5s (webhooks se ven al instante).
+    // En reposo: 15s. Pestaña oculta: 60s (ahorra free tier).
     // =========================================================================
+    const POLL_FAST_MS = 2500;
+    const POLL_IDLE_MS = 15000;
+    const POLL_HIDDEN_MS = 60000;
+    let pollTimer = null;
+    let pollInFlight = false;
+
+    function hasActiveCobros(orders) {
+      return (orders || []).some(
+        (o) =>
+          o.pago_estado === "PENDIENTE" ||
+          o.estado_chat === "ESPERANDO_PAGO" ||
+          o.estado_chat === "ESPERANDO_FACTURA" ||
+          o.estado_chat === "ESPERANDO_DATOS_FISCALES" ||
+          String(o.estado_chat || "").startsWith("ESPERANDO_FISCAL_") ||
+          o.estado_chat === "ERROR_FISCAL"
+      );
+    }
+
+    function nextPollDelayMs() {
+      if (document.hidden) return POLL_HIDDEN_MS;
+      return hasActiveCobros(state.orders) ? POLL_FAST_MS : POLL_IDLE_MS;
+    }
+
+    function scheduleNextPoll() {
+      if (pollTimer) clearTimeout(pollTimer);
+      const delay = nextPollDelayMs();
+      const hint = document.getElementById("pollingHint");
+      if (hint) {
+        const label =
+          delay === POLL_FAST_MS
+            ? "2.5s · cobros activos"
+            : delay === POLL_HIDDEN_MS
+              ? "60s · pestaña oculta"
+              : "15s · reposo";
+        hint.textContent = `POLLING: GET /api/ordenes · ${label}`;
+      }
+      pollTimer = setTimeout(() => pollOrders(false), delay);
+    }
+
     async function pollOrders(manual = false) {
+      if (pollInFlight && !manual) {
+        scheduleNextPoll();
+        return;
+      }
+      pollInFlight = true;
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 1800);
@@ -700,6 +746,8 @@
         setConnectionStatus(false);
         state.kpis = calculateMetrics(state.orders);
         if (manual) showToast("Backend local no detectado · Operando en Modo Demo Interactivo", "info");
+      } finally {
+        pollInFlight = false;
       }
 
       // Mantener selección solo si la orden sigue existiendo (no auto-abrir ticket)
@@ -709,6 +757,7 @@
 
       document.getElementById("lastSyncText").textContent = `Sincronizado · ${nowTimeStr()}`;
       renderAll();
+      scheduleNextPoll();
     }
 
     function setConnectionStatus(live) {
@@ -1796,11 +1845,16 @@
       if (e.key === "Escape" && state.selectedId) closeTicket();
     });
 
+    document.addEventListener("visibilitychange", () => {
+      // Al volver a la pestaña, sincroniza ya (pagos no esperan 60s)
+      if (!document.hidden) pollOrders(false);
+      else scheduleNextPoll();
+    });
+
     window.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       renderAll();
       pollOrders();
-      setInterval(pollOrders, 2500);
     });
   </script>
 </body>
