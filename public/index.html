@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CoDiPey — Cobro CoDi + CFDI desde WhatsApp</title>
-  <meta name="description" content="Cobro digital para tiendas de barrio: WhatsApp, QR CoDi sin comisión de tarjeta y factura CFDI 4.0." />
+  <title>CoDiPey — Cobra por WhatsApp, sin comisión de tarjeta</title>
+  <meta name="description" content="Para tu tienda: el cliente pide por WhatsApp, paga con QR y, si quiere, se lleva su factura. Sin terminal cara ni complicaciones." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500;600&family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -498,7 +498,7 @@
 <body>
   <div class="top">
     <span class="top-brand">CoDiPey</span>
-    <a class="top-cta" href="/admin">Abrir consola</a>
+    <a class="top-cta" href="/admin">Ver mi panel</a>
   </div>
 
   <header class="hero">
@@ -507,54 +507,54 @@
     </div>
 
     <div class="hero-copy">
-      <p class="hero-kicker"><i></i> WhatsApp · CoDi · CFDI 4.0</p>
+      <p class="hero-kicker"><i></i> Para tu tienda de barrio</p>
       <h1 class="display">CoDiPey</h1>
-      <p class="hero-lead">Cobro en el mostrador sin comisión de tarjeta.</p>
+      <p class="hero-lead">Cobra por WhatsApp. Sin que la tarjeta se coma tu ganancia.</p>
       <p class="hero-sub">
-        El cliente pide por WhatsApp, paga con QR CoDi y, si lo necesita, recibe factura —sin cadenas raras del SAT.
+        El cliente te escribe, paga con un código QR y, si pide factura, se la llevas lista. Tú sigues atendiendo.
       </p>
       <div class="hero-actions">
         <a class="btn btn-light" href="/admin">
-          Entrar a la consola
+          Probar el panel
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="btn btn-line" href="#historia">Ver la historia</a>
+        <a class="btn btn-line" href="#historia">¿Cómo funciona?</a>
       </div>
     </div>
 
     <div class="hero-frame">
       <div class="hero-frame-chrome">
-        <img src="/shot-console.png" alt="Consola operativa CoDiPey con órdenes CoDi y CFDI" width="1440" height="900" />
+        <img src="/shot-console.png" alt="Panel de CoDiPey con ventas y pagos" width="1440" height="900" />
       </div>
       <div class="hero-badge">
-        <strong class="mono">$0 comisión</strong>
-        <span>vs ~3.5% + IVA en tarjeta</span>
+        <strong class="mono">$0 de comisión</strong>
+        <span>La tarjeta te quita ~3.5%</span>
       </div>
     </div>
   </header>
 
   <div class="marquee" aria-hidden="true">
     <div class="marquee-track">
-      <span>Twilio WhatsApp</span><span>pey CoDi</span><span>Facturapi CFDI 4.0</span><span>Cloudflare Workers</span><span>Banxico</span>
-      <span>Twilio WhatsApp</span><span>pey CoDi</span><span>Facturapi CFDI 4.0</span><span>Cloudflare Workers</span><span>Banxico</span>
+      <span>Pide por WhatsApp</span><span>Paga con QR</span><span>Sin comisión de tarjeta</span><span>Factura si la piden</span><span>Todo desde el mostrador</span>
+      <span>Pide por WhatsApp</span><span>Paga con QR</span><span>Sin comisión de tarjeta</span><span>Factura si la piden</span><span>Todo desde el mostrador</span>
     </div>
   </div>
 
   <section class="statement">
     <div class="statement-inner">
-      <h2>La fila no espera a que abras el <em>portal del SAT</em>.</h2>
+      <h2>La gente en la fila <em>no puede esperar</em> a que hagas cuenta.</h2>
       <div class="statement-side">
         <p>
-          CoDi es gratis para el comercio. El problema es el flujo: QR, datos fiscales y timbrado no caben en un mostrador ajetreado.
+          Cobrar con tarjeta te come la ganancia. Facturar a mano te atrasa. CoDiPey une el chat, el pago y la factura en un solo flujo.
         </p>
         <div class="split">
           <div>
-            <strong>Antes</strong>
-            Terminal con comisión · RFC a puro texto · factura a mano
+            <strong>Como siempre</strong>
+            Terminal cara · anotar RFC · pelearte con la factura
           </div>
           <div>
-            <strong>CoDiPey</strong>
-            Botones en WhatsApp · Sin RFC en un toque · consola en vivo
+            <strong>Con CoDiPey</strong>
+            Botones en el chat · “sin factura” en un toque · ves todo en el panel
           </div>
         </div>
       </div>
@@ -563,69 +563,69 @@
 
   <section class="moments" id="historia">
     <div class="moments-head">
-      <p class="eyebrow">Tres momentos</p>
-      <h2>Del chat al comprobante, sin salir del mostrador.</h2>
+      <p class="eyebrow">Así de simple</p>
+      <h2>Tres pasos. Sin salirte del mostrador.</h2>
     </div>
 
     <article class="moment">
       <div>
-        <p class="moment-num">01 — WHATSAPP</p>
-        <h3>El cliente pide. Tú no tecleas fiscal.</h3>
-        <p>Lista de productos y botones: factura, solo pagar, sin RFC o cancelar. Pensado para quien atiende, no para contador.</p>
+        <p class="moment-num">01 — EL PEDIDO</p>
+        <h3>Te escriben. Tú eliges con botones.</h3>
+        <p>El cliente arma lo que lleva. Tú solo tocas: con factura, solo pagar, o cancelar. Nada de teclear códigos raros.</p>
       </div>
       <div class="moment-visual">
-        <img src="/phone-counter.jpg" alt="Celular sobre el mostrador con chat de cobro" width="1200" height="900" loading="lazy" />
+        <img src="/phone-counter.jpg" alt="Celular en el mostrador con el chat del cobro" width="1200" height="900" loading="lazy" />
       </div>
     </article>
 
     <article class="moment">
       <div>
-        <p class="moment-num">02 — QR CODI</p>
-        <h3>Paga con banca. Sin comisión de adquirencia.</h3>
-        <p>QR vía pey, vigencia ~10 minutos. Se regenera o cancela desde el chat o la consola. SPEI/CoDi, sin contracargos de tarjeta.</p>
+        <p class="moment-num">02 — EL PAGO</p>
+        <h3>Un QR. Pagan con su banco.</h3>
+        <p>Sale el código, lo escanean y listo. No pagas comisión de tarjeta. Si se vence, generas otro o lo cancelas.</p>
       </div>
       <div class="moment-visual contain">
-        <img src="/shot-qr-ticket.png" alt="Ticket de orden pendiente con QR CoDi" width="800" height="1200" loading="lazy" />
+        <img src="/shot-qr-ticket.png" alt="Pantalla con el código QR para pagar" width="800" height="1200" loading="lazy" />
       </div>
     </article>
 
     <article class="moment">
       <div>
-        <p class="moment-num">03 — CFDI 4.0</p>
-        <h3>Si piden factura, se timbra solo.</h3>
-        <p>Wizard guiado o público en general. Al liquidar el pago, Facturapi emite PDF y XML. La consola muestra el estatus al instante.</p>
+        <p class="moment-num">03 — LA FACTURA</p>
+        <h3>Si la piden, sale sola.</h3>
+        <p>Con datos o “sin RFC”. Cuando cae el pago, la factura se arma sola. Tú solo la mandas o la bajas del panel.</p>
       </div>
       <div class="moment-visual contain">
-        <img src="/shot-ticket.png" alt="Ticket liquidado con CFDI timbrado" width="800" height="1200" loading="lazy" />
+        <img src="/shot-ticket.png" alt="Venta pagada con factura lista" width="800" height="1200" loading="lazy" />
       </div>
     </article>
   </section>
 
   <section class="console" id="consola">
     <div class="console-inner">
-      <h2>La consola es la demo.</h2>
+      <h2>Tu panel de control, al tiro.</h2>
       <p>
-        Simula un cobro WhatsApp, mira el QR y liquida el pago —sin unir números al Sandbox de Twilio.
+        Ves quién debe, quién ya pagó y qué facturas salieron. Puedes probar un cobro completo sin usar tu WhatsApp.
       </p>
       <a class="btn btn-dark" href="/admin">
-        Abrir panel en vivo
+        Abrir mi panel
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </div>
     <div class="console-shot">
-      <img src="/shot-admin-ticket.png" alt="Vista real de la consola CoDiPey con ticket abierto" width="1440" height="900" loading="lazy" />
+      <img src="/shot-admin-ticket.png" alt="Panel de CoDiPey con una venta abierta" width="1440" height="900" loading="lazy" />
     </div>
   </section>
 
   <section class="close">
-    <h2>Pruébalo como lo vería el jurado.</h2>
-    <p>Dos clics: Simular Cobro WhatsApp → Simular Webhook Pago. Liquidación + CFDI en la misma pantalla.</p>
-    <a class="btn btn-light" href="/admin">Ir a la consola operativa</a>
+    <h2>Pruébalo en dos toques.</h2>
+    <p>Simula un cobro, mira el QR y marca el pago. Ves la venta cerrada —y la factura, si aplica— en la misma pantalla.</p>
+    <a class="btn btn-light" href="/admin">Ir al panel</a>
   </section>
 
   <footer class="foot">
-    <span>CoDiPey · Twilio · pey · Facturapi</span>
-    <a href="/admin">Consola →</a>
+    <span>CoDiPey · Cobro por WhatsApp para tu negocio</span>
+    <a href="/admin">Panel →</a>
   </footer>
 
   <script>
