@@ -101,6 +101,19 @@ async function sendContent(
   return true;
 }
 
+/**
+ * WhatsApp solo muestra 3 botones y no hay menú “pegajoso” en Sandbox.
+ * Reservamos siempre el 3er slot para *Menú* para que no se pierda.
+ */
+export function ensureMenuActions(
+  actions: QuickReplyAction[],
+): QuickReplyAction[] {
+  const primary = actions
+    .filter((a) => a.id !== "MENU" && a.id !== "HELP")
+    .slice(0, 2);
+  return [...primary, { title: "Menú", id: "MENU" }];
+}
+
 /** Envía botones de respuesta rápida (tarjeta interactiva WhatsApp). */
 export async function sendWhatsappQuickReply(
   env: Env,
@@ -108,20 +121,23 @@ export async function sendWhatsappQuickReply(
   body: string,
   actions: QuickReplyAction[],
 ): Promise<boolean> {
+  const finalActions = ensureMenuActions(actions);
   if (!hasTwilio(env)) {
-    console.log(`[whatsapp mock] quick-reply to=${to} body=${body} actions=${JSON.stringify(actions)}`);
+    console.log(
+      `[whatsapp mock] quick-reply to=${to} body=${body} actions=${JSON.stringify(finalActions)}`,
+    );
     return false;
   }
   const sid = await createContent(env, `qr_${Date.now()}`, {
     "twilio/quick-reply": {
       body: body.slice(0, 1024),
-      actions: actions.slice(0, 3).map((a) => ({
+      actions: finalActions.map((a) => ({
         title: a.title.slice(0, 20),
         id: a.id.slice(0, 200),
       })),
     },
   });
-  const fallback = `${body}\n\n${actions.map((a, i) => `${i + 1}) ${a.title}`).join("\n")}`;
+  const fallback = `${body}\n\n${finalActions.map((a, i) => `${i + 1}) ${a.title}`).join("\n")}`;
   if (!sid) {
     await sendWhatsapp(env, to, fallback);
     // Ya se entregó por API: el webhook no debe repetir en TwiML
@@ -222,6 +238,16 @@ export function resolveInteractiveId(
     inicio: "MENU",
     ayuda: "HELP",
     help: "HELP",
+    cobrar: "CART_PAY",
+    listo: "CART_PAY",
+    "cobrar ya": "CART_PAY",
+    "ir a cobrar": "CART_PAY",
+    "agregar más": "CART_ADD",
+    "agregar mas": "CART_ADD",
+    agregar: "CART_ADD",
+    "más productos": "CART_ADD",
+    "mas productos": "CART_ADD",
+    "otro producto": "CART_ADD",
   };
   const key = text.toLowerCase();
   if (map[key]) return map[key];
@@ -232,7 +258,9 @@ export function resolveInteractiveId(
     /^FISCAL_/.test(text) ||
     /^REG_/.test(text) ||
     /^USO_/.test(text) ||
-    /^(STATUS|HISTORY|QR_RENEW|QR_RESEND|CANCEL|MENU|HELP)$/.test(text)
+    /^(STATUS|HISTORY|QR_RENEW|QR_RESEND|CANCEL|MENU|HELP|CART_PAY|CART_ADD)$/.test(
+      text,
+    )
   ) {
     return text;
   }

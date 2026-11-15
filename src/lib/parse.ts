@@ -14,25 +14,37 @@ function money(n: number): string {
 export function parseProductLines(
   text: string,
 ): { items: Item[] | null; error: string | null } {
-  const lines = text
+  // Varios productos: una por línea, o separados por ; / ,
+  const rawChunks = text
     .trim()
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (!lines.length) {
+    .split(/\r?\n|;/)
+    .flatMap((chunk) => {
+      const t = chunk.trim();
+      if (!t) return [];
+      // "2 Cafe 45, 1 Agua 10" → partir por coma si cada lado parece producto
+      if (t.includes(",")) {
+        const parts = t.split(",").map((p) => p.trim()).filter(Boolean);
+        if (parts.length > 1 && parts.every((p) => PRODUCT_LINE_RE.test(p))) {
+          return parts;
+        }
+      }
+      return [t];
+    });
+
+  if (!rawChunks.length) {
     return {
       items: null,
       error:
-        "Envía productos, uno por línea. Ejemplo:\n2 Cafe 45\n1 Prueba CoDi 0.01",
+        "Envía productos, uno por línea. Ejemplo:\n2 Cafe 45\n1 Agua 10\n1 Prueba CoDi 0.01",
     };
   }
   const items: Item[] = [];
-  for (const ln of lines) {
+  for (const ln of rawChunks) {
     const m = PRODUCT_LINE_RE.exec(ln);
     if (!m) {
       return {
         items: null,
-        error: `No entendí: «${ln}»\nFormato: <cantidad> <concepto> <precio>\nEjemplo: 2 Cafe 45`,
+        error: `No entendí: «${ln}»\nFormato: <cantidad> <concepto> <precio>\nVarios: una línea cada uno\nEjemplo:\n2 Cafe 45\n1 Agua 10`,
       };
     }
     const qty = toNum(m[1]);

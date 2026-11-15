@@ -157,7 +157,10 @@ function formatMmSs(sec: number): string {
 
 async function askMenu(env: Env, telefono: string): Promise<string> {
   const body =
-    "🛒 *Cobro CoDi + CFDI 4.0*\nElige un producto, revisa tu cobro o escribe:\n`cantidad concepto precio`";
+    "🛒 *Cobro CoDi + CFDI 4.0*\n" +
+    "Elige productos (puedes varios) o escríbelos así:\n" +
+    "`2 Cafe 45`\n`1 Agua 10`\n\n" +
+    "Cuando termines, toca *Cobrar*.";
   const items = [
     ...CATALOG.map((c) => ({
       id: c.id,
@@ -179,6 +182,39 @@ async function askMenu(env: Env, telefono: string): Promise<string> {
     [...CATALOG.map((c, i) => `${i + 1}) ${c.item}`), "estado · historial · nuevo qr"]
       .join("\n")
   );
+}
+
+function formatItemsResumen(items: Item[]): string {
+  return items
+    .map(
+      (i) =>
+        `• ${i.cantidad} x ${i.concepto} @ $${i.precio_unitario} = $${i.subtotal}`,
+    )
+    .join("\n");
+}
+
+async function showCart(
+  env: Env,
+  telefono: string,
+  orden: Orden,
+): Promise<string> {
+  let items: Item[] = [];
+  try {
+    items = JSON.parse(orden.conceptos) as Item[];
+  } catch {
+    items = [];
+  }
+  const body =
+    `🛒 *Pedido en curso* · orden #${orden.id}\n` +
+    `${formatItemsResumen(items)}\n\n` +
+    `*Total: $${orden.monto} MXN*\n\n` +
+    `¿Agregamos más o cobramos?`;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Cobrar", id: "CART_PAY" },
+    { title: "Agregar más", id: "CART_ADD" },
+  ]);
+  if (sent) return "";
+  return `${body}\n\nResponde *cobrar* o *agregar más*.`;
 }
 
 async function askFacturaChoice(
@@ -805,14 +841,35 @@ async function releaseQrAfterFiscal(
   return `${preface}\n\n${qr}`.trim();
 }
 
-async function createOrderFromItems(
+/** Agrega productos al carrito (varios) o abre uno nuevo. */
+async function addItemsToCart(
   env: Env,
   telefono: string,
   items: Item[],
   existing: Orden | null,
 ): Promise<string> {
-  const total = sumItems(items);
   const ts = nowIso();
+
+  if (existing?.estado_chat === "ARMAR_PEDIDO") {
+    let prev: Item[] = [];
+    try {
+      prev = JSON.parse(existing.conceptos) as Item[];
+    } catch {
+      prev = [];
+    }
+    const merged = [...prev, ...items].slice(0, 30);
+    const total = sumItems(merged);
+    await env.DB.prepare(
+      `UPDATE ordenes SET conceptos = ?, monto = ?, updated_at = ? WHERE id = ?`,
+    )
+      .bind(JSON.stringify(merged), total, ts, existing.id)
+      .run();
+    const updated = await env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+      .bind(existing.id)
+      .first<Orden>();
+    return showCart(env, telefono, updated!);
+  }
+
   if (existing && existing.pago_estado === "PENDIENTE") {
     await env.DB.prepare(
       `UPDATE ordenes SET estado_chat = 'CANCELADO', updated_at = ? WHERE id = ? AND pago_estado = 'PENDIENTE'`,
@@ -820,21 +877,48 @@ async function createOrderFromItems(
       .bind(ts, existing.id)
       .run();
   }
+
+  const total = sumItems(items);
   const inserted = await env.DB.prepare(
     `INSERT INTO ordenes
       (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok, estado_chat, created_at, updated_at)
-     VALUES (?, ?, ?, 'PENDIENTE', 0, 0, 'ESPERANDO_FACTURA', ?, ?)`,
+     VALUES (?, ?, ?, 'PENDIENTE', 0, 0, 'ARMAR_PEDIDO', ?, ?)`,
   )
     .bind(telefono, JSON.stringify(items), total, ts, ts)
     .run();
   const newId = Number(inserted.meta.last_row_id);
-  const resumen = items
-    .map(
-      (i) =>
-        `• ${i.cantidad} x ${i.concepto} @ $${i.precio_unitario} = $${i.subtotal}`,
-    )
-    .join("\n");
-  return askFacturaChoice(env, telefono, newId, total, resumen);
+  const created = await env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+    .bind(newId)
+    .first<Orden>();
+  return showCart(env, telefono, created!);
+}
+
+async function checkoutCart(
+  env: Env,
+  telefono: string,
+  orden: Orden,
+): Promise<string> {
+  let items: Item[] = [];
+  try {
+    items = JSON.parse(orden.conceptos) as Item[];
+  } catch {
+    items = [];
+  }
+  if (!items.length) {
+    return askMenu(env, telefono);
+  }
+  await env.DB.prepare(
+    `UPDATE ordenes SET estado_chat = 'ESPERANDO_FACTURA', updated_at = ? WHERE id = ?`,
+  )
+    .bind(nowIso(), orden.id)
+    .run();
+  return askFacturaChoice(
+    env,
+    telefono,
+    orden.id,
+    orden.monto,
+    formatItemsResumen(items),
+  );
 }
 
 async function applyFiscalAndContinue(
@@ -887,6 +971,17 @@ export async function handleWhatsappMessage(
 
   if (interactive === "MENU" || interactive === "HELP") {
     return askMenu(env, telefono);
+  }
+
+  if (interactive === "CART_ADD") {
+    return askMenu(env, telefono);
+  }
+
+  if (interactive === "CART_PAY") {
+    if (!orden || orden.estado_chat !== "ARMAR_PEDIDO") {
+      return askMenu(env, telefono);
+    }
+    return checkoutCart(env, telefono, orden);
   }
 
   if (interactive === "STATUS" || /^estado|status$/i.test(text)) {
@@ -988,20 +1083,33 @@ export async function handleWhatsappMessage(
     !catalogHit &&
     /^\d+$/.test(text) &&
     estado !== "ESPERANDO_FACTURA" &&
+    estado !== "ARMAR_PEDIDO" &&
     !isFiscalWizardState(estado)
+  ) {
+    const idx = Number(text) - 1;
+    if (idx >= 0 && idx < CATALOG.length) catalogHit = CATALOG[idx];
+  }
+  // En carrito, "1"/"2" también pueden ser del catálogo
+  if (
+    !catalogHit &&
+    /^\d+$/.test(text) &&
+    estado === "ARMAR_PEDIDO"
   ) {
     const idx = Number(text) - 1;
     if (idx >= 0 && idx < CATALOG.length) catalogHit = CATALOG[idx];
   }
   if (catalogHit) {
     if (!catalogHit.line) {
-      return "Escribe tu pedido así:\n`cantidad concepto precio`\nEjemplo: `2 Cafe 45`";
+      return (
+        "Escribe tu pedido así (varios, uno por línea):\n" +
+        "`2 Cafe 45`\n`1 Agua 10`"
+      );
     }
     const parsed = parseProductLines(catalogHit.line);
     if (parsed.error || !parsed.items) {
       return parsed.error || "No entendí el producto";
     }
-    return createOrderFromItems(env, telefono, parsed.items, orden);
+    return addItemsToCart(env, telefono, parsed.items, orden);
   }
 
   if (
@@ -1061,10 +1169,19 @@ export async function handleWhatsappMessage(
     if (estado === "ESPERANDO_DATOS_FISCALES" || estado === "ERROR_FISCAL") {
       const maybeProducts = parseProductLines(text);
       if (!maybeProducts.error && maybeProducts.items) {
-        return createOrderFromItems(env, telefono, maybeProducts.items, orden);
+        return addItemsToCart(env, telefono, maybeProducts.items, orden);
       }
       return askFiscalActions(env, telefono, orden);
     }
+  }
+
+  // Armando pedido: más líneas de producto se suman al carrito
+  if (orden && estado === "ARMAR_PEDIDO") {
+    const more = parseProductLines(text);
+    if (!more.error && more.items) {
+      return addItemsToCart(env, telefono, more.items, orden);
+    }
+    return showCart(env, telefono, orden);
   }
 
   const { items, error } = parseProductLines(text);
@@ -1078,9 +1195,9 @@ export async function handleWhatsappMessage(
     }
     return (
       (error || "No entendí el pedido.") +
-      "\n\nUsa el menú (*estado*, *historial*, productos) o escribe:\n`cantidad concepto precio`"
+      "\n\nUsa el menú o escribe varios productos, uno por línea:\n`2 Cafe 45`\n`1 Agua 10`"
     );
   }
 
-  return createOrderFromItems(env, telefono, items, orden);
+  return addItemsToCart(env, telefono, items, orden);
 }
