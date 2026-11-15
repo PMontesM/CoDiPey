@@ -471,6 +471,74 @@
       height: clamp(260px, 40vw, 420px);
       padding: 0.5rem;
     }
+    .moment-visual.wa {
+      background: #0b141a;
+      display: flex;
+      justify-content: center;
+      padding: 1rem 1rem 0.75rem;
+    }
+    .moment-visual.wa img {
+      width: auto;
+      max-width: min(100%, 280px);
+      height: clamp(420px, 58vw, 560px);
+      object-fit: contain;
+      object-position: center top;
+      border-radius: 1.1rem;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+    }
+    @media (min-width: 900px) {
+      .moment-visual.wa img { max-width: 300px; height: 560px; }
+    }
+
+    /* Strip of WhatsApp screens */
+    .wa-gallery {
+      background: var(--ink);
+      padding: 0 1.25rem 3.5rem;
+    }
+    .wa-gallery-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .wa-gallery-note {
+      color: rgba(255,255,255,0.55);
+      font-size: 0.95rem;
+      max-width: 42ch;
+      margin: -0.5rem 0 1.75rem;
+    }
+    .wa-rail {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+    @media (min-width: 900px) {
+      .wa-rail { grid-template-columns: repeat(4, 1fr); gap: 1.15rem; }
+    }
+    .wa-card {
+      background: #121a20;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1rem;
+      padding: 0.75rem 0.75rem 0.9rem;
+      text-align: center;
+    }
+    .wa-card img {
+      width: 100%;
+      max-width: 240px;
+      margin: 0 auto 0.75rem;
+      border-radius: 1rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    }
+    .wa-card strong {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.2rem;
+    }
+    .wa-card span {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.35;
+    }
 
     /* —— Console band —— */
     .console {
@@ -574,7 +642,7 @@
       </div>
       <p class="hero-lead">Cobra por WhatsApp. Quédate con toda la venta.</p>
       <p class="hero-sub">
-        Te escriben, tocan un botón, pagan con QR. Si piden factura, sale sola. Sin terminal cara ni enredos.
+        La operación es por WhatsApp: te escriben, tocan un botón y pagan con QR. Si piden factura, sale sola. El panel solo es para vigilar.
       </p>
       <div class="hero-actions">
         <a class="btn btn-light" href="/admin">
@@ -627,57 +695,96 @@
 
   <section class="moments" id="historia">
     <div class="moments-head">
-      <p class="eyebrow">Tan fácil como WhatsApp</p>
-      <h2>Tres pasos. Como chatear con tu cliente.</h2>
+      <p class="eyebrow">La operación es por WhatsApp</p>
+      <h2>Así se ve el cobro en el chat.</h2>
     </div>
 
     <article class="moment">
       <div>
-        <p class="moment-num">01 — WHATSAPP</p>
-        <h3>Te escriben. Tú solo tocas botones.</h3>
-        <p>El cliente dice qué lleva. Tú eliges: con factura, solo pagar, o cancelar. Nada de teclear cosas raras.</p>
+        <p class="moment-num">01 — EL PEDIDO</p>
+        <h3>Escribes lo que llevan. Tocan un botón.</h3>
+        <p>Sale el total y preguntan: ¿factura o solo pagar? Todo con botones. Sin menús raros.</p>
       </div>
-      <div class="moment-visual">
-        <img src="/phone-counter.jpg" alt="Celular en el mostrador con el chat del cobro" width="1200" height="900" loading="lazy" />
+      <div class="moment-visual wa">
+        <img src="/wa-pedido.png" alt="WhatsApp: pedido y botones de factura o solo pagar" width="390" height="780" loading="lazy" />
       </div>
     </article>
 
     <article class="moment">
       <div>
         <p class="moment-num">02 — EL PAGO</p>
-        <h3>Un QR. $0 de comisión.</h3>
-        <p>Lo escanean con su banco y listo. No se te va el 3.5% en cada venta. Si se vence, generas otro o lo cancelas.</p>
+        <h3>Sale el QR. $0 de comisión.</h3>
+        <p>El cliente lo escanea con su banco. Tú no pagas lo de la terminal. Si se vence, pides otro QR o cancelas —también en el chat.</p>
       </div>
-      <div class="moment-visual contain">
-        <img src="/shot-qr-ticket.png" alt="Pantalla con el código QR para pagar" width="800" height="1200" loading="lazy" />
+      <div class="moment-visual wa">
+        <img src="/wa-qr.png" alt="WhatsApp: mensaje con QR CoDi para pagar" width="390" height="780" loading="lazy" />
       </div>
     </article>
 
     <article class="moment">
       <div>
         <p class="moment-num">03 — LA FACTURA</p>
-        <h3>Si la piden, sale sola.</h3>
-        <p>Con datos o “sin RFC”. Cuando cae el pago, la factura se arma sola. Tú solo la mandas o la bajas del panel.</p>
+        <h3>Si la piden, primero la cierras. Luego el QR.</h3>
+        <p>“Sin RFC” en un toque, o con datos. El QR llega al final para que no se pierda en el chat.</p>
       </div>
-      <div class="moment-visual contain">
-        <img src="/shot-ticket.png" alt="Venta pagada con factura lista" width="800" height="1200" loading="lazy" />
+      <div class="moment-visual wa">
+        <img src="/wa-factura.png" alt="WhatsApp: opciones Sin RFC o con RFC" width="390" height="780" loading="lazy" />
+      </div>
+    </article>
+
+    <article class="moment">
+      <div>
+        <p class="moment-num">04 — LISTO</p>
+        <h3>Pagan y te avisa el mismo WhatsApp.</h3>
+        <p>Confirmación de pago y factura lista. El panel solo sirve para vigilar; el día a día es el chat.</p>
+      </div>
+      <div class="moment-visual wa">
+        <img src="/wa-pagado.png" alt="WhatsApp: pago confirmado y factura lista" width="390" height="780" loading="lazy" />
       </div>
     </article>
   </section>
 
+  <section class="wa-gallery" aria-label="Recorrido en WhatsApp">
+    <div class="wa-gallery-inner">
+      <p class="wa-gallery-note">De punta a punta en el celular que ya usas en el mostrador.</p>
+      <div class="wa-rail">
+        <figure class="wa-card">
+          <img src="/wa-pedido.png" alt="" loading="lazy" />
+          <strong>1. Pedido</strong>
+          <span>Total + botones</span>
+        </figure>
+        <figure class="wa-card">
+          <img src="/wa-factura.png" alt="" loading="lazy" />
+          <strong>2. Factura</strong>
+          <span>Sin RFC o con datos</span>
+        </figure>
+        <figure class="wa-card">
+          <img src="/wa-qr.png" alt="" loading="lazy" />
+          <strong>3. QR CoDi</strong>
+          <span>$0 de comisión</span>
+        </figure>
+        <figure class="wa-card">
+          <img src="/wa-pagado.png" alt="" loading="lazy" />
+          <strong>4. Pagado</strong>
+          <span>Aviso + factura</span>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section class="console" id="consola">
     <div class="console-inner">
-      <h2>Tu panel de control, al tiro.</h2>
+      <h2>El panel es de control. La caja es WhatsApp.</h2>
       <p>
-        Ves quién debe, quién ya pagó y qué facturas salieron. Puedes probar un cobro completo sin usar tu WhatsApp.
+        En el panel ves quién debe, quién ya pagó y las facturas. Para probar sin tu número, simulas el cobro ahí.
       </p>
       <a class="btn btn-dark" href="/admin">
-        Abrir mi panel
+        Abrir panel de control
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </div>
     <div class="console-shot">
-      <img src="/shot-admin-ticket.png" alt="Panel de CoDiPey con una venta abierta" width="1440" height="900" loading="lazy" />
+      <img src="/shot-admin-ticket.png" alt="Panel de control CoDiPey" width="1440" height="900" loading="lazy" />
     </div>
   </section>
 

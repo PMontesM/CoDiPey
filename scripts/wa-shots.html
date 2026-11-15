@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WA shots</title>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: #0b141a;
+      padding: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+    }
+    .phone {
+      width: 390px;
+      background: #0b141a;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 3px solid #1f2c34;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    }
+    .status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 18px 6px;
+      color: #e9edef;
+      font-size: 13px;
+      font-weight: 600;
+      background: #1f2c34;
+    }
+    .status .icons { display: flex; gap: 6px; opacity: 0.85; font-size: 12px; }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px 10px;
+      background: #1f2c34;
+      color: #e9edef;
+    }
+    .back { font-size: 22px; opacity: 0.9; padding: 0 4px; }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, #16302B, #2F5C4F);
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 15px; color: #fff;
+    }
+    .who strong { display: block; font-size: 16px; font-weight: 600; }
+    .who span { font-size: 12px; color: #8696a0; }
+    .chat {
+      background: #0b141a;
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(22,48,43,0.35), transparent 50%),
+        linear-gradient(#0b141a, #0b141a);
+      min-height: 640px;
+      padding: 12px 10px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .day {
+      align-self: center;
+      background: #182229;
+      color: #8696a0;
+      font-size: 11.5px;
+      padding: 5px 10px;
+      border-radius: 7px;
+      margin: 4px 0 8px;
+    }
+    .row { display: flex; width: 100%; }
+    .row.in { justify-content: flex-start; }
+    .row.out { justify-content: flex-end; }
+    .bubble {
+      max-width: 82%;
+      padding: 7px 9px 5px;
+      border-radius: 8px;
+      font-size: 14.2px;
+      line-height: 1.35;
+      position: relative;
+      color: #e9edef;
+    }
+    .row.in .bubble { background: #202c33; border-top-left-radius: 0; }
+    .row.out .bubble { background: #005c4b; border-top-right-radius: 0; }
+    .bubble b { font-weight: 700; }
+    .meta {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 3px;
+      margin-top: 3px;
+      font-size: 10.5px;
+      color: rgba(233,237,239,0.55);
+    }
+    .row.out .meta { color: rgba(233,237,239,0.65); }
+    .checks { color: #53bdeb; font-size: 13px; letter-spacing: -1px; }
+    .btns {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-top: 1px solid rgba(233,237,239,0.12);
+    }
+    .btns button {
+      all: unset;
+      display: block;
+      text-align: center;
+      padding: 10px 8px;
+      color: #53bdeb;
+      font-weight: 600;
+      font-size: 14px;
+      border-top: 1px solid rgba(233,237,239,0.08);
+      cursor: default;
+    }
+    .btns button:first-child { border-top: none; }
+    .qr-card {
+      margin-top: 6px;
+      background: #fff;
+      border-radius: 6px;
+      padding: 10px;
+      color: #111;
+    }
+    .qr-card .label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #667781;
+      margin-bottom: 6px;
+    }
+    .qr-card svg { width: 100%; height: auto; display: block; }
+    .qr-card .amt {
+      margin-top: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      text-align: center;
+      color: #111;
+    }
+    .caption { color: #fff; font-size: 12px; margin-top: 8px; opacity: 0.5; text-align: center; width: 390px; }
+  </style>
+</head>
+<body>
+  <!-- 1: Pedido + botones factura -->
+  <div>
+    <div class="phone" id="wa1">
+      <div class="status"><span>9:41</span><span class="icons">▌▌▌ 🔋</span></div>
+      <div class="header">
+        <span class="back">‹</span>
+        <div class="avatar">CP</div>
+        <div class="who"><strong>CoDiPey · Abarrotes</strong><span>en línea</span></div>
+      </div>
+      <div class="chat">
+        <div class="day">Hoy</div>
+        <div class="row out"><div class="bubble">hola<div class="meta">9:40 <span class="checks">✓✓</span></div></div></div>
+        <div class="row in"><div class="bubble">¡Hola! 👋 Escribe lo que llevas, por ejemplo:<br><br>1 Café de olla 45<br>2 Pan dulce 18<div class="meta">9:40</div></div></div>
+        <div class="row out"><div class="bubble">1 Café de olla 45<br>2 Pan dulce 18<div class="meta">9:41 <span class="checks">✓✓</span></div></div></div>
+        <div class="row in"><div class="bubble">
+          ✅ <b>Orden #25</b><br>
+          • 1 x Café de olla @ $45 = $45.00<br>
+          • 2 x Pan dulce @ $18 = $36.00<br><br>
+          <b>Total: $81.00 MXN</b><br><br>
+          ¿El cliente necesita factura?
+          <div class="btns">
+            <button>Sí, factura</button>
+            <button>Solo pagar</button>
+          </div>
+          <div class="meta">9:41</div>
+        </div></div>
+      </div>
+    </div>
+    <p class="caption">wa-pedido</p>
+  </div>
+
+  <!-- 2: Solo pagar → QR -->
+  <div>
+    <div class="phone" id="wa2">
+      <div class="status"><span>9:42</span><span class="icons">▌▌▌ 🔋</span></div>
+      <div class="header">
+        <span class="back">‹</span>
+        <div class="avatar">CP</div>
+        <div class="who"><strong>CoDiPey · Abarrotes</strong><span>en línea</span></div>
+      </div>
+      <div class="chat">
+        <div class="day">Hoy</div>
+        <div class="row out"><div class="bubble">Solo pagar<div class="meta">9:41 <span class="checks">✓✓</span></div></div></div>
+        <div class="row in"><div class="bubble">
+          🔲 <b>QR CoDi</b> orden #25 ($81.00 MXN)<br>
+          Café de olla + pan<br>
+          Válido 10 min — escanéalo con tu banca.
+          <div class="qr-card">
+            <div class="label">QR CoDi · Banxico</div>
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <rect width="120" height="120" fill="#fff"/>
+              <g fill="#111">
+                <rect x="8" y="8" width="34" height="34" rx="2"/>
+                <rect x="14" y="14" width="22" height="22" fill="#fff"/>
+                <rect x="20" y="20" width="10" height="10"/>
+                <rect x="78" y="8" width="34" height="34" rx="2"/>
+                <rect x="84" y="14" width="22" height="22" fill="#fff"/>
+                <rect x="90" y="20" width="10" height="10"/>
+                <rect x="8" y="78" width="34" height="34" rx="2"/>
+                <rect x="14" y="84" width="22" height="22" fill="#fff"/>
+                <rect x="20" y="90" width="10" height="10"/>
+                <rect x="50" y="8" width="8" height="8"/><rect x="62" y="8" width="8" height="8"/>
+                <rect x="50" y="20" width="8" height="8"/>
+                <rect x="8" y="50" width="8" height="8"/><rect x="20" y="50" width="8" height="8"/>
+                <rect x="32" y="50" width="8" height="8"/><rect x="50" y="50" width="8" height="8"/>
+                <rect x="62" y="50" width="8" height="8"/><rect x="74" y="50" width="8" height="8"/>
+                <rect x="86" y="50" width="8" height="8"/><rect x="98" y="50" width="8" height="8"/>
+                <rect x="50" y="62" width="8" height="8"/><rect x="74" y="62" width="8" height="8"/>
+                <rect x="98" y="62" width="8" height="8"/><rect x="50" y="74" width="8" height="8"/>
+                <rect x="62" y="74" width="8" height="8"/><rect x="86" y="74" width="8" height="8"/>
+                <rect x="98" y="74" width="20" height="8"/><rect x="50" y="86" width="8" height="8"/>
+                <rect x="74" y="86" width="8" height="8"/><rect x="98" y="86" width="8" height="8"/>
+                <rect x="50" y="98" width="20" height="8"/><rect x="86" y="98" width="8" height="8"/>
+                <rect x="98" y="98" width="14" height="14"/>
+              </g>
+            </svg>
+            <div class="amt">$81.00 · $0 comisión</div>
+          </div>
+          <div class="btns">
+            <button>Nuevo QR</button>
+            <button>Cancelar cobro</button>
+          </div>
+          <div class="meta">9:42</div>
+        </div></div>
+      </div>
+    </div>
+    <p class="caption">wa-qr</p>
+  </div>
+
+  <!-- 3: Factura sin RFC → QR al final -->
+  <div>
+    <div class="phone" id="wa3">
+      <div class="status"><span>9:43</span><span class="icons">▌▌▌ 🔋</span></div>
+      <div class="header">
+        <span class="back">‹</span>
+        <div class="avatar">CP</div>
+        <div class="who"><strong>CoDiPey · Abarrotes</strong><span>en línea</span></div>
+      </div>
+      <div class="chat">
+        <div class="day">Hoy</div>
+        <div class="row out"><div class="bubble">Sí, factura<div class="meta">9:42 <span class="checks">✓✓</span></div></div></div>
+        <div class="row in"><div class="bubble">
+          🧾 <b>Factura</b> — orden #25 ($81.00 MXN)<br><br>
+          Primero cerramos la factura; <b>el QR de pago llega al final</b> para que no se pierda.<br><br>
+          En la mayoría de las tiendas basta con <b>Sin RFC</b>.
+          <div class="btns">
+            <button>Sin RFC</button>
+            <button>Sí tengo RFC</button>
+          </div>
+          <div class="meta">9:42</div>
+        </div></div>
+        <div class="row out"><div class="bubble">Sin RFC<div class="meta">9:43 <span class="checks">✓✓</span></div></div></div>
+        <div class="row in"><div class="bubble">
+          ✅ Datos listos (público en general).<br>
+          Aquí va el QR para pagar — <b>$0 de comisión</b>.
+          <div class="meta">9:43</div>
+        </div></div>
+      </div>
+    </div>
+    <p class="caption">wa-factura</p>
+  </div>
+
+  <!-- 4: Pago confirmado -->
+  <div>
+    <div class="phone" id="wa4">
+      <div class="status"><span>9:45</span><span class="icons">▌▌▌ 🔋</span></div>
+      <div class="header">
+        <span class="back">‹</span>
+        <div class="avatar">CP</div>
+        <div class="who"><strong>CoDiPey · Abarrotes</strong><span>en línea</span></div>
+      </div>
+      <div class="chat">
+        <div class="day">Hoy</div>
+        <div class="row in"><div class="bubble">
+          💰 <b>Pago CoDi confirmado:</b> $81.00 MXN (orden #25).<div class="meta">9:44</div>
+        </div></div>
+        <div class="row in"><div class="bubble">
+          ✅ Factura lista.<br>
+          Te mando el PDF / XML o los bajas del panel.
+          <div class="btns">
+            <button>Menú</button>
+            <button>Estado</button>
+          </div>
+          <div class="meta">9:45</div>
+        </div></div>
+      </div>
+    </div>
+    <p class="caption">wa-pagado</p>
+  </div>
+</body>
+</html>
