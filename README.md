@@ -30,7 +30,7 @@ En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a 
 ### Stack
 Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Facturapi CFDI 4.0
 
-### Cómo demoea el jurado
+### Cómo demostrar ante el jurado
 
 **A) Sin WhatsApp (2 min)**  
 1. Abrir la [consola](https://cobro-codi.inomali.workers.dev/admin).  

@@ -190,7 +190,7 @@ app.get("/api/demo/whatsapp-join", (c) => {
     sms_disponible: Boolean((c.env.TWILIO_SMS_FROM || "").trim()),
     nota: payload.configured
       ? "Registra tu número y abre WhatsApp con el join listo. Tú no necesitas aprobación manual."
-      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker. Usa /admin para demoea sin WhatsApp.",
+      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker. Usa /admin para demostrar sin WhatsApp.",
   });
 });
 

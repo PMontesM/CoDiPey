@@ -23,7 +23,7 @@ export function isFiscalWizardState(estado: string): boolean {
   return (FISCAL_STEPS as readonly string[]).includes(estado);
 }
 
-/** Régimenes frecuentes en retail / persona física (etiqueta clara + código SAT). */
+/** Regímenes frecuentes en retail / persona física (etiqueta clara + código SAT). */
 export const REGIMEN_OPTIONS = [
   {
     id: "REG_626",
