@@ -2,7 +2,7 @@
 
 **Cobro digital para tiendas de barrio:** el cliente pide por WhatsApp, arma un carrito, paga con **QR CoDi** ($0 de comisión de tarjeta) y, si lo necesita, recibe **factura CFDI 4.0**.
 
-Pensado para mostrador: botones, menú fijo, carrito multi-producto y pasos fiscales guiados (no cadenas del SAT).
+Pensado para mostrador: botones, menú, carrito multi-producto y pasos fiscales guiados (no cadenas del SAT).
 
 ---
 
@@ -27,7 +27,7 @@ En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a 
 1. WhatsApp con **catálogo + carrito** (varios productos) y botones (Cobrar / Menú / Sí factura / Solo pagar / Sin RFC).
 2. **Ticket térmico** (PNG) + página HTML `/ticket/:id` con QR grande.
 3. **QR CoDi** vía pey (vigencia ~10 min; regenerar o cancelar desde chat o panel).
-4. Factura: **Sin RFC** en un toque, o wizard de 5 pasos; validación SAT con Facturapi.
+4. Factura: **Sin RFC** en un toque, RFC guardado (**Sí, esos** / **Otros datos**), o wizard de 5 pasos con reintento por campo si el SAT rechaza.
 5. **Panel** en tiempo real: liquidación, CFDI, cancelar pendientes, simulación de cobro/pago.
 
 ### Stack
@@ -39,7 +39,7 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 1. Abrir el [panel](https://cobro-codi.inomali.workers.dev/admin).  
 2. Con seed: la orden más reciente (`ESPERANDO_PAGO` $25) → **Simular Webhook Pago pey**.  
    O bien: **+ Simular Cobro WhatsApp** → abrir la orden nueva → simular pago.  
-   Filtro **Fiscal**: hay 3 órdenes de atención (error CP, RFC inválido, listo por timbrar).
+   Filtro **Fiscal**: 3 órdenes de atención (error CP, RFC inválido, listo por timbrar).
 
 **B) Con su WhatsApp (auto-servicio)**  
 1. En la [landing](https://cobro-codi.inomali.workers.dev/) → *Probar en mi WhatsApp*.  
@@ -53,7 +53,7 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 
 ## Descripción corta (copiar/pegar)
 
-> CoDiPey es un MVP que permite a un comercio cobrar por WhatsApp con QR CoDi (pey) y emitir CFDI 4.0 (Facturapi): carrito multi-producto, botones, Sin RFC, captura fiscal guiada, ticket + panel operativo. Demo pública en `/admin` sin unir números al Sandbox de Twilio.
+> CoDiPey es un MVP que permite a un comercio cobrar por WhatsApp con QR CoDi (pey) y emitir CFDI 4.0 (Facturapi): carrito multi-producto, botones, Sin RFC, captura fiscal guiada con corrección por campo, ticket + panel operativo. Demo pública en `/admin` sin unir números al Sandbox de Twilio.
 
 ---
 
@@ -100,12 +100,25 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 
 ## Flujo WhatsApp (como está en `src/lib/chat.ts`)
 
-1. `hola` / Menú → catálogo (Prueba CoDi, Café, Agua, o texto libre).
-2. Cada producto entra al **carrito** (`estado_chat = ARMAR_PEDIDO`). Botones: **Cobrar** / **Agregar más**.
+1. `hola` / **Menú** → catálogo (Prueba CoDi, Café, Agua, o texto libre `2 Cafe 45`).
+2. Cada producto entra al **carrito** (`ARMAR_PEDIDO`). Botones: **Cobrar** / **Agregar más** (+ **Menú** en el 3er slot).
 3. **Cobrar** → `ESPERANDO_FACTURA` → **Sí, factura** o **Solo pagar**.
 4. **Solo pagar** → ticket + QR de inmediato (`ESPERANDO_PAGO`).
-5. **Sí, factura** → **Sin RFC** o wizard (RFC → nombre → CP → régimen → uso) → QR al cerrar fiscal.
-6. Pago CoDi (webhook pey o simular-pago) → `PAGADO` → timbrado automático si hay datos fiscales.
+5. **Sí, factura**:
+   - Sin datos guardados → **Sin RFC** / **Sí tengo RFC**.
+   - Con RFC guardado → **Sí, esos** / **Otros datos** / **Sin RFC** (aquí no se fuerza Menú: WhatsApp solo da 3 botones).
+6. Wizard (5 pasos): RFC → nombre → CP → régimen → uso → validación SAT.
+   - Si el SAT rechaza, **re-pide el campo concreto** (CP, nombre, RFC o régimen) y revalida; no solo “empezar de nuevo”.
+7. Pago CoDi (webhook pey o simular-pago) → `PAGADO` → timbrado automático si hay datos fiscales.
+
+### Reglas importantes del FSM
+
+| Situación | Comportamiento |
+|---|---|
+| Tap de producto (`PROD_*`) durante el wizard | Abandona el fiscal y abre **carrito** (no valida el texto como RFC) |
+| **Menú** durante el wizard | Cancela la orden fiscal pendiente y muestra el catálogo |
+| RFC / CP / nombre inválido a mitad de paso | Vuelve a pedir **ese** dato con el error arriba |
+| Fallo SAT al final del wizard | Mensaje de hints + re-pide el campo según `fiscalRetryStepFromHints` |
 
 Estados útiles en panel: `ARMAR_PEDIDO`, `ESPERANDO_FACTURA`, `ESPERANDO_FISCAL_*`, `ESPERANDO_DATOS_FISCALES`, `ESPERANDO_PAGO`, `COMPLETADO`, `ERROR_FISCAL`, `CANCELADO`.
 
@@ -133,6 +146,8 @@ npm run db:seed:remote   # D1 de producción (panel en vivo)
 npm run db:seed:local    # D1 local de wrangler dev
 ```
 
+Tras un smoke o demos que ensucien el panel, vuelve a correr `db:seed:remote` antes del pitch.
+
 ---
 
 ## Deploy
@@ -153,6 +168,8 @@ npm run deploy
 
 Migraciones en `migrations/` (`0001_init`, `0002_cfdi_uuid`, `0003_demo_whatsapp`).
 
+> Los cambios en `public/` y en el Worker **solo se ven en vivo tras** `npm run deploy`. Un push a git no actualiza Cloudflare solo.
+
 ---
 
 ## Dev / tests
@@ -161,13 +178,23 @@ Migraciones en `migrations/` (`0001_init`, `0002_cfdi_uuid`, `0003_demo_whatsapp
 npm run dev              # wrangler dev
 npm run db:migrate:local
 npm run db:seed:local
-npm test                 # vitest (25 tests Worker + parse)
-npm run smoke            # health + webhook carrito + Twilio config
+npm test                 # vitest — 35 tests (Worker + parse + e2e)
+npm run smoke            # health + webhook carrito + Twilio config (prod)
 npm run check            # test + smoke
 npm run typecheck
 ```
 
-El smoke espera que el primer producto deje la orden en **`ARMAR_PEDIDO`** (carrito), no en `ESPERANDO_FACTURA`.
+### Qué cubren los tests
+
+| Área | Cobertura |
+|---|---|
+| Carrito | Primer producto → `ARMAR_PEDIDO`; varios ítems; `PROD_*` de lista; Cobrar → `ESPERANDO_FACTURA` |
+| Factura | Solo pagar → QR; Sí factura → Sin RFC; Sí tengo RFC / Otros datos → wizard |
+| Wizard | Pasos con botones; RFC inválido re-pide; tap `PROD_*` en wizard → carrito (no error RFC); Menú cancela fiscal |
+| SAT hints | `fiscalRetryStepFromHints` enruta a CP / nombre / RFC / régimen |
+| Botones WA | `ensureMenuActions` (Menú en 3er slot; `stickyMenu: false` preserva Otros datos) |
+| Demo API | simular-cobro / simular-pago / ticket HTML / join WhatsApp |
+| Smoke live | Espera `ARMAR_PEDIDO` y cancela la orden de prueba para no ensuciar el panel |
 
 ---
 
@@ -176,7 +203,10 @@ El smoke espera que el primer producto deje la orden en **`ARMAR_PEDIDO`** (carr
 | Ruta | Rol |
 |---|---|
 | `src/index.ts` | Rutas Hono |
-| `src/lib/chat.ts` | FSM WhatsApp + carrito |
+| `src/lib/chat.ts` | FSM WhatsApp + carrito + wizard fiscal |
+| `src/lib/fiscal-wizard.ts` | Borrador fiscal, validadores, routing de reintento SAT |
+| `src/lib/sat-validate.ts` | EFOS + validación Facturapi/SAT |
+| `src/lib/twilio.ts` | Quick-reply / listas; `ensureMenuActions` |
 | `src/lib/pey.ts` | QR CoDi + TTL + ticket PNG |
 | `src/lib/ticket.ts` | SVG/PNG térmico + HTML `/ticket` |
 | `src/lib/facturapi.ts` | Timbrado CFDI |
@@ -186,6 +216,7 @@ El smoke espera que el primer producto deje la orden en **`ARMAR_PEDIDO`** (carr
 | `migrations/` | Schema D1 |
 | `scripts/seed-presentacion.mjs` | Seed de pitch |
 | `scripts/smoke-live.mjs` | Smoke contra prod |
+| `test/worker.spec.ts` | Tests Worker + bloque **e2e WhatsApp flows** |
 
 `main.py` y `templates/` son **legacy** (no se despliegan). El runtime de producción es solo el Worker.
 
