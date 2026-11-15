@@ -101,6 +101,15 @@ npx wrangler secret put PUBLIC_URL
 npm run deploy
 ```
 
+## Seed de presentación
+
+Borra órdenes/blobs/fiscales y planta 8 escenarios para el pitch (pagado+CFDI, sin factura, error fiscal, carrito, pendiente listo para liquidar, etc.):
+
+```bash
+npm run db:seed:remote   # D1 de producción (panel en vivo)
+npm run db:seed:local    # D1 local de wrangler dev
+```
+
 ## Tests
 
 ```bash
