@@ -92,11 +92,12 @@ async function crearQrYAvanzar(
     peyData = await crearQrPey(env, ordenId, Number(monto), concepto);
   } catch (err) {
     const status = (err as { status?: number }).status;
-    let detail = String(err);
+    const raw = err instanceof Error ? err.message : String(err);
+    let detail = raw;
     if (status === 401 || status === 403) {
-      detail = `pey rechazó la API key (HTTP ${status}). Revisa PEY_API_KEY.`;
-    } else if (status) {
-      detail = `HTTP ${status}`;
+      detail =
+        `pey rechazó la API key (HTTP ${status}). ` +
+        `Revisa PEY_API_KEY en Cloudflare Secrets (sin espacios) y CoDi en portal.mipey.mx.\n${raw}`;
     }
     const msg = `⚠️ No pudimos generar el QR CoDi.\n${detail}\nReintenta enviando de nuevo tus productos.`;
     await sendWhatsapp(env, telefono, msg);

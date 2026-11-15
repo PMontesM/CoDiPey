@@ -7,10 +7,12 @@ export async function crearQrPey(
   amount: number,
   concept: string,
 ): Promise<Record<string, unknown>> {
+  // Evita 403 por espacios/saltos si la key se pegó mal en el dashboard
+  const apiKey = (env.PEY_API_KEY || "").trim().replace(/^Bearer\s+/i, "");
   const res = await fetch("https://api.pey.mx/codi/qr", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.PEY_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     },
@@ -23,7 +25,17 @@ export async function crearQrPey(
   });
   if (!res.ok) {
     const text = await res.text();
-    const err = new Error(`pey HTTP ${res.status}: ${text.slice(0, 300)}`);
+    let detail = text.slice(0, 300);
+    try {
+      const j = JSON.parse(text) as {
+        message?: string;
+        error?: { message?: string };
+      };
+      detail = j.error?.message || j.message || detail;
+    } catch {
+      /* keep text */
+    }
+    const err = new Error(`pey HTTP ${res.status}: ${detail}`);
     (err as Error & { status?: number }).status = res.status;
     throw err;
   }
