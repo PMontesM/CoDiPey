@@ -44,18 +44,35 @@ async function main() {
     else ok("/health");
   }
 
+  const smokeFrom = "whatsapp:+5215500009999";
   const wa = await fetch(`${WORKER}/whatsapp/webhook`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      From: "whatsapp:+5215500009999",
+      From: smokeFrom,
       Body: "1 Smoke Test 0.01",
     }),
   });
   const twiml = await wa.text();
-  if (!wa.ok || !twiml.includes("Orden #") || !twiml.includes("factura")) {
+  // Con Twilio: Content API envía botones y el webhook responde TwiML vacío.
+  // Sin Twilio: el texto de factura viaja en TwiML.
+  const twimlOk =
+    wa.ok &&
+    (twiml.includes("<Response></Response>") ||
+      (twiml.includes("Orden #") && /factura/i.test(twiml)));
+  if (!twimlOk) {
     fail(`whatsapp step1 unexpected: ${wa.status} ${twiml.slice(0, 200)}`);
-  } else ok("whatsapp step1 creates order");
+  } else {
+    const ordenes = await fetch(`${WORKER}/api/ordenes`);
+    const list = ordenes.ok ? await ordenes.json() : null;
+    const rows = list?.ordenes || (Array.isArray(list) ? list : []);
+    const hit = rows.find(
+      (o) => o.telefono === smokeFrom && o.estado_chat === "ESPERANDO_FACTURA",
+    );
+    if (!hit) {
+      fail("whatsapp step1: no order in ESPERANDO_FACTURA for smoke phone");
+    } else ok(`whatsapp step1 creates order #${hit.id} (interactive or TwiML)`);
+  }
 
   const env = loadEnv();
   const sid = env.TWILIO_ACCOUNT_SID;
