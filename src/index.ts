@@ -85,7 +85,9 @@ app.post("/whatsapp/webhook", async (c) => {
       /* ignore */
     }
   }
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${xmlEscape(reply)}</Message></Response>`;
+  const twiml = reply.trim()
+    ? `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${xmlEscape(reply)}</Message></Response>`
+    : `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`;
   return c.body(twiml, 200, { "Content-Type": "application/xml" });
 });
 

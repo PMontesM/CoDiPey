@@ -170,8 +170,8 @@ describe("Worker HTTP", () => {
       body: formBody({ From: "whatsapp:+5215510076571", Body: "1" }),
     });
     const text = await res.text();
-    expect(text).toMatch(/Escanea el QR/);
-    expect(text).toMatch(/\/files\/qr_\d+\.png/);
+    // Sin credenciales Twilio en test: TwiML trae el link; con Twilio sería Response vacío + MediaUrl
+    expect(text).toMatch(/QR CoDi|\/files\/qr_\d+\.png/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",

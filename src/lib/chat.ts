@@ -148,10 +148,18 @@ async function crearQrYAvanzar(
     fiscalMsg = "Sin factura. Escanea el QR CoDi para pagar.";
   }
 
-  // Solo link en texto: WhatsApp Sandbox falla (63015) al adjuntar media desde workers.dev
-  const msg = `Orden #${ordenId} por $${monto} MXN.\nConcepto CoDi: ${concepto}\nEscanea el QR (válido 10 min):\n${media}\n\n${fiscalMsg}`;
-  await sendWhatsapp(env, telefono, msg);
-  return msg;
+  // Imagen por API REST + fiscal en segundo mensaje. TwiML vacío evita duplicados.
+  const qrMsg =
+    `🔲 QR CoDi orden #${ordenId} ($${monto} MXN)\n` +
+    `Concepto: ${concepto}\nVálido 10 min — escanéalo con tu banca.\n` +
+    `Si no ves la imagen: ${media}`;
+  const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
+  if (hasTwilio) {
+    await sendWhatsapp(env, telefono, qrMsg, media);
+    await sendWhatsapp(env, telefono, fiscalMsg);
+    return ""; // webhook responde <Response/> vacío
+  }
+  return `${qrMsg}\n\n${fiscalMsg}`;
 }
 
 export async function handleWhatsappMessage(
@@ -192,6 +200,17 @@ export async function handleWhatsappMessage(
       }
       return `✅ Datos fiscales guardados para orden #${o2?.id}. Cuando se confirme el pago CoDi, timbraremos automáticamente.`;
     }
+    if (/^(qr|reenviar)$/i.test(text) && orden.pey_qr_id) {
+      const media = `${publicUrl}/files/qr_${orden.id}.png`;
+      const qrMsg =
+        `🔲 QR CoDi orden #${orden.id} ($${orden.monto} MXN)\n` +
+        `Si no ves la imagen: ${media}`;
+      if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+        await sendWhatsapp(env, telefono, qrMsg, media);
+        return "";
+      }
+      return qrMsg;
+    }
     if (estado === "ESPERANDO_DATOS_FISCALES" || estado === "ERROR_FISCAL") {
       // Si manda productos otra vez, dejar caer al flujo de nueva orden
       const maybeProducts = parseProductLines(text);
@@ -199,7 +218,7 @@ export async function handleWhatsappMessage(
         // continue below
       } else {
         const qrHint = orden.pey_qr_id
-          ? `\n\nTu QR CoDi sigue aquí:\n${publicUrl}/files/qr_${orden.id}.png`
+          ? `\n\nTu QR CoDi sigue aquí:\n${publicUrl}/files/qr_${orden.id}.png\n(o responde *qr* para reenviarlo)`
           : "";
         return (
           "Para facturar envía:\nRFC | Razón Social | CP | Régimen | UsoCFDI" +
