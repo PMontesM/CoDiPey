@@ -5,6 +5,7 @@ import {
   sumItems,
   xmlEscape,
 } from "../src/lib/parse";
+import { ensureMenuActions } from "../src/lib/twilio";
 
 describe("parseProductLines", () => {
   it("parses single and multi line products", () => {
@@ -56,5 +57,36 @@ describe("parseFiscalData", () => {
 describe("xmlEscape", () => {
   it("escapes XML special chars for TwiML", () => {
     expect(xmlEscape(`a&b<c>"d`)).toBe("a&amp;b&lt;c&gt;&quot;d");
+  });
+});
+
+describe("ensureMenuActions", () => {
+  it("keeps Menú as 3rd slot by default (drops 3rd primary)", () => {
+    const out = ensureMenuActions([
+      { title: "Sí, esos", id: "FISCAL_KEEP" },
+      { title: "Sin RFC", id: "FISCAL_DEMO" },
+      { title: "Otros datos", id: "FISCAL_EDIT" },
+    ]);
+    expect(out.map((a) => a.id)).toEqual([
+      "FISCAL_KEEP",
+      "FISCAL_DEMO",
+      "MENU",
+    ]);
+  });
+
+  it("preserves Otros datos when stickyMenu is false", () => {
+    const out = ensureMenuActions(
+      [
+        { title: "Sí, esos", id: "FISCAL_KEEP" },
+        { title: "Otros datos", id: "FISCAL_EDIT" },
+        { title: "Sin RFC", id: "FISCAL_DEMO" },
+      ],
+      false,
+    );
+    expect(out.map((a) => a.id)).toEqual([
+      "FISCAL_KEEP",
+      "FISCAL_EDIT",
+      "FISCAL_DEMO",
+    ]);
   });
 });

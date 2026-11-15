@@ -278,14 +278,22 @@ async function askSavedFiscalChoice(
   const body =
     `¿Facturamos con los datos que ya tenemos?\n` +
     `*${saved.rfc}* · ${corto}\n\n` +
-    `El QR CoDi se envía en cuanto confirmes.`;
-  const sent = await sendWhatsappQuickReply(env, telefono, body, [
-    { title: "Sí, esos", id: "FISCAL_KEEP" },
-    { title: "Sin RFC", id: "FISCAL_DEMO" },
-    { title: "Otros datos", id: "FISCAL_EDIT" },
-  ]);
+    `El QR CoDi se envía en cuanto confirmes.\n` +
+    `Si son otros datos, toca *Otros datos* y te guío.`;
+  // stickyMenu:false — WhatsApp solo da 3 botones; no podemos sacrificar "Otros datos" por Menú.
+  const sent = await sendWhatsappQuickReply(
+    env,
+    telefono,
+    body,
+    [
+      { title: "Sí, esos", id: "FISCAL_KEEP" },
+      { title: "Otros datos", id: "FISCAL_EDIT" },
+      { title: "Sin RFC", id: "FISCAL_DEMO" },
+    ],
+    { stickyMenu: false },
+  );
   if (sent) return "";
-  return `${body}\n\nResponde *si*, *sin rfc* u *otros*.`;
+  return `${body}\n\nResponde *si*, *otros* o *sin rfc*.`;
 }
 
 async function startFiscalWizard(

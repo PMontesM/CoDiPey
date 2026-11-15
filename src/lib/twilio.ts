@@ -103,16 +103,26 @@ async function sendContent(
 
 /**
  * WhatsApp solo muestra 3 botones y no hay menú “pegajoso” en Sandbox.
- * Reservamos siempre el 3er slot para *Menú* para que no se pierda.
+ * Por defecto reservamos el 3er slot para *Menú*.
+ * Con `stickyMenu: false` se respetan hasta 3 acciones tal cual (p. ej. Sí esos / Otros / Sin RFC).
  */
 export function ensureMenuActions(
   actions: QuickReplyAction[],
+  stickyMenu = true,
 ): QuickReplyAction[] {
+  if (!stickyMenu) {
+    return actions.slice(0, 3);
+  }
   const primary = actions
     .filter((a) => a.id !== "MENU" && a.id !== "HELP")
     .slice(0, 2);
   return [...primary, { title: "Menú", id: "MENU" }];
 }
+
+export type QuickReplyOpts = {
+  /** Default true. false = no forzar Menú; útil cuando los 3 botones son del flujo. */
+  stickyMenu?: boolean;
+};
 
 /** Envía botones de respuesta rápida (tarjeta interactiva WhatsApp). */
 export async function sendWhatsappQuickReply(
@@ -120,8 +130,9 @@ export async function sendWhatsappQuickReply(
   to: string,
   body: string,
   actions: QuickReplyAction[],
+  opts?: QuickReplyOpts,
 ): Promise<boolean> {
-  const finalActions = ensureMenuActions(actions);
+  const finalActions = ensureMenuActions(actions, opts?.stickyMenu !== false);
   if (!hasTwilio(env)) {
     console.log(
       `[whatsapp mock] quick-reply to=${to} body=${body} actions=${JSON.stringify(finalActions)}`,

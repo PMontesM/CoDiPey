@@ -517,6 +517,57 @@ describe("Worker HTTP", () => {
     expect(twiml).toMatch(/Orden #|Vigencia|QR/i);
   });
 
+  it("WhatsApp Otros datos with saved RFC starts wizard", async () => {
+    const ts = new Date().toISOString();
+    const phone = "whatsapp:+5215511229988";
+    const fiscal = await env.DB.prepare(
+      `INSERT INTO clientes_fiscales
+        (telefono, rfc, razon_social, codigo_postal, regimen, uso_cfdi, updated_at)
+       VALUES (?, 'URE180429TM6', 'UNIVERSIDAD ROBOTICA ESPAÑOLA', '86991', '601', 'G03', ?)`,
+    )
+      .bind(phone, ts)
+      .run();
+    const fiscalId = Number(fiscal.meta.last_row_id);
+    await env.DB.prepare(
+      `INSERT INTO ordenes
+        (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
+         cliente_fiscal_id, estado_chat, created_at, updated_at)
+       VALUES (?, ?, '45.00', 'PENDIENTE', 1, 1, ?, 'ESPERANDO_DATOS_FISCALES', ?, ?)`,
+    )
+      .bind(
+        phone,
+        JSON.stringify([
+          {
+            cantidad: "1",
+            concepto: "Cafe",
+            precio_unitario: "45.00",
+            subtotal: "45.00",
+          },
+        ]),
+        fiscalId,
+        ts,
+        ts,
+      )
+      .run();
+
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: phone,
+        Body: "Otros datos",
+        ButtonPayload: "FISCAL_EDIT",
+      }),
+    });
+    expect(await res.text()).toMatch(/Paso 1 de 5|RFC/i);
+    const orden = await env.DB.prepare(
+      "SELECT estado_chat FROM ordenes WHERE telefono = ? ORDER BY id DESC LIMIT 1",
+    )
+      .bind(phone)
+      .first<{ estado_chat: string }>();
+    expect(orden?.estado_chat).toBe("ESPERANDO_FISCAL_RFC");
+  });
+
   it("WhatsApp Sí tengo RFC starts step-by-step wizard", async () => {
     const ts = new Date().toISOString();
     await env.DB.prepare(
