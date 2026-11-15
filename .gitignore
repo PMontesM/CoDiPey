@@ -30,3 +30,9 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Cloudflare / Node
+node_modules/
+.wrangler/
+dist/
+*.tsbuildinfo

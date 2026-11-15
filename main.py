@@ -28,10 +28,11 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public_files"
 TEMPLATES_DIR = BASE_DIR / "templates"
-DB_PATH = BASE_DIR / "hackathon.db"
+DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "hackathon.db")))
 
 PUBLIC_DIR.mkdir(exist_ok=True)
 TEMPLATES_DIR.mkdir(exist_ok=True)
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 PEY_API_KEY = os.getenv("PEY_API_KEY", "")
 PEY_QR_URL = "https://api.pey.mx/codi/qr"
@@ -40,7 +41,10 @@ FACTURAPI_BASE = "https://www.facturapi.io/v2"
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
+# Preferir PUBLIC_URL fija (workers.dev / dominio). Si no hay, se actualiza
+# por middleware desde el Host de cada request (túneles / Cloudflare).
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8765").rstrip("/")
+_PUBLIC_URL_FROM_ENV = bool(os.getenv("PUBLIC_URL"))
 
 # Línea de producto: "2 Cafe 45" o "1 Prueba CoDi 0.01"
 PRODUCT_LINE_RE = re.compile(
@@ -49,6 +53,20 @@ PRODUCT_LINE_RE = re.compile(
 
 app = FastAPI(title="Cobro WhatsApp CoDi + CFDI", version="1.0.0")
 app.mount("/files", StaticFiles(directory=str(PUBLIC_DIR)), name="files")
+
+
+@app.middleware("http")
+async def _sync_public_url(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Si PUBLIC_URL no viene del entorno, deriva la base pública del Host."""
+    global PUBLIC_URL
+    if not _PUBLIC_URL_FROM_ENV:
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+        if host and not host.startswith("127.") and "localhost" not in host:
+            proto = request.headers.get("x-forwarded-proto") or (
+                "https" if "trycloudflare" in host or "workers.dev" in host else request.url.scheme
+            )
+            PUBLIC_URL = f"{proto}://{host}".rstrip("/")
+    return await call_next(request)
 
 
 # ---------------------------------------------------------------------------

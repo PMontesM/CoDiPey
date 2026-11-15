@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cobro-whatsapp-codi",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "containers": [
+    {
+      "class_name": "CobroBackend",
+      "image": "./Dockerfile",
+      "max_instances": 1,
+      "instance_type": "basic",
+      "name": "cobro-backend"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "CobroBackend",
+        "name": "COBRO_BACKEND"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["CobroBackend"]
+    }
+  ]
+}

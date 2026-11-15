@@ -90,12 +90,51 @@ cloudflared tunnel --url http://localhost:8765
 
 Copia la URL HTTPS resultante a `PUBLIC_URL` en `.env` y reinicia uvicorn.
 
+> **Nota:** `cloudflared tunnel --url ...` (Quick Tunnel) genera un hostname `*.trycloudflare.com` **nuevo cada vez**. Eso rompe los webhooks de Twilio/pey.
+
 ### Webhooks (URLs exactas)
 
 | Proveedor | Método | Path |
 |---|---|---|
 | **Twilio Sandbox** | `POST` | `{PUBLIC_URL}/whatsapp/webhook` |
 | **portal.mipey.mx** | `POST` | `{PUBLIC_URL}/pey/webhook` |
+
+## URL fija con cuenta Cloudflare **gratis** (recomendado)
+
+No hace falta plan de pago. Usa un **Tunnel nombrado** + un dominio en tu zona Cloudflare (el plan Free lo permite).
+
+```bash
+# 1) Login (una vez) — abre el navegador / OAuth
+cloudflared tunnel login
+
+# 2) Crear tunnel permanente
+cloudflared tunnel create cobro-codi
+
+# 3) DNS (sustituye tudominio.com)
+cloudflared tunnel route dns cobro-codi cobro.tudominio.com
+
+# 4) Config ~/.cloudflared/config.yml
+# tunnel: <TUNNEL_ID>
+# credentials-file: /home/ubuntu/.cloudflared/<TUNNEL_ID>.json
+# ingress:
+#   - hostname: cobro.tudominio.com
+#     service: http://127.0.0.1:8765
+#   - service: http_status:404
+
+cloudflared tunnel run cobro-codi
+```
+
+Luego en `.env`:
+
+```bash
+PUBLIC_URL=https://cobro.tudominio.com
+```
+
+Y deja Twilio/pey apuntando a esa URL **para siempre** (no cambia al reiniciar).
+
+### ¿Y Cloudflare Containers / workers.dev?
+
+Eso sube el FastAPI como contenedor a `*.workers.dev`, pero **Containers es de plan de pago**. La cuenta “temporal” de Wrangler solo era un atajo de prueba sin login; **no la necesitas** si usas tu cuenta free + tunnel nombrado.
 
 También disponibles:
 

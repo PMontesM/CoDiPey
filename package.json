@@ -1,0 +1,18 @@
+{
+  "name": "cobro-whatsapp-codi",
+  "private": true,
+  "version": "1.0.0",
+  "description": "WhatsApp + CoDi (pey) + CFDI 4.0 — Cloudflare Containers",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "deploy:temp": "wrangler deploy --temporary",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.0.30",
+    "@cloudflare/workers-types": "^5.20261113.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.162.0"
+  }
+}
