@@ -10,8 +10,9 @@ import {
 import { evaluarYTimbrar } from "./lib/facturapi";
 import { nowIso, xmlEscape } from "./lib/parse";
 import { getQrExpiresInSec } from "./lib/pey";
+import { renderTicketHtmlPage } from "./lib/ticket";
 import { sendWhatsapp } from "./lib/twilio";
-import type { Env, Orden } from "./types";
+import type { Env, Item, Orden } from "./types";
 
 type AppEnv = { Bindings: Env };
 
@@ -50,6 +51,63 @@ app.get("/files/:key", async (c) => {
       "content-type": obj.contentType,
       "cache-control": "public, max-age=300",
     },
+  });
+});
+
+/** Ticket HTML responsive (WhatsApp no embebe HTML; se abre en el navegador). */
+app.get("/ticket/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id) || id <= 0) return c.text("Orden inválida", 400);
+  const orden = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+    .bind(id)
+    .first<Orden>();
+  if (!orden) return c.text("Orden no encontrada", 404);
+
+  let items: Item[] = [];
+  try {
+    const raw = JSON.parse(orden.conceptos) as Item[];
+    if (Array.isArray(raw)) items = raw;
+  } catch {
+    items = [];
+  }
+
+  const expires = await getQrExpiresInSec(c.env, {
+    id: orden.id,
+    pago_estado: orden.pago_estado,
+    pey_qr_id: orden.pey_qr_id,
+  });
+  let estado: "PENDIENTE" | "PAGADO" | "CANCELADO" | "VENCIDO" = "PENDIENTE";
+  if (orden.pago_estado === "PAGADO") estado = "PAGADO";
+  else if (
+    orden.pago_estado === "CANCELADO" ||
+    orden.estado_chat === "CANCELADO"
+  ) {
+    estado = "CANCELADO";
+  } else if (orden.pey_qr_id && expires === 0) {
+    estado = "VENCIDO";
+  }
+
+  const base = publicUrl(c);
+  // Prefer QR suelto (escaneable); cae al ticket si aún no existe.
+  const rawQr = await getBlob(c.env, `qr_code_${orden.id}.png`);
+  const qrImageUrl = rawQr
+    ? `${base}/files/qr_code_${orden.id}.png`
+    : `${base}/files/qr_${orden.id}.png`;
+  const html = renderTicketHtmlPage({
+    meta: {
+      ordenId: orden.id,
+      monto: String(orden.monto),
+      items,
+      concepto: orden.concepto_pey || undefined,
+      peyQrId: orden.pey_qr_id,
+      vigenciaMin: 10,
+    },
+    qrImageUrl,
+    estado,
+    expiresInSec: expires,
+  });
+  return c.html(html, 200, {
+    "cache-control": "public, max-age=30",
   });
 });
 

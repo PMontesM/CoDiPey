@@ -268,7 +268,7 @@ describe("Worker HTTP", () => {
       }),
     });
     const text = await res.text();
-    expect(text).toMatch(/Ticket CoDiPey|QR CoDi|\/files\/qr_\d+\.png/);
+    expect(text).toMatch(/Ticket de cobro|Ticket CoDiPey|QR CoDi|\/ticket\/\d+|\/files\/qr_\d+\.png/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -370,7 +370,7 @@ describe("Worker HTTP", () => {
         ButtonPayload: "FISCAL_DEMO",
       }),
     });
-    expect(await res.text()).toMatch(/QR CoDi|\/files\/qr_/);
+    expect(await res.text()).toMatch(/Ticket de cobro|QR CoDi|\/ticket\/\d+|\/files\/qr_/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -584,7 +584,7 @@ describe("Worker HTTP", () => {
         ButtonPayload: "USO_G03",
       }),
     });
-    expect(await res.text()).toMatch(/QR CoDi|Datos listos|factura listos|\/files\/qr_/i);
+    expect(await res.text()).toMatch(/Ticket de cobro|QR CoDi|Datos listos|factura listos|\/ticket\/\d+|\/files\/qr_/i);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, datos_fiscales_ok, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -661,6 +661,13 @@ describe("Worker HTTP", () => {
       "SELECT key FROM blobs WHERE key LIKE 'qr_%'",
     ).first();
     expect(blob).toBeTruthy();
+
+    const ticket = await call(`/ticket/${body.orden.id}`);
+    expect(ticket.status).toBe(200);
+    const html = await ticket.text();
+    expect(html).toMatch(/TICKET DE COBRO/);
+    expect(html).toMatch(/ESCANEA PARA PAGAR/);
+    expect(html).toMatch(/qr_code_\d+\.png|qr_\d+\.png/);
   });
 
   it("POST /api/demo/simular-pago/:id liquidates and stamps CFDI", async () => {

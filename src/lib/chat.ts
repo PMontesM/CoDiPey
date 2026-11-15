@@ -640,6 +640,7 @@ async function emitirQr(
     .run();
 
   const media = `${publicUrl}/files/qr_${orden.id}.png`;
+  const ticketUrl = `${publicUrl}/ticket/${orden.id}`;
   const qrMsg = formatTicketCaption(
     {
       ordenId: orden.id,
@@ -649,7 +650,7 @@ async function emitirQr(
       vigenciaMin: Math.floor(QR_TTL_SEC / 60),
       peyQrId,
     },
-    media,
+    { mediaUrl: media, ticketUrl },
   );
 
   const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
@@ -659,7 +660,7 @@ async function emitirQr(
       await sendWhatsappQuickReply(
         env,
         telefono,
-        "Ahí va tu ticket con el QR. Si vence (~10 min), pide *Nuevo QR*.",
+        `Ticket listo. Para escanear más fácil ábrelo a pantalla completa:\n${ticketUrl}\nSi vence (~10 min), pide *Nuevo QR*.`,
         [
           { title: "Estado", id: "STATUS" },
           { title: "Nuevo QR", id: "QR_RENEW" },
@@ -693,6 +694,7 @@ async function resendOrRenewQr(
   }
 
   const media = `${publicUrl}/files/qr_${orden.id}.png`;
+  const ticketUrl = `${publicUrl}/ticket/${orden.id}`;
   const items = parseOrdenItems(orden);
   const qrMsg =
     formatTicketCaption(
@@ -702,8 +704,9 @@ async function resendOrRenewQr(
         items,
         concepto: orden.concepto_pey || undefined,
         vigenciaMin: Math.floor(QR_TTL_SEC / 60),
+        peyQrId: orden.pey_qr_id,
       },
-      media,
+      { mediaUrl: media, ticketUrl },
     ) + `\n⏱ Vigencia restante: ${formatMmSs(expires)}`;
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     await sendWhatsapp(env, telefono, qrMsg, media);

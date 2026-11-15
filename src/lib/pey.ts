@@ -80,8 +80,10 @@ export type StoreQrOptions = {
 };
 
 /**
- * Genera QR CoDi y lo guarda como ticket de cobro (conceptos + total + QR).
- * Si el render del ticket falla, cae al QR plano.
+ * Genera QR CoDi:
+ * - `qr_{id}.png` → ticket térmico (WhatsApp media)
+ * - `qr_code_{id}.png` → QR suelto (página HTML /ticket/:id para escanear grande)
+ * Si el render del ticket falla, el ticket cae al QR plano.
  */
 export async function storeQrPng(
   env: Env,
@@ -89,11 +91,13 @@ export async function storeQrPng(
   qrPayload: string,
   opts?: StoreQrOptions,
 ): Promise<string> {
-  const url = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrPayload)}`;
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrPayload)}`;
   const img = await fetch(url);
   if (!img.ok) throw new Error(`QR image HTTP ${img.status}`);
   const qrBytes = await img.arrayBuffer();
   const key = `qr_${ordenId}.png`;
+  const rawKey = `qr_code_${ordenId}.png`;
+  await putBlob(env, rawKey, qrBytes, "image/png");
 
   let bytes = qrBytes;
   if (opts?.monto) {
