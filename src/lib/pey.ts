@@ -1,6 +1,25 @@
 import type { Env } from "../types";
 import { putBlob } from "./blobs";
 
+/** Vigencia CoDi en pey (segundos). */
+export const QR_TTL_SEC = 600;
+
+export async function getQrExpiresInSec(
+  env: Env,
+  orden: { id: number; pago_estado: string; pey_qr_id: string | null },
+): Promise<number> {
+  if (orden.pago_estado !== "PENDIENTE" || !orden.pey_qr_id) return 0;
+  const blob = await env.DB.prepare(
+    "SELECT updated_at FROM blobs WHERE key = ?",
+  )
+    .bind(`qr_${orden.id}.png`)
+    .first<{ updated_at: string }>();
+  if (!blob?.updated_at) return 0;
+  const elapsed = (Date.now() - Date.parse(blob.updated_at)) / 1000;
+  if (!Number.isFinite(elapsed)) return 0;
+  return Math.max(0, Math.floor(QR_TTL_SEC - elapsed));
+}
+
 export async function crearQrPey(
   env: Env,
   ordenId: number,
@@ -19,7 +38,7 @@ export async function crearQrPey(
     body: JSON.stringify({
       amount,
       concept: concept.slice(0, 40),
-      expiration: 600,
+      expiration: QR_TTL_SEC,
       numRef: String(ordenId),
     }),
   });

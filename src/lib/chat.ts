@@ -7,7 +7,13 @@ import {
   parseProductLines,
   sumItems,
 } from "./parse";
-import { crearQrPey, extractQrPayload, storeQrPng } from "./pey";
+import {
+  crearQrPey,
+  extractQrPayload,
+  getQrExpiresInSec,
+  QR_TTL_SEC,
+  storeQrPng,
+} from "./pey";
 import {
   resolveInteractiveId,
   sendWhatsapp,
@@ -48,6 +54,12 @@ const CATALOG: Array<{ id: string; item: string; description: string; line: stri
     description: "cantidad concepto precio",
     line: "",
   },
+];
+
+const MENU_ACTIONS: Array<{ id: string; item: string; description: string }> = [
+  { id: "STATUS", item: "Estado del cobro", description: "Orden activa y vigencia QR" },
+  { id: "HISTORY", item: "Historial", description: "Últimas 5 órdenes" },
+  { id: "QR_RENEW", item: "Nuevo QR", description: "Si venció la solicitud CoDi" },
 ];
 
 async function getActiveOrder(
@@ -111,18 +123,36 @@ async function upsertClienteFiscal(
   return Number(res.meta.last_row_id);
 }
 
+function formatMmSs(sec: number): string {
+  const s = Math.max(0, Math.floor(sec));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
 async function askMenu(env: Env, telefono: string): Promise<string> {
   const body =
-    "🛒 *Cobro CoDi + CFDI 4.0*\nElige un producto del menú o escribe tu pedido:\n`cantidad concepto precio`\nEj: `1 Prueba CoDi 0.01`";
-  const sent = await sendWhatsappList(env, telefono, body, "Ver productos", CATALOG.map((c) => ({
-    id: c.id,
-    item: c.item,
-    description: c.description,
-  })));
+    "🛒 *Cobro CoDi + CFDI 4.0*\nElige un producto, revisa tu cobro o escribe:\n`cantidad concepto precio`";
+  const items = [
+    ...CATALOG.map((c) => ({
+      id: c.id,
+      item: c.item,
+      description: c.description,
+    })),
+    ...MENU_ACTIONS,
+  ];
+  const sent = await sendWhatsappList(
+    env,
+    telefono,
+    body,
+    "Ver opciones",
+    items,
+  );
   if (sent) return "";
   return (
     `${body}\n\n` +
-    CATALOG.map((c, i) => `${i + 1}) ${c.item}`).join("\n")
+    [...CATALOG.map((c, i) => `${i + 1}) ${c.item}`), "estado · historial · nuevo qr"]
+      .join("\n")
   );
 }
 
@@ -143,6 +173,28 @@ async function askFacturaChoice(
   return `${body}\n\nResponde *1* = Sí  |  *2* = No`;
 }
 
+/** Prompt claro de captura fiscal (WhatsApp no tiene formulario nativo). */
+async function askFiscalCapture(
+  env: Env,
+  telefono: string,
+  orden: Orden,
+): Promise<string> {
+  const body =
+    `🧾 *Captura de datos fiscales* — orden #${orden.id}\n\n` +
+    `Envía *un solo mensaje* con este formato:\n` +
+    `\`RFC | Razón Social | CP | Régimen | UsoCFDI\`\n\n` +
+    `Ejemplo listo para copiar:\n` +
+    `\`XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03\`\n\n` +
+    `O usa el botón de público en general.`;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Público general", id: "FISCAL_DEMO" },
+    { title: "Reenviar QR", id: "QR_RESEND" },
+    { title: "Menú", id: "MENU" },
+  ]);
+  if (sent) return "";
+  return body;
+}
+
 async function askFiscalActions(
   env: Env,
   telefono: string,
@@ -154,20 +206,216 @@ async function askFiscalActions(
     : "";
   const body =
     `🧾 *Datos fiscales* (orden #${orden.id})\n` +
-    `Elige una tarjeta o envía:\n` +
-    `RFC | Razón Social | CP | Régimen | UsoCFDI` +
+    `Elige una opción o captura tus datos.` +
     qrHint;
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Público general", id: "FISCAL_DEMO" },
+    { title: "Capturar datos", id: "FISCAL_EDIT" },
     { title: "Reenviar QR", id: "QR_RESEND" },
-    { title: "Menú", id: "MENU" },
   ]);
   if (sent) return "";
   return (
     `${body}\n\n` +
     `Ejemplo: XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03\n` +
-    `O responde *qr* para reenviar el código.`
+    `O responde *capturar* / *qr*.`
   );
+}
+
+async function askSavedFiscalChoice(
+  env: Env,
+  telefono: string,
+  saved: ClienteFiscal,
+): Promise<string> {
+  const body =
+    `Usaremos tus datos fiscales guardados (*${saved.rfc}*).\n` +
+    `Confírmalos o captura otros.`;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Confirmar", id: "FISCAL_KEEP" },
+    { title: "Capturar datos", id: "FISCAL_EDIT" },
+    { title: "Reenviar QR", id: "QR_RESEND" },
+  ]);
+  if (sent) return "";
+  return `${body}\n\nResponde *ok* para confirmar, *capturar* para cambiar, o *qr*.`;
+}
+
+async function replyStatus(
+  env: Env,
+  publicUrl: string,
+  telefono: string,
+  orden: Orden | null,
+): Promise<string> {
+  if (!orden) {
+    const msg =
+      "No tienes un cobro activo.\nAbre el menú para iniciar uno nuevo.";
+    const sent = await sendWhatsappQuickReply(env, telefono, msg, [
+      { title: "Menú", id: "MENU" },
+    ]);
+    return sent ? "" : msg;
+  }
+
+  const expires = await getQrExpiresInSec(env, orden);
+  const vencido =
+    orden.pago_estado === "PENDIENTE" && !!orden.pey_qr_id && expires === 0;
+  const vigencia = !orden.pey_qr_id
+    ? "sin QR aún"
+    : vencido
+      ? "VENCIDA (0:00)"
+      : formatMmSs(expires);
+
+  let body =
+    `📋 *Orden #${orden.id}*\n` +
+    `Monto: $${orden.monto} MXN\n` +
+    `Pago: ${orden.pago_estado}\n` +
+    `Chat: ${orden.estado_chat}\n` +
+    `Vigencia QR: ${vigencia}`;
+
+  if (vencido) {
+    body +=
+      `\n\n⚠️ La solicitud CoDi *venció* (~${Math.floor(QR_TTL_SEC / 60)} min). ` +
+      `Banxico ya no la acepta. Genera un *Nuevo QR* (mismo monto) o inicia otro pedido.`;
+  } else if (orden.pey_qr_id) {
+    body += `\nQR: ${publicUrl}/files/qr_${orden.id}.png`;
+  }
+
+  const actions = vencido
+    ? [
+        { title: "Nuevo QR", id: "QR_RENEW" },
+        { title: "Menú", id: "MENU" },
+        { title: "Historial", id: "HISTORY" },
+      ]
+    : [
+        { title: "Reenviar QR", id: "QR_RESEND" },
+        { title: "Menú", id: "MENU" },
+        { title: "Historial", id: "HISTORY" },
+      ];
+
+  const sent = await sendWhatsappQuickReply(env, telefono, body, actions);
+  return sent ? "" : body;
+}
+
+async function replyHistory(env: Env, telefono: string): Promise<string> {
+  const { results } = await env.DB.prepare(
+    `SELECT id, monto, pago_estado, estado_chat, facturapi_id, created_at
+     FROM ordenes WHERE telefono = ?
+     ORDER BY id DESC LIMIT 5`,
+  )
+    .bind(telefono)
+    .all<{
+      id: number;
+      monto: string;
+      pago_estado: string;
+      estado_chat: string;
+      facturapi_id: string | null;
+      created_at: string;
+    }>();
+
+  if (!results?.length) {
+    const empty = "Aún no hay órdenes en este número.";
+    const sent = await sendWhatsappQuickReply(env, telefono, empty, [
+      { title: "Menú", id: "MENU" },
+    ]);
+    return sent ? "" : empty;
+  }
+
+  const lines = results.map((o) => {
+    const stamp = o.facturapi_id ? " · CFDI" : "";
+    return `• #${o.id} $${o.monto} — ${o.pago_estado} / ${o.estado_chat}${stamp}`;
+  });
+  const body =
+    `🗂️ *Últimas órdenes*\n${lines.join("\n")}\n\n` +
+    `Para un cobro nuevo abre el menú. Para revisar detalle usa la consola /admin.`;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Estado", id: "STATUS" },
+    { title: "Menú", id: "MENU" },
+  ]);
+  return sent ? "" : body;
+}
+
+async function emitirQr(
+  env: Env,
+  publicUrl: string,
+  telefono: string,
+  orden: Orden,
+  opts?: { announceOnly?: boolean },
+): Promise<string> {
+  const concepto =
+    orden.concepto_pey ||
+    conceptForPey(JSON.parse(orden.conceptos) as Item[], orden.id);
+  let peyData: Record<string, unknown>;
+  try {
+    peyData = await crearQrPey(env, orden.id, Number(orden.monto), concepto);
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
+    const msg = `⚠️ No pudimos generar el QR CoDi.\n${raw}`;
+    await sendWhatsapp(env, telefono, msg);
+    return msg;
+  }
+  const qrPayload = extractQrPayload(peyData);
+  const peyQrId =
+    String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
+  await storeQrPng(env, orden.id, qrPayload);
+  await env.DB.prepare(
+    `UPDATE ordenes SET pey_qr_id = ?, concepto_pey = ?, updated_at = ? WHERE id = ?`,
+  )
+    .bind(peyQrId, concepto, nowIso(), orden.id)
+    .run();
+
+  const media = `${publicUrl}/files/qr_${orden.id}.png`;
+  const qrMsg =
+    `🔲 *QR CoDi* orden #${orden.id} ($${orden.monto} MXN)\n` +
+    `${concepto}\nVálido ${Math.floor(QR_TTL_SEC / 60)} min — escanéalo con tu banca.\n` +
+    `Si no ves la imagen: ${media}`;
+
+  const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
+  if (hasTwilio) {
+    await sendWhatsapp(env, telefono, qrMsg, media);
+    if (!opts?.announceOnly) {
+      await sendWhatsappQuickReply(
+        env,
+        telefono,
+        "Cuando venza la vigencia (~10 min) el banco ya no podrá pagar este QR. Usa *Nuevo QR* o revisa el *Estado*.",
+        [
+          { title: "Estado", id: "STATUS" },
+          { title: "Nuevo QR", id: "QR_RENEW" },
+          { title: "Menú", id: "MENU" },
+        ],
+      );
+    }
+    return "";
+  }
+  return qrMsg;
+}
+
+async function resendOrRenewQr(
+  env: Env,
+  publicUrl: string,
+  telefono: string,
+  orden: Orden,
+  forceRenew: boolean,
+): Promise<string> {
+  const expires = await getQrExpiresInSec(env, orden);
+  const vencido =
+    forceRenew ||
+    !orden.pey_qr_id ||
+    (orden.pago_estado === "PENDIENTE" && expires === 0);
+
+  if (vencido) {
+    if (orden.pago_estado === "PAGADO") {
+      return `La orden #${orden.id} ya está pagada; no se genera otro QR.`;
+    }
+    return emitirQr(env, publicUrl, telefono, orden);
+  }
+
+  const media = `${publicUrl}/files/qr_${orden.id}.png`;
+  const qrMsg =
+    `🔲 QR CoDi orden #${orden.id} ($${orden.monto} MXN)\n` +
+    `Vigencia restante: ${formatMmSs(expires)}\n` +
+    `Si no ves la imagen: ${media}`;
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+    await sendWhatsapp(env, telefono, qrMsg, media);
+    return "";
+  }
+  return qrMsg;
 }
 
 async function crearQrYAvanzar(
@@ -221,7 +469,7 @@ async function crearQrYAvanzar(
 
   const qrMsg =
     `🔲 *QR CoDi* orden #${ordenId} ($${monto} MXN)\n` +
-    `${concepto}\nVálido 10 min — escanéalo con tu banca.\n` +
+    `${concepto}\nVálido ${Math.floor(QR_TTL_SEC / 60)} min — escanéalo con tu banca.\n` +
     `Si no ves la imagen: ${media}`;
 
   const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
@@ -237,17 +485,9 @@ async function crearQrYAvanzar(
       )
         .bind(savedFiscal.id, peyQrId, nowIso(), ordenId)
         .run();
-      const fiscalMsg =
-        `Usaremos tus datos fiscales guardados (*${savedFiscal.rfc}*).\n` +
-        `Si quieres cambiarlos, usa la tarjeta o envía la cadena fiscal.`;
-      if (hasTwilio) {
-        await sendWhatsappQuickReply(env, telefono, fiscalMsg, [
-          { title: "Público general", id: "FISCAL_DEMO" },
-          { title: "Reenviar QR", id: "QR_RESEND" },
-        ]);
-        return "";
-      }
-      return `${qrMsg}\n\n${fiscalMsg}`;
+      const ask = await askSavedFiscalChoice(env, telefono, savedFiscal);
+      if (hasTwilio) return "";
+      return `${qrMsg}\n\n${ask}`;
     }
     await env.DB.prepare(
       `UPDATE ordenes SET pey_qr_id = ?, estado_chat = 'ESPERANDO_DATOS_FISCALES', updated_at = ? WHERE id = ?`,
@@ -268,10 +508,12 @@ async function crearQrYAvanzar(
     )
       .bind(peyQrId, nowIso(), ordenId)
       .run();
-    const okMsg = "Sin factura. Escanea el QR CoDi para pagar.";
+    const okMsg =
+      "Sin factura. Escanea el QR CoDi para pagar.\nSi vence (~10 min), pide *Nuevo QR*.";
     if (hasTwilio) {
       await sendWhatsappQuickReply(env, telefono, okMsg, [
-        { title: "Reenviar QR", id: "QR_RESEND" },
+        { title: "Estado", id: "STATUS" },
+        { title: "Nuevo QR", id: "QR_RENEW" },
         { title: "Menú", id: "MENU" },
       ]);
       return "";
@@ -354,9 +596,26 @@ export async function handleWhatsappMessage(
   const orden = await getActiveOrder(env, telefono);
   const estado = orden?.estado_chat || "ESPERANDO_PRODUCTOS";
 
-  // Menú / ayuda siempre disponibles
   if (interactive === "MENU" || interactive === "HELP") {
     return askMenu(env, telefono);
+  }
+
+  if (interactive === "STATUS" || /^estado|status$/i.test(text)) {
+    return replyStatus(env, publicUrl, telefono, orden);
+  }
+
+  if (interactive === "HISTORY" || /^historial|ordenes|órdenes$/i.test(text)) {
+    return replyHistory(env, telefono);
+  }
+
+  if (
+    interactive === "QR_RENEW" ||
+    /^(nuevo qr|renovar qr|renovar)$/i.test(text)
+  ) {
+    if (!orden) {
+      return askMenu(env, telefono);
+    }
+    return resendOrRenewQr(env, publicUrl, telefono, orden, true);
   }
 
   // Factura sí/no (antes del catálogo numérico: "1"/"2" son Sí/No aquí)
@@ -373,7 +632,6 @@ export async function handleWhatsappMessage(
         orden.monto,
       );
     }
-    // compat texto 1/2
     if (text === "1" || text === "2") {
       const items = JSON.parse(orden.conceptos) as Item[];
       return crearQrYAvanzar(
@@ -386,7 +644,6 @@ export async function handleWhatsappMessage(
         orden.monto,
       );
     }
-    // Si eligió otro producto del list-picker, sigue al catálogo abajo
     if (!CATALOG.some((c) => c.id === interactive)) {
       return askFacturaChoice(
         env,
@@ -409,7 +666,9 @@ export async function handleWhatsappMessage(
       return "Escribe tu pedido así:\n`cantidad concepto precio`\nEjemplo: `2 Cafe 45`";
     }
     const parsed = parseProductLines(catalogHit.line);
-    if (parsed.error || !parsed.items) return parsed.error || "No entendí el producto";
+    if (parsed.error || !parsed.items) {
+      return parsed.error || "No entendí el producto";
+    }
     return createOrderFromItems(env, telefono, parsed.items, orden);
   }
 
@@ -419,16 +678,24 @@ export async function handleWhatsappMessage(
       estado,
     )
   ) {
-    if (interactive === "QR_RESEND" && orden.pey_qr_id) {
-      const media = `${publicUrl}/files/qr_${orden.id}.png`;
-      const qrMsg =
-        `🔲 QR CoDi orden #${orden.id} ($${orden.monto} MXN)\n` +
-        `Si no ves la imagen: ${media}`;
-      if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
-        await sendWhatsapp(env, telefono, qrMsg, media);
-        return "";
-      }
-      return qrMsg;
+    if (interactive === "QR_RESEND" || /^qr$/i.test(text)) {
+      return resendOrRenewQr(env, publicUrl, telefono, orden, false);
+    }
+
+    if (interactive === "FISCAL_KEEP" || /^(ok|confirmar|sí|si)$/i.test(text)) {
+      return `Perfecto. Seguimos con tus datos guardados. Escanea el QR (vigencia ~10 min). Si vence, pide *Nuevo QR*.`;
+    }
+
+    if (
+      interactive === "FISCAL_EDIT" ||
+      /^(capturar|cambiar datos|capturar datos)$/i.test(text)
+    ) {
+      await env.DB.prepare(
+        `UPDATE ordenes SET estado_chat = 'ESPERANDO_DATOS_FISCALES', datos_fiscales_ok = 0, updated_at = ? WHERE id = ?`,
+      )
+        .bind(nowIso(), orden.id)
+        .run();
+      return askFiscalCapture(env, telefono, orden);
     }
 
     if (interactive === "FISCAL_DEMO") {
@@ -450,16 +717,18 @@ export async function handleWhatsappMessage(
     }
   }
 
-  // Productos en texto libre
   const { items, error } = parseProductLines(text);
   if (error || !items) {
-    // Primera interacción / mensaje raro → menú con tarjetas
-    if (!text || text.length < 2 || /hola|menu|menú|ayuda|hi|buenas/i.test(text)) {
+    if (
+      !text ||
+      text.length < 2 ||
+      /hola|menu|menú|ayuda|hi|buenas/i.test(text)
+    ) {
       return askMenu(env, telefono);
     }
     return (
       (error || "No entendí el pedido.") +
-      "\n\nUsa el menú de productos o escribe:\n`cantidad concepto precio`"
+      "\n\nUsa el menú (*estado*, *historial*, productos) o escribe:\n`cantidad concepto precio`"
     );
   }
 

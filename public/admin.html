@@ -1152,17 +1152,21 @@
           <div class="bg-[#FFFFFF] border border-[#E4DFD3] rounded-xl p-4 shadow-warm">
             <div class="flex items-center justify-between border-b border-[#E4DFD3] pb-3 mb-3.5">
               <div>
-                <span class="text-[10px] font-semibold uppercase tracking-wider text-[#B45309]">
-                  SOLICITUD CODI ACTIVA · POST /codi/qr
+                <span class="text-[10px] font-semibold uppercase tracking-wider ${order.expires_in_sec > 0 ? "text-[#B45309]" : "text-[#9F1239]"}">
+                  ${order.expires_in_sec > 0
+                    ? "SOLICITUD CODI ACTIVA · POST /codi/qr"
+                    : "SOLICITUD CODI VENCIDA · POST /codi/qr"}
                 </span>
                 <h3 class="text-sm font-semibold text-[#1C1917] mt-0.5">
-                  Esperando autorización bancaria
+                  ${order.expires_in_sec > 0
+                    ? "Esperando autorización bancaria"
+                    : "QR vencido — pide Nuevo QR por WhatsApp"}
                 </h3>
               </div>
-              <div class="text-right bg-[#FEF3C7] border border-[#FDE68A] px-2.5 py-1 rounded-lg">
-                <span class="block text-[9px] font-semibold uppercase tracking-wider text-[#B45309]">VIGENCIA</span>
-                <span id="qrCountdownTimer" class="tabular-mono text-xs font-bold text-[#B45309]">
-                  ${formatTimer(order.expires_in_sec)}
+              <div class="text-right ${order.expires_in_sec > 0 ? "bg-[#FEF3C7] border-[#FDE68A] text-[#B45309]" : "bg-[#FFE4E6] border-[#FECDD3] text-[#9F1239]"} border px-2.5 py-1 rounded-lg">
+                <span class="block text-[9px] font-semibold uppercase tracking-wider">VIGENCIA</span>
+                <span id="qrCountdownTimer" class="tabular-mono text-xs font-bold">
+                  ${order.expires_in_sec > 0 ? formatTimer(order.expires_in_sec) : "VENCIDA"}
                 </span>
               </div>
             </div>

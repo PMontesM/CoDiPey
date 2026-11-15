@@ -303,6 +303,76 @@ describe("Worker HTTP", () => {
     expect(twiml).toMatch(/Prueba CoDi/i);
   });
 
+  it("WhatsApp STATUS reports active order", async () => {
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "1 Prueba CoDi 0.01",
+      }),
+    });
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({ From: "whatsapp:+5215510076571", Body: "1" }),
+    });
+
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "Estado del cobro",
+        ButtonPayload: "STATUS",
+      }),
+    });
+    const twiml = await res.text();
+    expect(twiml).toMatch(/Orden #|Vigencia|QR/i);
+  });
+
+  it("WhatsApp Capturar datos prompts fiscal format", async () => {
+    const ts = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT INTO ordenes
+        (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
+         pey_qr_id, estado_chat, created_at, updated_at)
+       VALUES (?, ?, '0.01', 'PENDIENTE', 1, 1, 'qr_x', 'ESPERANDO_PAGO', ?, ?)`,
+    )
+      .bind(
+        "whatsapp:+5215510076571",
+        JSON.stringify([
+          {
+            cantidad: "1",
+            concepto: "Prueba",
+            precio_unitario: "0.01",
+            subtotal: "0.01",
+          },
+        ]),
+        ts,
+        ts,
+      )
+      .run();
+
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "Capturar datos",
+        ButtonPayload: "FISCAL_EDIT",
+      }),
+    });
+    const twiml = await res.text();
+    expect(twiml).toMatch(/Captura de datos fiscales|RFC \| Razón Social/i);
+
+    const orden = await env.DB.prepare(
+      "SELECT estado_chat, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{ estado_chat: string; datos_fiscales_ok: number }>();
+    expect(orden?.estado_chat).toBe("ESPERANDO_DATOS_FISCALES");
+    expect(orden?.datos_fiscales_ok).toBe(0);
+  });
+
   it("rejects gibberish with helpful TwiML", async () => {
     const res = await call("/whatsapp/webhook", {
       method: "POST",

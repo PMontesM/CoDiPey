@@ -192,8 +192,20 @@ export function resolveInteractiveId(
     "público en general": "FISCAL_DEMO",
     "publico en general": "FISCAL_DEMO",
     "demo sat": "FISCAL_DEMO",
+    "capturar datos": "FISCAL_EDIT",
+    capturar: "FISCAL_EDIT",
+    "cambiar datos": "FISCAL_EDIT",
+    confirmar: "FISCAL_KEEP",
+    ok: "FISCAL_KEEP",
     "reenviar qr": "QR_RESEND",
     qr: "QR_RESEND",
+    "nuevo qr": "QR_RENEW",
+    "renovar qr": "QR_RENEW",
+    renovar: "QR_RENEW",
+    "estado del cobro": "STATUS",
+    estado: "STATUS",
+    status: "STATUS",
+    historial: "HISTORY",
     menú: "MENU",
     menu: "MENU",
     hola: "MENU",
@@ -205,7 +217,12 @@ export function resolveInteractiveId(
   const key = text.toLowerCase();
   if (map[key]) return map[key];
   // list item ids come as Body when selected in some Twilio versions
-  if (/^PROD_/.test(text) || /^FACTURA_/.test(text) || /^FISCAL_/.test(text)) {
+  if (
+    /^PROD_/.test(text) ||
+    /^FACTURA_/.test(text) ||
+    /^FISCAL_/.test(text) ||
+    /^(STATUS|HISTORY|QR_RENEW|QR_RESEND|MENU|HELP)$/.test(text)
+  ) {
     return text;
   }
   return text;

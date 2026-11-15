@@ -7,10 +7,13 @@ import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const WORKER =
-  process.env.PUBLIC_URL?.replace(/\/$/, "") ||
-  "https://cobro-codi.inomali.workers.dev";
-const EXPECTED_TWILIO_WEBHOOK = `${WORKER}/whatsapp/webhook`;
+const PRODUCTION = "https://cobro-codi.inomali.workers.dev";
+// Prefer explicit SMOKE_URL; ignore stale tunnel PUBLIC_URL from local .env
+const WORKER = (
+  process.env.SMOKE_URL ||
+  PRODUCTION
+).replace(/\/$/, "");
+const EXPECTED_TWILIO_WEBHOOK = `${PRODUCTION}/whatsapp/webhook`;
 
 function loadEnv() {
   const p = resolve(process.cwd(), ".env");

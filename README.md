@@ -38,13 +38,14 @@ Otros endpoints: `GET /admin`, `GET /api/ordenes`, `POST /api/ordenes/:id/reinte
 
 Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de respaldo.
 
-1. Escribe `hola` → menú con lista *Ver productos* (o escribe `cantidad concepto precio`)
-2. Tras el pedido → tarjetas **Sí, factura** / **Solo pagar** → llega **imagen QR CoDi**
-3. Pago: escanear QR en banca ($0.01 en demo)
-4. Fiscal (si pediste factura): tarjetas **Público general** / **Reenviar QR**, o cadena  
+1. Escribe `hola` → lista *Ver opciones* (productos, **Estado**, **Historial**, **Nuevo QR**)
+2. Tras el pedido → **Sí, factura** / **Solo pagar** → imagen QR CoDi (**vigencia ~10 min**)
+3. Si el QR vence: Banxico ya no lo acepta; la orden sigue `PENDIENTE` hasta que uses **Nuevo QR** (mismo monto) o abras otro pedido desde el menú
+4. Fiscal: **Público general**, **Capturar datos** (te pide la cadena) o  
    `RFC | Razón Social | CP | Régimen | UsoCFDI`  
-   Ejemplo SAT: `XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03`
-5. Compat texto: `1`/`2` = factura sí/no; `qr` = reenviar imagen
+   Ejemplo: `XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03`
+5. Revisar: WhatsApp `estado` / `historial`, o consola `/admin` (ticket por fila)
+6. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
 
 El cobro y la captura fiscal avanzan en paralelo. Timbrado solo si:
 

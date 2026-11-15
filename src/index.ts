@@ -4,6 +4,7 @@ import { getBlob } from "./lib/blobs";
 import { handleWhatsappMessage } from "./lib/chat";
 import { evaluarYTimbrar } from "./lib/facturapi";
 import { nowIso, xmlEscape } from "./lib/parse";
+import { getQrExpiresInSec } from "./lib/pey";
 import { sendWhatsapp } from "./lib/twilio";
 import type { Env, Orden } from "./types";
 
@@ -51,8 +52,19 @@ app.get("/api/ordenes", async (c) => {
      LEFT JOIN clientes_fiscales c ON c.id = o.cliente_fiscal_id
      ORDER BY o.id DESC`,
   ).all<Orden & Record<string, unknown>>();
+  const rows = results || [];
+  const withExpiry = await Promise.all(
+    rows.map(async (o) => {
+      const expires_in_sec = await getQrExpiresInSec(c.env, {
+        id: Number(o.id),
+        pago_estado: String(o.pago_estado),
+        pey_qr_id: (o.pey_qr_id as string | null) || null,
+      });
+      return { ...o, expires_in_sec, qr_vencido: expires_in_sec === 0 && o.pago_estado === "PENDIENTE" && !!o.pey_qr_id };
+    }),
+  );
   const emisor = await resolveEmisor(c.env);
-  return c.json(buildOrdenesPayload(results || [], emisor));
+  return c.json(buildOrdenesPayload(withExpiry, emisor));
 });
 
 app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
