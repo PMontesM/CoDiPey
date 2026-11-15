@@ -950,12 +950,20 @@
           .join(", ") || "Cobro general";
 
         // CoDi Settlement Badge
+        const isCancelled =
+          order.pago_estado === "CANCELADO" || order.estado_chat === "CANCELADO";
         const paymentHtml = order.pago_estado === "PAGADO"
           ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DCFCE7] text-[#15803D] font-semibold text-[11px]">
                <span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>
                <span>Liquidado</span>
              </div>
              ${order.pey_transaction_id ? `<div class="tabular-mono text-[10px] text-[#686158] mt-1 truncate max-w-[130px]">${escapeHtml(order.pey_transaction_id)}</div>` : ""}`
+          : isCancelled
+          ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#686158] font-semibold text-[11px]">
+               <span class="w-1.5 h-1.5 rounded-full bg-[#8C8377]"></span>
+               <span>Cancelado</span>
+             </div>
+             <div class="tabular-mono text-[10px] text-[#686158] mt-1">No se cobrará</div>`
           : `<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] font-semibold text-[11px]">
                <span class="w-1.5 h-1.5 rounded-full bg-[#B45309]"></span>
                <span>Pendiente QR</span>
@@ -1083,6 +1091,8 @@
       openTicket();
 
       const isPaid = order.pago_estado === "PAGADO";
+      const isCancelled =
+        order.pago_estado === "CANCELADO" || order.estado_chat === "CANCELADO";
       const isStamped = Boolean(order.facturapi_id);
       const hasFiscalError = Boolean(order.error_fiscal);
       const isBusy = state.busyOrderIds.has(order.id);
@@ -1090,7 +1100,17 @@
 
       // Determine Contextual Body (State A, State B, or State C)
       let contextualHtml = "";
-      if (!isPaid) {
+      if (isCancelled) {
+        contextualHtml = `
+          <div class="p-4 rounded-xl bg-[#F7F4EC] border border-[#E4DFD3] space-y-2">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-[#686158]">Estado</span>
+            <h3 class="text-sm font-semibold text-[#1C1917]">Cobro cancelado</h3>
+            <p class="text-xs text-[#686158]">
+              La orden #${escapeHtml(order.id)} quedó en <span class="tabular-mono font-semibold">CANCELADO</span>
+              y ya no cuenta como pendiente.
+            </p>
+          </div>`;
+      } else if (!isPaid) {
         // STATE A: Pending Payment (QR CoDi Card + Countdown + Demo Webhook Trigger)
         contextualHtml = renderStateAPendingQr(order, isBusy);
       } else if (isStamped) {
