@@ -39,11 +39,11 @@ Otros endpoints: `GET /admin`, `GET /api/ordenes`, `POST /api/ordenes/:id/reinte
 Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de respaldo.
 
 1. Escribe `hola` → lista *Ver opciones* (productos, **Estado**, **Historial**, **Nuevo QR**)
-2. Tras el pedido → **Sí, factura** / **Solo pagar** → imagen QR CoDi (**vigencia ~10 min**)
-3. Si el QR vence: Banxico ya no lo acepta; la orden sigue `PENDIENTE` hasta que uses **Nuevo QR** (mismo monto) o abras otro pedido desde el menú
-4. Fiscal (pensado para mostrador): **Sin RFC** (un toque) o **Sí tengo RFC** → 5 pasos
-   simples (RFC → nombre → CP → régimen → uso). Al terminar, **Facturapi valida contra el SAT**
-   (mejor que el portal de certificados, que pide captcha y no es API). Si no cuadran, te dice qué corregir.
+2. Tras el pedido → **Sí, factura** / **Solo pagar**
+3. **Solo pagar** → QR CoDi de inmediato (**vigencia ~10 min**)
+4. **Sí, factura** → primero datos (**Sin RFC** o wizard); *el QR se manda al cerrar*
+   para que no se pierda en el chat. Facturapi valida contra el SAT.
+5. Si el QR vence: Banxico ya no lo acepta; **Nuevo QR** o otro pedido desde el menú
 5. Revisar: WhatsApp `estado` / `historial`, o consola `/admin` (ticket por fila)
 6. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
 

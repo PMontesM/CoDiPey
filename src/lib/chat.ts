@@ -206,13 +206,14 @@ async function askFiscalActions(
   orden: Orden,
 ): Promise<string> {
   const body =
-    `🧾 *Factura* — orden #${orden.id}\n\n` +
+    `🧾 *Factura* — orden #${orden.id} ($${orden.monto} MXN)\n\n` +
+    `Primero cerramos la factura; *el QR de pago llega al final* para que no se pierda.\n\n` +
     `En la mayoría de las tiendas basta con *Sin RFC*.\n` +
     `Si el cliente trae RFC, lo llenamos juntitos, una pregunta a la vez.`;
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Sin RFC", id: "FISCAL_DEMO" },
     { title: "Sí tengo RFC", id: "FISCAL_EDIT" },
-    { title: "Reenviar QR", id: "QR_RESEND" },
+    { title: "Menú", id: "MENU" },
   ]);
   if (sent) return "";
   return `${body}\n\nResponde *sin rfc* o *tengo rfc*.`;
@@ -229,7 +230,8 @@ async function askSavedFiscalChoice(
       : saved.razon_social;
   const body =
     `¿Facturamos con los datos que ya tenemos?\n` +
-    `*${saved.rfc}* · ${corto}`;
+    `*${saved.rfc}* · ${corto}\n\n` +
+    `El QR CoDi se envía en cuanto confirmes.`;
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Sí, esos", id: "FISCAL_KEEP" },
     { title: "Sin RFC", id: "FISCAL_DEMO" },
@@ -351,6 +353,9 @@ async function advanceFiscalWizard(
     return askMenu(env, telefono);
   }
   if (interactive === "QR_RESEND" || interactive === "QR_RENEW") {
+    if (!orden.pey_qr_id && interactive === "QR_RESEND") {
+      return "Aún no hay QR. Termina la factura y te lo mando al cerrar.";
+    }
     return resendOrRenewQr(
       env,
       publicUrl,
@@ -612,7 +617,7 @@ async function emitirQr(
     String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
   await storeQrPng(env, orden.id, qrPayload);
   await env.DB.prepare(
-    `UPDATE ordenes SET pey_qr_id = ?, concepto_pey = ?, updated_at = ? WHERE id = ?`,
+    `UPDATE ordenes SET pey_qr_id = ?, concepto_pey = ?, estado_chat = 'ESPERANDO_PAGO', updated_at = ? WHERE id = ?`,
   )
     .bind(peyQrId, concepto, nowIso(), orden.id)
     .run();
@@ -630,7 +635,7 @@ async function emitirQr(
       await sendWhatsappQuickReply(
         env,
         telefono,
-        "Cuando venza la vigencia (~10 min) el banco ya no podrá pagar este QR. Usa *Nuevo QR* o revisa el *Estado*.",
+        "Este es el código para pagar. Si vence (~10 min), pide *Nuevo QR*.",
         [
           { title: "Estado", id: "STATUS" },
           { title: "Nuevo QR", id: "QR_RENEW" },
@@ -675,14 +680,18 @@ async function resendOrRenewQr(
   return qrMsg;
 }
 
-async function crearQrYAvanzar(
+/**
+ * Tras Sí/No factura:
+ * - Sin factura → QR de inmediato
+ * - Con factura → primero datos fiscales; el QR se manda al cerrar fiscal
+ */
+async function afterFacturaChoice(
   env: Env,
   publicUrl: string,
   telefono: string,
   ordenId: number,
   requiere: number,
   items: Item[],
-  monto: string,
 ): Promise<string> {
   const concepto = conceptForPey(items, ordenId);
   await env.DB.prepare(
@@ -691,94 +700,74 @@ async function crearQrYAvanzar(
     .bind(requiere, concepto, nowIso(), ordenId)
     .run();
 
-  let peyData: Record<string, unknown>;
-  try {
-    peyData = await crearQrPey(env, ordenId, Number(monto), concepto);
-  } catch (err) {
-    const status = (err as { status?: number }).status;
-    const raw = err instanceof Error ? err.message : String(err);
-    let detail = raw;
-    if (status === 401 || status === 403) {
-      detail =
-        `pey rechazó la API key (HTTP ${status}). ` +
-        `Revisa PEY_API_KEY en Cloudflare Secrets (sin espacios) y CoDi en portal.mipey.mx.\n${raw}`;
-    }
-    const msg = `⚠️ No pudimos generar el QR CoDi.\n${detail}\nReintenta desde el menú de productos.`;
-    await sendWhatsapp(env, telefono, msg);
-    await env.DB.prepare(
-      `UPDATE ordenes SET estado_chat = 'CANCELADO', updated_at = ? WHERE id = ?`,
-    )
-      .bind(nowIso(), ordenId)
-      .run();
-    return msg;
+  const orden = await env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+    .bind(ordenId)
+    .first<Orden>();
+  if (!orden) return "No encontré la orden. Escribe *menú*.";
+
+  // Solo pagar: QR ya
+  if (requiere === 0) {
+    const qr = await emitirQr(env, publicUrl, telefono, orden);
+    const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
+    if (hasTwilio) return "";
+    return `${qr}\n\nSin factura. Escanea el QR para pagar.`;
   }
 
-  const qrPayload = extractQrPayload(peyData);
-  const peyQrId = String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
-  await storeQrPng(env, ordenId, qrPayload);
-  const media = `${publicUrl}/files/qr_${ordenId}.png`;
-
+  // Con factura: datos primero (el QR espera)
   const savedFiscal = await env.DB.prepare(
     "SELECT * FROM clientes_fiscales WHERE telefono = ?",
   )
     .bind(telefono)
     .first<ClienteFiscal>();
 
-  const qrMsg =
-    `🔲 *QR CoDi* orden #${ordenId} ($${monto} MXN)\n` +
-    `${concepto}\nVálido ${Math.floor(QR_TTL_SEC / 60)} min — escanéalo con tu banca.\n` +
-    `Si no ves la imagen: ${media}`;
-
-  const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
-  if (hasTwilio) {
-    await sendWhatsapp(env, telefono, qrMsg, media);
+  if (savedFiscal) {
+    await env.DB.prepare(
+      `UPDATE ordenes SET datos_fiscales_ok = 1, cliente_fiscal_id = ?,
+       estado_chat = 'ESPERANDO_DATOS_FISCALES', updated_at = ? WHERE id = ?`,
+    )
+      .bind(savedFiscal.id, nowIso(), ordenId)
+      .run();
+    return askSavedFiscalChoice(env, telefono, savedFiscal);
   }
 
-  if (requiere === 1) {
-    if (savedFiscal) {
-      await env.DB.prepare(
-        `UPDATE ordenes SET datos_fiscales_ok = 1, cliente_fiscal_id = ?, pey_qr_id = ?,
-         estado_chat = 'ESPERANDO_PAGO', updated_at = ? WHERE id = ?`,
-      )
-        .bind(savedFiscal.id, peyQrId, nowIso(), ordenId)
-        .run();
-      const ask = await askSavedFiscalChoice(env, telefono, savedFiscal);
-      if (hasTwilio) return "";
-      return `${qrMsg}\n\n${ask}`;
-    }
-    await env.DB.prepare(
-      `UPDATE ordenes SET pey_qr_id = ?, estado_chat = 'ESPERANDO_DATOS_FISCALES', updated_at = ? WHERE id = ?`,
-    )
-      .bind(peyQrId, nowIso(), ordenId)
-      .run();
-    const orden = await env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
-      .bind(ordenId)
-      .first<Orden>();
-    if (orden) {
-      const ask = await askFiscalActions(env, telefono, orden);
-      if (hasTwilio) return "";
-      return `${qrMsg}\n\n${ask}`;
-    }
-  } else {
-    await env.DB.prepare(
-      `UPDATE ordenes SET pey_qr_id = ?, estado_chat = 'ESPERANDO_PAGO', updated_at = ? WHERE id = ?`,
-    )
-      .bind(peyQrId, nowIso(), ordenId)
-      .run();
-    const okMsg =
-      "Sin factura. Escanea el QR CoDi para pagar.\nSi vence (~10 min), pide *Nuevo QR*.";
+  await env.DB.prepare(
+    `UPDATE ordenes SET estado_chat = 'ESPERANDO_DATOS_FISCALES', updated_at = ? WHERE id = ?`,
+  )
+    .bind(nowIso(), ordenId)
+    .run();
+  const orden2 = { ...orden, estado_chat: "ESPERANDO_DATOS_FISCALES", requiere_factura: 1 };
+  return askFiscalActions(env, telefono, orden2);
+}
+
+/** Tras guardar fiscal (o confirmar guardados): emite el QR si aún no existe. */
+async function releaseQrAfterFiscal(
+  env: Env,
+  publicUrl: string,
+  telefono: string,
+  ordenId: number,
+  preface: string,
+): Promise<string> {
+  const orden = await env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+    .bind(ordenId)
+    .first<Orden>();
+  if (!orden) return preface;
+
+  if (orden.pey_qr_id) {
+    const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
     if (hasTwilio) {
-      await sendWhatsappQuickReply(env, telefono, okMsg, [
-        { title: "Estado", id: "STATUS" },
-        { title: "Nuevo QR", id: "QR_RENEW" },
-        { title: "Menú", id: "MENU" },
-      ]);
+      await sendWhatsapp(env, telefono, preface);
       return "";
     }
-    return `${qrMsg}\n\n${okMsg}`;
+    return preface;
   }
 
-  return hasTwilio ? "" : qrMsg;
+  const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
+  if (hasTwilio && preface.trim()) {
+    await sendWhatsapp(env, telefono, preface);
+  }
+  const qr = await emitirQr(env, publicUrl, telefono, orden);
+  if (hasTwilio) return "";
+  return `${preface}\n\n${qr}`.trim();
 }
 
 async function createOrderFromItems(
@@ -824,7 +813,7 @@ async function applyFiscalAndContinue(
   const cid = await upsertClienteFiscal(env, telefono, data);
   await env.DB.prepare(
     `UPDATE ordenes SET datos_fiscales_ok = 1, cliente_fiscal_id = ?, requiere_factura = 1,
-     error_fiscal = NULL, estado_chat = 'ESPERANDO_PAGO', updated_at = ? WHERE id = ?`,
+     error_fiscal = NULL, estado_chat = 'ESPERANDO_DATOS_FISCALES', updated_at = ? WHERE id = ?`,
   )
     .bind(cid, nowIso(), orden.id)
     .run();
@@ -832,13 +821,20 @@ async function applyFiscalAndContinue(
   const o2 = await env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
     .bind(orden.id)
     .first<Orden>();
-  if (o2?.facturapi_id) {
-    return `✅ Datos fiscales guardados y factura timbrada para orden #${o2.id}.`;
-  }
+
   if (o2?.pago_estado === "PAGADO" && o2.estado_chat === "ERROR_FISCAL") {
     return `Datos guardados, pero el timbrado falló:\n${o2.error_fiscal}\nCorrige e intenta de nuevo (no se vuelve a cobrar).`;
   }
-  return `✅ Datos fiscales guardados para orden #${o2?.id}. Cuando se confirme el pago CoDi, timbraremos automáticamente.`;
+  if (o2?.facturapi_id) {
+    return `✅ Datos listos y factura timbrada (orden #${o2.id}).`;
+  }
+  if (o2?.pago_estado === "PAGADO") {
+    return `✅ Datos guardados para orden #${o2.id}. La factura se timbra enseguida.`;
+  }
+  const preface =
+    `✅ Datos de factura listos (orden #${o2?.id}).\n` +
+    `Ahora sí te mando el QR para pagar:`;
+  return releaseQrAfterFiscal(env, publicUrl, telefono, orden.id, preface);
 }
 
 export async function handleWhatsappMessage(
@@ -880,26 +876,24 @@ export async function handleWhatsappMessage(
   if (orden && estado === "ESPERANDO_FACTURA") {
     if (interactive === "FACTURA_SI" || interactive === "FACTURA_NO") {
       const items = JSON.parse(orden.conceptos) as Item[];
-      return crearQrYAvanzar(
+      return afterFacturaChoice(
         env,
         publicUrl,
         telefono,
         orden.id,
         interactive === "FACTURA_SI" ? 1 : 0,
         items,
-        orden.monto,
       );
     }
     if (text === "1" || text === "2") {
       const items = JSON.parse(orden.conceptos) as Item[];
-      return crearQrYAvanzar(
+      return afterFacturaChoice(
         env,
         publicUrl,
         telefono,
         orden.id,
         text === "1" ? 1 : 0,
         items,
-        orden.monto,
       );
     }
     if (!CATALOG.some((c) => c.id === interactive)) {
@@ -955,6 +949,12 @@ export async function handleWhatsappMessage(
     )
   ) {
     if (interactive === "QR_RESEND" || /^qr$/i.test(text)) {
+      if (!orden.pey_qr_id) {
+        return (
+          "Todavía no hay QR: primero termina los datos de factura " +
+          "(*Sin RFC* o *Sí tengo RFC*)."
+        );
+      }
       return resendOrRenewQr(env, publicUrl, telefono, orden, false);
     }
 
@@ -962,7 +962,13 @@ export async function handleWhatsappMessage(
       interactive === "FISCAL_KEEP" ||
       /^(ok|confirmar|sí|si|si, esos|sí, esos)$/i.test(text)
     ) {
-      return `Listo, usamos esos datos. Escanea el QR (vale ~10 min). Si se vence, pide *Nuevo QR*.`;
+      return releaseQrAfterFiscal(
+        env,
+        publicUrl,
+        telefono,
+        orden.id,
+        "✅ Usamos tus datos guardados. Aquí va el QR para pagar:",
+      );
     }
 
     if (

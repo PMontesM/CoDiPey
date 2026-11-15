@@ -201,7 +201,7 @@ describe("Worker HTTP", () => {
     expect(row?.conceptos).toContain("Prueba CoDi");
   });
 
-  it("WhatsApp button payload FACTURA_SI advances like tapping Sí", async () => {
+  it("WhatsApp FACTURA_SI asks fiscal first without sending QR", async () => {
     await call("/whatsapp/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -222,16 +222,23 @@ describe("Worker HTTP", () => {
       }),
     });
     expect(res.status).toBe(200);
-    expect(await res.text()).toMatch(/QR CoDi|\/files\/qr_/);
+    const twiml = await res.text();
+    expect(twiml).toMatch(/Sin RFC|factura|QR de pago llega al final/i);
+    expect(twiml).not.toMatch(/\/files\/qr_/);
 
     const orden = await env.DB.prepare(
-      "SELECT estado_chat, requiere_factura FROM ordenes ORDER BY id DESC LIMIT 1",
-    ).first<{ estado_chat: string; requiere_factura: number }>();
+      "SELECT estado_chat, requiere_factura, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{
+      estado_chat: string;
+      requiere_factura: number;
+      pey_qr_id: string | null;
+    }>();
     expect(orden?.requiere_factura).toBe(1);
     expect(orden?.estado_chat).toBe("ESPERANDO_DATOS_FISCALES");
+    expect(orden?.pey_qr_id).toBeNull();
   });
 
-  it("WhatsApp 1 generates CoDi QR via pey and stores PNG", async () => {
+  it("WhatsApp Solo pagar generates CoDi QR immediately", async () => {
     await call("/whatsapp/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -244,22 +251,66 @@ describe("Worker HTTP", () => {
     const res = await call("/whatsapp/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: "whatsapp:+5215510076571", Body: "1" }),
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "Solo pagar",
+        ButtonPayload: "FACTURA_NO",
+      }),
     });
     const text = await res.text();
-    // Sin credenciales Twilio en test: TwiML trae el link; con Twilio sería Response vacío + MediaUrl
     expect(text).toMatch(/QR CoDi|\/files\/qr_\d+\.png/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
     ).first<{ estado_chat: string; pey_qr_id: string }>();
-    expect(orden?.estado_chat).toBe("ESPERANDO_DATOS_FISCALES");
+    expect(orden?.estado_chat).toBe("ESPERANDO_PAGO");
     expect(orden?.pey_qr_id).toBe("qr_test_1");
 
     const blob = await env.DB.prepare(
       "SELECT key FROM blobs WHERE key LIKE 'qr_%'",
     ).first();
     expect(blob).toBeTruthy();
+  });
+
+  it("WhatsApp Sin RFC after factura releases QR at the end", async () => {
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "1 Prueba CoDi 0.01",
+      }),
+    });
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "1",
+      }),
+    });
+
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "Sin RFC",
+        ButtonPayload: "FISCAL_DEMO",
+      }),
+    });
+    expect(await res.text()).toMatch(/QR CoDi|\/files\/qr_/);
+
+    const orden = await env.DB.prepare(
+      "SELECT estado_chat, pey_qr_id, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{
+      estado_chat: string;
+      pey_qr_id: string;
+      datos_fiscales_ok: number;
+    }>();
+    expect(orden?.datos_fiscales_ok).toBe(1);
+    expect(orden?.pey_qr_id).toBe("qr_test_1");
+    expect(orden?.estado_chat).toBe("ESPERANDO_PAGO");
   });
 
   it("pey webhook marks PAGADO idempotently", async () => {
@@ -338,7 +389,11 @@ describe("Worker HTTP", () => {
     await call("/whatsapp/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: "whatsapp:+5215510076571", Body: "1" }),
+      body: formBody({
+        From: "whatsapp:+5215510076571",
+        Body: "2",
+        ButtonPayload: "FACTURA_NO",
+      }),
     });
 
     const res = await call("/whatsapp/webhook", {
@@ -403,7 +458,7 @@ describe("Worker HTTP", () => {
       `INSERT INTO ordenes
         (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
          pey_qr_id, estado_chat, created_at, updated_at)
-       VALUES (?, ?, '0.01', 'PENDIENTE', 1, 0, 'qr_x', 'ESPERANDO_DATOS_FISCALES', ?, ?)`,
+       VALUES (?, ?, '0.01', 'PENDIENTE', 1, 0, NULL, 'ESPERANDO_DATOS_FISCALES', ?, ?)`,
     )
       .bind(
         phone,
@@ -458,12 +513,17 @@ describe("Worker HTTP", () => {
         ButtonPayload: "USO_G03",
       }),
     });
-    expect(await res.text()).toMatch(/Datos fiscales guardados|timbrada/i);
+    expect(await res.text()).toMatch(/QR CoDi|Datos listos|factura listos|\/files\/qr_/i);
 
     const orden = await env.DB.prepare(
-      "SELECT estado_chat, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
-    ).first<{ estado_chat: string; datos_fiscales_ok: number }>();
+      "SELECT estado_chat, datos_fiscales_ok, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{
+      estado_chat: string;
+      datos_fiscales_ok: number;
+      pey_qr_id: string | null;
+    }>();
     expect(orden?.datos_fiscales_ok).toBe(1);
+    expect(orden?.pey_qr_id).toBe("qr_test_1");
     expect(orden?.estado_chat).toBe("ESPERANDO_PAGO");
   });
 
