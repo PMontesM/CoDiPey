@@ -1,6 +1,19 @@
 import type { ClienteFiscal, Env, Item, Orden } from "../types";
 import { evaluarYTimbrar } from "./facturapi";
 import {
+  clearFiscalDraft,
+  draftComplete,
+  isFiscalWizardState,
+  loadFiscalDraft,
+  normalizeRfc,
+  REGIMEN_OPTIONS,
+  saveFiscalDraft,
+  USO_OPTIONS,
+  validateCp,
+  validateNombre,
+  validateRfc,
+} from "./fiscal-wizard";
+import {
   conceptForPey,
   nowIso,
   parseFiscalData,
@@ -164,7 +177,7 @@ async function askFacturaChoice(
   resumen: string,
 ): Promise<string> {
   const body =
-    `✅ *Orden #${ordenId}*\n${resumen}\n\n*Total: $${total} MXN*\n\n¿Requieres factura CFDI 4.0?`;
+    `✅ *Orden #${ordenId}*\n${resumen}\n\n*Total: $${total} MXN*\n\n¿El cliente necesita factura?`;
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
     { title: "Sí, factura", id: "FACTURA_SI" },
     { title: "Solo pagar", id: "FACTURA_NO" },
@@ -173,52 +186,35 @@ async function askFacturaChoice(
   return `${body}\n\nResponde *1* = Sí  |  *2* = No`;
 }
 
-/** Prompt claro de captura fiscal (WhatsApp no tiene formulario nativo). */
-async function askFiscalCapture(
+async function setOrdenEstado(
   env: Env,
-  telefono: string,
-  orden: Orden,
-): Promise<string> {
-  const body =
-    `🧾 *Captura de datos fiscales* — orden #${orden.id}\n\n` +
-    `Envía *un solo mensaje* con este formato:\n` +
-    `\`RFC | Razón Social | CP | Régimen | UsoCFDI\`\n\n` +
-    `Ejemplo listo para copiar:\n` +
-    `\`XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03\`\n\n` +
-    `O usa el botón de público en general.`;
-  const sent = await sendWhatsappQuickReply(env, telefono, body, [
-    { title: "Público general", id: "FISCAL_DEMO" },
-    { title: "Reenviar QR", id: "QR_RESEND" },
-    { title: "Menú", id: "MENU" },
-  ]);
-  if (sent) return "";
-  return body;
+  ordenId: number,
+  estado: string,
+): Promise<void> {
+  await env.DB.prepare(
+    `UPDATE ordenes SET estado_chat = ?, updated_at = ? WHERE id = ?`,
+  )
+    .bind(estado, nowIso(), ordenId)
+    .run();
 }
 
+/** Entrada fiscal para tienda de barrio: un toque o te guiamos paso a paso. */
 async function askFiscalActions(
   env: Env,
   telefono: string,
   orden: Orden,
-  publicUrl: string,
 ): Promise<string> {
-  const qrHint = orden.pey_qr_id
-    ? `\nQR: ${publicUrl}/files/qr_${orden.id}.png`
-    : "";
   const body =
-    `🧾 *Datos fiscales* (orden #${orden.id})\n` +
-    `Elige una opción o captura tus datos.` +
-    qrHint;
+    `🧾 *Factura* — orden #${orden.id}\n\n` +
+    `En la mayoría de las tiendas basta con *Sin RFC*.\n` +
+    `Si el cliente trae RFC, lo llenamos juntitos, una pregunta a la vez.`;
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
-    { title: "Público general", id: "FISCAL_DEMO" },
-    { title: "Capturar datos", id: "FISCAL_EDIT" },
+    { title: "Sin RFC", id: "FISCAL_DEMO" },
+    { title: "Sí tengo RFC", id: "FISCAL_EDIT" },
     { title: "Reenviar QR", id: "QR_RESEND" },
   ]);
   if (sent) return "";
-  return (
-    `${body}\n\n` +
-    `Ejemplo: XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03\n` +
-    `O responde *capturar* / *qr*.`
-  );
+  return `${body}\n\nResponde *sin rfc* o *tengo rfc*.`;
 }
 
 async function askSavedFiscalChoice(
@@ -226,16 +222,223 @@ async function askSavedFiscalChoice(
   telefono: string,
   saved: ClienteFiscal,
 ): Promise<string> {
+  const corto =
+    saved.razon_social.length > 28
+      ? `${saved.razon_social.slice(0, 28)}…`
+      : saved.razon_social;
   const body =
-    `Usaremos tus datos fiscales guardados (*${saved.rfc}*).\n` +
-    `Confírmalos o captura otros.`;
+    `¿Facturamos con los datos que ya tenemos?\n` +
+    `*${saved.rfc}* · ${corto}`;
   const sent = await sendWhatsappQuickReply(env, telefono, body, [
-    { title: "Confirmar", id: "FISCAL_KEEP" },
-    { title: "Capturar datos", id: "FISCAL_EDIT" },
-    { title: "Reenviar QR", id: "QR_RESEND" },
+    { title: "Sí, esos", id: "FISCAL_KEEP" },
+    { title: "Sin RFC", id: "FISCAL_DEMO" },
+    { title: "Otros datos", id: "FISCAL_EDIT" },
   ]);
   if (sent) return "";
-  return `${body}\n\nResponde *ok* para confirmar, *capturar* para cambiar, o *qr*.`;
+  return `${body}\n\nResponde *si*, *sin rfc* u *otros*.`;
+}
+
+async function startFiscalWizard(
+  env: Env,
+  telefono: string,
+  orden: Orden,
+): Promise<string> {
+  await clearFiscalDraft(env, telefono);
+  await saveFiscalDraft(env, telefono, {});
+  await env.DB.prepare(
+    `UPDATE ordenes SET estado_chat = 'ESPERANDO_FISCAL_RFC', datos_fiscales_ok = 0, updated_at = ? WHERE id = ?`,
+  )
+    .bind(nowIso(), orden.id)
+    .run();
+  const body =
+    `Perfecto. Vamos despacio 👍\n\n` +
+    `*Paso 1 de 5 — RFC*\n` +
+    `Escríbelo tal cual viene en la constancia (12 o 13 caracteres).\n` +
+    `Ejemplo: \`VECJ880326XXX\``;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
+    { title: "Cancelar", id: "MENU" },
+  ]);
+  return sent ? "" : body;
+}
+
+async function askFiscalNombre(env: Env, telefono: string): Promise<string> {
+  const body =
+    `*Paso 2 de 5 — Nombre*\n` +
+    `¿Cómo se llama la persona o el negocio?\n` +
+    `(Como en la constancia del SAT)`;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
+  ]);
+  return sent ? "" : body;
+}
+
+async function askFiscalCp(env: Env, telefono: string): Promise<string> {
+  const body =
+    `*Paso 3 de 5 — Código postal*\n` +
+    `Los *5 dígitos* del domicilio fiscal.\n` +
+    `Ejemplo: \`06600\``;
+  const sent = await sendWhatsappQuickReply(env, telefono, body, [
+    { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
+  ]);
+  return sent ? "" : body;
+}
+
+async function askFiscalRegimen(env: Env, telefono: string): Promise<string> {
+  const body =
+    `*Paso 4 de 5 — Régimen*\n` +
+    `Elige el que más se parezca (si dudas, *RESICO* suele ser el de personas físicas).`;
+  const sent = await sendWhatsappList(
+    env,
+    telefono,
+    body,
+    "Elegir régimen",
+    REGIMEN_OPTIONS.map((o) => ({
+      id: o.id,
+      item: o.item,
+      description: o.description,
+    })),
+  );
+  if (sent) return "";
+  return (
+    `${body}\n\n` +
+    REGIMEN_OPTIONS.map((o, i) => `${i + 1}) ${o.item}`).join("\n")
+  );
+}
+
+async function askFiscalUso(env: Env, telefono: string): Promise<string> {
+  const body =
+    `*Paso 5 de 5 — ¿Para qué la factura?*\n` +
+    `Si no estás seguro, elige *Gastos en general*.`;
+  const sent = await sendWhatsappList(
+    env,
+    telefono,
+    body,
+    "Elegir uso",
+    USO_OPTIONS.map((o) => ({
+      id: o.id,
+      item: o.item,
+      description: o.description,
+    })),
+  );
+  if (sent) return "";
+  return (
+    `${body}\n\n` + USO_OPTIONS.map((o, i) => `${i + 1}) ${o.item}`).join("\n")
+  );
+}
+
+async function advanceFiscalWizard(
+  env: Env,
+  publicUrl: string,
+  telefono: string,
+  orden: Orden,
+  estado: string,
+  interactive: string,
+  text: string,
+): Promise<string> {
+  // Escape hatches always available
+  if (interactive === "FISCAL_DEMO") {
+    await clearFiscalDraft(env, telefono);
+    return applyFiscalAndContinue(env, publicUrl, telefono, orden, DEMO_FISCAL);
+  }
+  if (interactive === "MENU" || interactive === "HELP") {
+    await clearFiscalDraft(env, telefono);
+    return askMenu(env, telefono);
+  }
+  if (interactive === "QR_RESEND" || interactive === "QR_RENEW") {
+    return resendOrRenewQr(
+      env,
+      publicUrl,
+      telefono,
+      orden,
+      interactive === "QR_RENEW",
+    );
+  }
+
+  const draft = await loadFiscalDraft(env, telefono);
+
+  if (estado === "ESPERANDO_FISCAL_RFC") {
+    const err = validateRfc(text);
+    if (err) {
+      const retry =
+        `${err}\n\n*Paso 1 de 5 — RFC*\nEscríbelo sin espacios. Ejemplo: \`VECJ880326XXX\``;
+      const sent = await sendWhatsappQuickReply(env, telefono, retry, [
+        { title: "Mejor Sin RFC", id: "FISCAL_DEMO" },
+        { title: "Cancelar", id: "MENU" },
+      ]);
+      return sent ? "" : retry;
+    }
+    draft.rfc = normalizeRfc(text);
+    await saveFiscalDraft(env, telefono, draft);
+    await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_NOMBRE");
+    return askFiscalNombre(env, telefono);
+  }
+
+  if (estado === "ESPERANDO_FISCAL_NOMBRE") {
+    const err = validateNombre(text);
+    if (err) return err;
+    draft.razon_social = text.trim();
+    await saveFiscalDraft(env, telefono, draft);
+    await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_CP");
+    return askFiscalCp(env, telefono);
+  }
+
+  if (estado === "ESPERANDO_FISCAL_CP") {
+    const err = validateCp(text);
+    if (err) return err;
+    draft.codigo_postal = text.trim();
+    await saveFiscalDraft(env, telefono, draft);
+    await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_REGIMEN");
+    return askFiscalRegimen(env, telefono);
+  }
+
+  if (estado === "ESPERANDO_FISCAL_REGIMEN") {
+    let picked = REGIMEN_OPTIONS.find((o) => o.id === interactive);
+    if (!picked && /^\d+$/.test(text)) {
+      picked = REGIMEN_OPTIONS[Number(text) - 1];
+    }
+    if (!picked) {
+      picked = REGIMEN_OPTIONS.find((o) => o.code === text.trim());
+    }
+    if (!picked) {
+      return askFiscalRegimen(env, telefono);
+    }
+    draft.regimen = picked.code;
+    await saveFiscalDraft(env, telefono, draft);
+    await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_USO");
+    return askFiscalUso(env, telefono);
+  }
+
+  if (estado === "ESPERANDO_FISCAL_USO") {
+    let picked = USO_OPTIONS.find((o) => o.id === interactive);
+    if (!picked && /^\d+$/.test(text)) {
+      picked = USO_OPTIONS[Number(text) - 1];
+    }
+    if (!picked) {
+      picked = USO_OPTIONS.find(
+        (o) => o.code === text.trim().toUpperCase(),
+      );
+    }
+    if (!picked) {
+      return askFiscalUso(env, telefono);
+    }
+    draft.uso_cfdi = picked.code;
+    await saveFiscalDraft(env, telefono, draft);
+    if (!draftComplete(draft)) {
+      await setOrdenEstado(env, orden.id, "ESPERANDO_FISCAL_RFC");
+      return startFiscalWizard(env, telefono, orden);
+    }
+    await clearFiscalDraft(env, telefono);
+    return applyFiscalAndContinue(env, publicUrl, telefono, orden, {
+      rfc: draft.rfc,
+      razon_social: draft.razon_social,
+      codigo_postal: draft.codigo_postal,
+      regimen: draft.regimen,
+      uso_cfdi: draft.uso_cfdi,
+    });
+  }
+
+  return askFiscalActions(env, telefono, orden);
 }
 
 async function replyStatus(
@@ -498,7 +701,7 @@ async function crearQrYAvanzar(
       .bind(ordenId)
       .first<Orden>();
     if (orden) {
-      const ask = await askFiscalActions(env, telefono, orden, publicUrl);
+      const ask = await askFiscalActions(env, telefono, orden);
       if (hasTwilio) return "";
       return `${qrMsg}\n\n${ask}`;
     }
@@ -563,6 +766,7 @@ async function applyFiscalAndContinue(
   orden: Orden,
   data: Record<string, string>,
 ): Promise<string> {
+  await clearFiscalDraft(env, telefono);
   const cid = await upsertClienteFiscal(env, telefono, data);
   await env.DB.prepare(
     `UPDATE ordenes SET datos_fiscales_ok = 1, cliente_fiscal_id = ?, requiere_factura = 1,
@@ -655,9 +859,27 @@ export async function handleWhatsappMessage(
     }
   }
 
+  // Asistente fiscal paso a paso (antes del catálogo: no cancelar a mitad)
+  if (orden && isFiscalWizardState(estado)) {
+    return advanceFiscalWizard(
+      env,
+      publicUrl,
+      telefono,
+      orden,
+      estado,
+      interactive,
+      text,
+    );
+  }
+
   // Catálogo (lista Twilio o número 1–N del menú texto)
   let catalogHit = CATALOG.find((c) => c.id === interactive);
-  if (!catalogHit && /^\d+$/.test(text) && estado !== "ESPERANDO_FACTURA") {
+  if (
+    !catalogHit &&
+    /^\d+$/.test(text) &&
+    estado !== "ESPERANDO_FACTURA" &&
+    !isFiscalWizardState(estado)
+  ) {
     const idx = Number(text) - 1;
     if (idx >= 0 && idx < CATALOG.length) catalogHit = CATALOG[idx];
   }
@@ -682,29 +904,35 @@ export async function handleWhatsappMessage(
       return resendOrRenewQr(env, publicUrl, telefono, orden, false);
     }
 
-    if (interactive === "FISCAL_KEEP" || /^(ok|confirmar|sí|si)$/i.test(text)) {
-      return `Perfecto. Seguimos con tus datos guardados. Escanea el QR (vigencia ~10 min). Si vence, pide *Nuevo QR*.`;
+    if (
+      interactive === "FISCAL_KEEP" ||
+      /^(ok|confirmar|sí|si|si, esos|sí, esos)$/i.test(text)
+    ) {
+      return `Listo, usamos esos datos. Escanea el QR (vale ~10 min). Si se vence, pide *Nuevo QR*.`;
     }
 
     if (
       interactive === "FISCAL_EDIT" ||
-      /^(capturar|cambiar datos|capturar datos)$/i.test(text)
-    ) {
-      await env.DB.prepare(
-        `UPDATE ordenes SET estado_chat = 'ESPERANDO_DATOS_FISCALES', datos_fiscales_ok = 0, updated_at = ? WHERE id = ?`,
+      /^(capturar|cambiar datos|capturar datos|tengo rfc|sí tengo rfc|si tengo rfc|otros|otros datos)$/i.test(
+        text,
       )
-        .bind(nowIso(), orden.id)
-        .run();
-      return askFiscalCapture(env, telefono, orden);
+    ) {
+      return startFiscalWizard(env, telefono, orden);
     }
 
-    if (interactive === "FISCAL_DEMO") {
+    if (
+      interactive === "FISCAL_DEMO" ||
+      /^(sin rfc|publico|público|público general|publico general)$/i.test(text)
+    ) {
       return applyFiscalAndContinue(env, publicUrl, telefono, orden, DEMO_FISCAL);
     }
 
+    // Compat: si alguien pega la cadena completa, la aceptamos sin anunciarla
     if (text.includes("|")) {
       const { data, error } = parseFiscalData(text);
-      if (error || !data) return error || "Datos inválidos";
+      if (error || !data) {
+        return askFiscalActions(env, telefono, orden);
+      }
       return applyFiscalAndContinue(env, publicUrl, telefono, orden, data);
     }
 
@@ -713,7 +941,7 @@ export async function handleWhatsappMessage(
       if (!maybeProducts.error && maybeProducts.items) {
         return createOrderFromItems(env, telefono, maybeProducts.items, orden);
       }
-      return askFiscalActions(env, telefono, orden, publicUrl);
+      return askFiscalActions(env, telefono, orden);
     }
   }
 

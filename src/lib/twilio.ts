@@ -187,15 +187,21 @@ export function resolveInteractiveId(
     "si factura": "FACTURA_SI",
     "solo pagar": "FACTURA_NO",
     "no factura": "FACTURA_NO",
-    "público general": "FISCAL_DEMO",
-    "publico general": "FISCAL_DEMO",
-    "público en general": "FISCAL_DEMO",
-    "publico en general": "FISCAL_DEMO",
+    // No mapear "público en general" por texto: es razón social habitual en el wizard
+    "sin rfc": "FISCAL_DEMO",
+    "mejor sin rfc": "FISCAL_DEMO",
     "demo sat": "FISCAL_DEMO",
     "capturar datos": "FISCAL_EDIT",
     capturar: "FISCAL_EDIT",
     "cambiar datos": "FISCAL_EDIT",
+    "sí tengo rfc": "FISCAL_EDIT",
+    "si tengo rfc": "FISCAL_EDIT",
+    "tengo rfc": "FISCAL_EDIT",
+    "otros datos": "FISCAL_EDIT",
+    otros: "FISCAL_EDIT",
     confirmar: "FISCAL_KEEP",
+    "sí, esos": "FISCAL_KEEP",
+    "si, esos": "FISCAL_KEEP",
     ok: "FISCAL_KEEP",
     "reenviar qr": "QR_RESEND",
     qr: "QR_RESEND",
@@ -221,6 +227,8 @@ export function resolveInteractiveId(
     /^PROD_/.test(text) ||
     /^FACTURA_/.test(text) ||
     /^FISCAL_/.test(text) ||
+    /^REG_/.test(text) ||
+    /^USO_/.test(text) ||
     /^(STATUS|HISTORY|QR_RENEW|QR_RESEND|MENU|HELP)$/.test(text)
   ) {
     return text;

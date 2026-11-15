@@ -145,7 +145,7 @@ describe("Worker HTTP", () => {
     expect(res.status).toBe(200);
     const twiml = await res.text();
     expect(twiml).toContain("Orden #");
-    expect(twiml).toMatch(/factura CFDI 4\.0/i);
+    expect(twiml).toMatch(/necesita factura|factura/i);
     expect(twiml).toMatch(/Sí|1/i);
 
     const row = await env.DB.prepare(
@@ -169,7 +169,7 @@ describe("Worker HTTP", () => {
     expect(res.status).toBe(200);
     const twiml = await res.text();
     expect(twiml).toContain("Orden #");
-    expect(twiml).toMatch(/factura CFDI 4\.0/i);
+    expect(twiml).toMatch(/necesita factura|factura/i);
 
     const row = await env.DB.prepare(
       "SELECT monto, conceptos FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -331,13 +331,13 @@ describe("Worker HTTP", () => {
     expect(twiml).toMatch(/Orden #|Vigencia|QR/i);
   });
 
-  it("WhatsApp Capturar datos prompts fiscal format", async () => {
+  it("WhatsApp Sí tengo RFC starts step-by-step wizard", async () => {
     const ts = new Date().toISOString();
     await env.DB.prepare(
       `INSERT INTO ordenes
         (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
          pey_qr_id, estado_chat, created_at, updated_at)
-       VALUES (?, ?, '0.01', 'PENDIENTE', 1, 1, 'qr_x', 'ESPERANDO_PAGO', ?, ?)`,
+       VALUES (?, ?, '0.01', 'PENDIENTE', 1, 0, 'qr_x', 'ESPERANDO_DATOS_FISCALES', ?, ?)`,
     )
       .bind(
         "whatsapp:+5215510076571",
@@ -359,18 +359,89 @@ describe("Worker HTTP", () => {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formBody({
         From: "whatsapp:+5215510076571",
-        Body: "Capturar datos",
+        Body: "Sí tengo RFC",
         ButtonPayload: "FISCAL_EDIT",
       }),
     });
     const twiml = await res.text();
-    expect(twiml).toMatch(/Captura de datos fiscales|RFC \| Razón Social/i);
+    expect(twiml).toMatch(/Paso 1 de 5|RFC/i);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
     ).first<{ estado_chat: string; datos_fiscales_ok: number }>();
-    expect(orden?.estado_chat).toBe("ESPERANDO_DATOS_FISCALES");
+    expect(orden?.estado_chat).toBe("ESPERANDO_FISCAL_RFC");
     expect(orden?.datos_fiscales_ok).toBe(0);
+  });
+
+  it("WhatsApp fiscal wizard completes with buttons and text", async () => {
+    const ts = new Date().toISOString();
+    const phone = "whatsapp:+5215510076571";
+    await env.DB.prepare(
+      `INSERT INTO ordenes
+        (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
+         pey_qr_id, estado_chat, created_at, updated_at)
+       VALUES (?, ?, '0.01', 'PENDIENTE', 1, 0, 'qr_x', 'ESPERANDO_DATOS_FISCALES', ?, ?)`,
+    )
+      .bind(
+        phone,
+        JSON.stringify([
+          {
+            cantidad: "1",
+            concepto: "Prueba",
+            precio_unitario: "0.01",
+            subtotal: "0.01",
+          },
+        ]),
+        ts,
+        ts,
+      )
+      .run();
+
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({ From: phone, Body: "tengo rfc", ButtonPayload: "FISCAL_EDIT" }),
+    });
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({ From: phone, Body: "XAXX010101000" }),
+    });
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({ From: phone, Body: "PUBLICO EN GENERAL" }),
+    });
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({ From: phone, Body: "06600" }),
+    });
+    await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: phone,
+        Body: "RESICO (fácil)",
+        ButtonPayload: "REG_616",
+      }),
+    });
+    const res = await call("/whatsapp/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formBody({
+        From: phone,
+        Body: "Gastos en general",
+        ButtonPayload: "USO_G03",
+      }),
+    });
+    expect(await res.text()).toMatch(/Datos fiscales guardados|timbrada/i);
+
+    const orden = await env.DB.prepare(
+      "SELECT estado_chat, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{ estado_chat: string; datos_fiscales_ok: number }>();
+    expect(orden?.datos_fiscales_ok).toBe(1);
+    expect(orden?.estado_chat).toBe("ESPERANDO_PAGO");
   });
 
   it("rejects gibberish with helpful TwiML", async () => {

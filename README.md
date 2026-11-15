@@ -41,9 +41,8 @@ Captura con **botones / lista** (Twilio Content API). Si fallan, queda texto de 
 1. Escribe `hola` → lista *Ver opciones* (productos, **Estado**, **Historial**, **Nuevo QR**)
 2. Tras el pedido → **Sí, factura** / **Solo pagar** → imagen QR CoDi (**vigencia ~10 min**)
 3. Si el QR vence: Banxico ya no lo acepta; la orden sigue `PENDIENTE` hasta que uses **Nuevo QR** (mismo monto) o abras otro pedido desde el menú
-4. Fiscal: **Público general**, **Capturar datos** (te pide la cadena) o  
-   `RFC | Razón Social | CP | Régimen | UsoCFDI`  
-   Ejemplo: `XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03`
+4. Fiscal (pensado para mostrador): **Sin RFC** (un toque) o **Sí tengo RFC** → 5 pasos
+   simples (RFC → nombre → CP → régimen en lista → uso en lista). Sin cadenas raras.
 5. Revisar: WhatsApp `estado` / `historial`, o consola `/admin` (ticket por fila)
 6. Compat texto: `1`/`2` = factura; `qr` = reenviar; `nuevo qr` = regenerar
 
