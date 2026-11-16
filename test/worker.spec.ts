@@ -266,7 +266,7 @@ describe("Worker HTTP", () => {
   async function startCartAndCheckout(from = "whatsapp:+5215510076571") {
     await callWhatsapp({
         From: from,
-        Body: "1 Prueba CoDi 0.01",
+        Body: "1 Prueba Mostrito 0.01",
       });
     await callWhatsapp({
         From: from,
@@ -279,7 +279,7 @@ describe("Worker HTTP", () => {
   it("WhatsApp step1 opens cart before invoice", async () => {
     const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
-        Body: "1 Prueba CoDi 0.01",
+        Body: "1 Prueba Mostrito 0.01",
       });
     expect(res.status).toBe(200);
     const twiml = await res.text();
@@ -327,9 +327,9 @@ describe("Worker HTTP", () => {
   it("WhatsApp list picker PROD_ adds catalog item to cart", async () => {
     const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
-        Body: "Prueba CoDi $0.01",
+        Body: "Prueba Mostrito $0.01",
         ButtonPayload: "PROD_PRUEBA_001",
-        ButtonText: "Prueba CoDi $0.01",
+        ButtonText: "Prueba Mostrito $0.01",
       });
     expect(res.status).toBe(200);
     const twiml = await res.text();
@@ -341,7 +341,7 @@ describe("Worker HTTP", () => {
     ).first<{ monto: string; conceptos: string; estado_chat: string }>();
     expect(row?.estado_chat).toBe("ARMAR_PEDIDO");
     expect(row?.monto).toBe("0.01");
-    expect(row?.conceptos).toContain("Prueba CoDi");
+    expect(row?.conceptos).toContain("Prueba Mostrito");
   });
 
   it("WhatsApp FACTURA_SI asks fiscal first without sending QR", async () => {
@@ -379,7 +379,7 @@ describe("Worker HTTP", () => {
         ButtonPayload: "FACTURA_NO",
       });
     const text = await res.text();
-    expect(text).toMatch(/Ticket de cobro|Ticket CoDiPey|QR CoDi|\/ticket\/\d+|\/files\/qr_\d+\.png/);
+    expect(text).toMatch(/Ticket de cobro|Ticket Mostrito|QR|\/ticket\/\d+|\/files\/qr_\d+\.png/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -459,7 +459,7 @@ describe("Worker HTTP", () => {
         Body: "Sin RFC",
         ButtonPayload: "FISCAL_DEMO",
       });
-    expect(await res.text()).toMatch(/Ticket de cobro|QR CoDi|\/ticket\/\d+|\/files\/qr_/);
+    expect(await res.text()).toMatch(/Ticket de cobro|QR|\/ticket\/\d+|\/files\/qr_/);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pey_qr_id, datos_fiscales_ok FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -573,8 +573,8 @@ describe("Worker HTTP", () => {
   it("hola opens product menu with catalog options", async () => {
     const res = await callWhatsapp({ From: "whatsapp:+5215510076571", Body: "hola" });
     const twiml = await res.text();
-    expect(twiml).toMatch(/Cobro CoDi|productos|pedido/i);
-    expect(twiml).toMatch(/Prueba CoDi/i);
+    expect(twiml).toMatch(/Cobro Mostrito|productos|pedido/i);
+    expect(twiml).toMatch(/Prueba Mostrito/i);
   });
 
   it("WhatsApp STATUS reports active order", async () => {
@@ -717,7 +717,7 @@ describe("Worker HTTP", () => {
         Body: "Gastos en general",
         ButtonPayload: "USO_G03",
       });
-    expect(await res.text()).toMatch(/Ticket de cobro|QR CoDi|Datos listos|factura listos|\/ticket\/\d+|\/files\/qr_/i);
+    expect(await res.text()).toMatch(/Ticket de cobro|QR|Datos listos|factura listos|\/ticket\/\d+|\/files\/qr_/i);
 
     const orden = await env.DB.prepare(
       "SELECT estado_chat, datos_fiscales_ok, pey_qr_id FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -868,9 +868,9 @@ describe("Worker HTTP", () => {
 
     it("e2e: producto → carrito → cobrar → solo pagar → QR (sin factura)", async () => {
       let res = await wa({
-        Body: "Prueba CoDi $0.01 Demo de liquidación Banxico",
+        Body: "Prueba Mostrito $0.01 Demo de liquidación Banxico",
         ButtonPayload: "PROD_PRUEBA_001",
-        ButtonText: "Prueba CoDi $0.01",
+        ButtonText: "Prueba Mostrito $0.01",
       });
       expect(await res.text()).toMatch(/Pedido en curso|Cobrar/i);
       expect((await latestOrden())?.estado_chat).toBe("ARMAR_PEDIDO");
@@ -924,9 +924,9 @@ describe("Worker HTTP", () => {
 
       // Tap de lista vieja de productos (regresión del bug del screenshot)
       const res = await wa({
-        Body: "Prueba CoDi $0.01 Demo de liquidación Banxico",
+        Body: "Prueba Mostrito $0.01 Demo de liquidación Banxico",
         ButtonPayload: "PROD_PRUEBA_001",
-        ButtonText: "Prueba CoDi $0.01",
+        ButtonText: "Prueba Mostrito $0.01",
       });
       const twiml = await res.text();
       expect(twiml).not.toMatch(/Ese RFC no se ve completo/i);

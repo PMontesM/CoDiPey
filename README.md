@@ -1,6 +1,6 @@
-# CoDiPey — Cobro WhatsApp + CoDi + CFDI 4.0
+# Mostrito — Cobro por WhatsApp + CFDI 4.0
 
-**Cobro digital para tiendas de barrio:** el cliente pide por WhatsApp, arma un carrito, paga con **QR CoDi** ($0 de comisión de tarjeta) y, si lo necesita, recibe **factura CFDI 4.0**.
+**Cobro digital para tiendas de barrio:** el cliente pide por WhatsApp, arma un carrito, paga con **QR de su banco** ($0 de comisión de tarjeta) y, si lo necesita, recibe **factura CFDI 4.0**.
 
 Pensado para mostrador: botones, menú, carrito multi-producto y pasos fiscales guiados (no cadenas del SAT).
 
@@ -10,8 +10,8 @@ Pensado para mostrador: botones, menú, carrito multi-producto y pasos fiscales 
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | CoDiPey |
-| **Tagline** | Cobro CoDi + factura CFDI desde WhatsApp, listo para tienda |
+| **Nombre** | Mostrito (mascota: ajolote) |
+| **Tagline** | Cobro por WhatsApp + factura CFDI, listo para el mostrador |
 | **Repo** | https://github.com/PMontesM/CoDiPey *(público)* |
 | **Landing** | https://cobro-codi.inomali.workers.dev/ |
 | **Panel** | https://cobro-codi.inomali.workers.dev/admin |
@@ -26,7 +26,7 @@ En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a 
 ### Solución
 1. WhatsApp con **catálogo + carrito** (varios productos) y botones (Cobrar / Menú / Sí factura / Solo pagar / Sin RFC).
 2. **Ticket térmico** (PNG) + página HTML `/ticket/:id` con QR grande.
-3. **QR CoDi** vía pey (`POST /codi/qr`, vigencia ~10 min) **y** un **payment link** aparte (`POST /payment-link/create`) para pagar sin escanear. El link va en el caption de WhatsApp y como botón en `/ticket/:id`. Si el payment link falla (p. ej. la key sin checkout), el cobro sigue solo con QR.
+3. **QR de pago** (rail CoDi Banxico) vía pey (`POST /codi/qr`, vigencia ~10 min) **y** un **payment link** aparte (`POST /payment-link/create`) para pagar sin escanear. El link va en el caption de WhatsApp y como botón en `/ticket/:id`. Si el payment link falla (p. ej. la key sin checkout), el cobro sigue solo con QR.
 4. Factura: **Sin RFC** en un toque, RFC guardado (**Sí, esos** / **Otros datos**), o wizard de 5 pasos con reintento por campo si el SAT rechaza.
 5. **Panel** en tiempo real: liquidación, CFDI, cancelar pendientes, simulación de cobro/pago.
 
@@ -53,7 +53,7 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 
 ## Descripción corta (copiar/pegar)
 
-> CoDiPey es un MVP que permite a un comercio cobrar por WhatsApp con QR CoDi (pey) y emitir CFDI 4.0 (Facturapi): carrito multi-producto, botones, Sin RFC, captura fiscal guiada con corrección por campo, ticket + panel operativo. Demo pública en `/admin` sin unir números al Sandbox de Twilio.
+> Mostrito es un MVP que permite a un comercio cobrar por WhatsApp con QR bancario (vía pey) y emitir CFDI 4.0 (Facturapi): carrito multi-producto, botones, Sin RFC, captura fiscal guiada con corrección por campo, ticket + panel operativo. Demo pública en `/admin` sin unir números al Sandbox de Twilio.
 
 ---
 
@@ -103,7 +103,7 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 
 ## Flujo WhatsApp (como está en `src/lib/chat.ts`)
 
-1. `hola` / **Menú** → catálogo (Prueba CoDi, Café, Agua, o texto libre `2 Cafe 45`).
+1. `hola` / **Menú** → catálogo (Prueba Mostrito, Café, Agua, o texto libre `2 Cafe 45`).
 2. Cada producto entra al **carrito** (`ARMAR_PEDIDO`). Botones: **Cobrar** / **Agregar más** (+ **Menú** en el 3er slot).
 3. **Cobrar** → `ESPERANDO_FACTURA` → **Sí, factura** o **Solo pagar**.
 4. **Solo pagar** → ticket + QR + payment link (`ESPERANDO_PAGO`). El caption incluye *Paga tocando el link* cuando `POST /payment-link/create` responde con `url`.

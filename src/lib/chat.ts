@@ -60,9 +60,9 @@ const DEMO_FISCAL = {
 const CATALOG: Array<{ id: string; item: string; description: string; line: string }> = [
   {
     id: "PROD_PRUEBA_001",
-    item: "Prueba CoDi $0.01",
+    item: "Prueba Mostrito $0.01",
     description: "Demo de liquidación Banxico",
-    line: "1 Prueba CoDi 0.01",
+    line: "1 Prueba Mostrito 0.01",
   },
   {
     id: "PROD_CAFE_045",
@@ -87,7 +87,7 @@ const CATALOG: Array<{ id: string; item: string; description: string; line: stri
 const MENU_ACTIONS: Array<{ id: string; item: string; description: string }> = [
   { id: "STATUS", item: "Estado del cobro", description: "Orden activa y vigencia QR" },
   { id: "HISTORY", item: "Historial", description: "Últimas 5 órdenes" },
-  { id: "QR_RENEW", item: "Nuevo QR", description: "Si venció la solicitud CoDi" },
+  { id: "QR_RENEW", item: "Nuevo QR", description: "Si venció el QR de pago" },
   { id: "CANCEL", item: "Cancelar cobro", description: "Si ya no se va a cobrar" },
 ];
 
@@ -161,7 +161,7 @@ function formatMmSs(sec: number): string {
 
 async function askMenu(env: Env, telefono: string): Promise<string> {
   const body =
-    "🛒 *Cobro CoDi + CFDI 4.0*\n" +
+    "🛒 *Cobro Mostrito + CFDI 4.0*\n" +
     "Elige productos (puedes varios) o escríbelos así:\n" +
     "`2 Cafe 45`\n`1 Agua 10`\n\n" +
     "Cuando termines, toca *Cobrar*.";
@@ -282,7 +282,7 @@ async function askSavedFiscalChoice(
   const body =
     `¿Facturamos con los datos que ya tenemos?\n` +
     `*${saved.rfc}* · ${corto}\n\n` +
-    `El QR CoDi se envía en cuanto confirmes.\n` +
+    `El QR de pago se envía en cuanto confirmes.\n` +
     `Si son otros datos, toca *Otros datos* y te guío.`;
   // stickyMenu:false — WhatsApp solo da 3 botones; no podemos sacrificar "Otros datos" por Menú.
   const sent = await sendWhatsappQuickReply(
@@ -777,7 +777,7 @@ async function replyStatus(
 
   if (vencido) {
     body +=
-      `\n\n⚠️ La solicitud CoDi *venció* (~${Math.floor(QR_TTL_SEC / 60)} min). ` +
+      `\n\n⚠️ El QR de pago *venció* (~${Math.floor(QR_TTL_SEC / 60)} min). ` +
       `Banxico ya no la acepta. Genera un *Nuevo QR* (mismo monto) o inicia otro pedido.`;
   } else if (orden.pey_qr_id) {
     body += `\nTicket: ${publicUrl}/files/qr_${orden.id}.png`;
@@ -852,7 +852,7 @@ async function emitirQr(
     peyData = await crearQrPey(env, orden.id, Number(orden.monto), concepto);
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err);
-    const msg = `⚠️ No pudimos generar el QR CoDi.\n${raw}`;
+    const msg = `⚠️ No pudimos generar el QR de pago.\n${raw}`;
     await sendWhatsapp(env, telefono, msg);
     return msg;
   }

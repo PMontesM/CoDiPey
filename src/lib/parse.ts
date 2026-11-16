@@ -35,7 +35,7 @@ export function parseProductLines(
     return {
       items: null,
       error:
-        "Envía productos, uno por línea. Ejemplo:\n2 Cafe 45\n1 Agua 10\n1 Prueba CoDi 0.01",
+        "Envía productos, uno por línea. Ejemplo:\n2 Cafe 45\n1 Agua 10\n1 Prueba Mostrito 0.01",
     };
   }
   const items: Item[] = [];

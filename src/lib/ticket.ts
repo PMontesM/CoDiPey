@@ -117,7 +117,7 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
       : [
           {
             cantidad: "1",
-            concepto: meta.concepto || "Cobro CoDi",
+            concepto: meta.concepto || "Cobro Mostrito",
             precio_unitario: meta.monto,
             subtotal: meta.monto,
           },
@@ -129,7 +129,7 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
   let y = 48;
 
   body.push(
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="34" font-weight="700" fill="#111">CoDiPey</text>`,
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="34" font-weight="700" fill="#111">Mostrito</text>`,
   );
   y += 30;
   body.push(
@@ -137,7 +137,7 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
   );
   y += 24;
   body.push(
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="14" fill="#444">WhatsApp + CoDi  ·  $0 comisión</text>`,
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="14" fill="#444">WhatsApp + QR  ·  $0 comisión</text>`,
   );
   y += 20;
   body.push(dottedLine(y));
@@ -151,7 +151,7 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
   );
   y += 24;
   body.push(
-    `<text x="${MARGIN}" y="${y}" font-family="${MONO}" font-size="14" fill="#444">Pago: CoDi Banxico</text>`,
+    `<text x="${MARGIN}" y="${y}" font-family="${MONO}" font-size="14" fill="#444">Pago: app de tu banco</text>`,
   );
   body.push(
     `<text x="${MARGIN + CONTENT_W}" y="${y}" text-anchor="end" font-family="${MONO}" font-size="14" fill="#444">Vig. ${vigencia} min</text>`,
@@ -228,7 +228,7 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
   y += qrSize + 36;
 
   body.push(
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="14" fill="#333">QR CoDi - app de tu banco</text>`,
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="14" fill="#333">QR · app de tu banco</text>`,
   );
   y += 20;
   if (meta.peyQrId) {
@@ -299,7 +299,7 @@ export function formatTicketCaption(
       : [
           {
             cantidad: "1",
-            concepto: meta.concepto || "Cobro CoDi",
+            concepto: meta.concepto || "Cobro Mostrito",
             precio_unitario: meta.monto,
             subtotal: meta.monto,
           },
@@ -345,7 +345,7 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
       : [
           {
             cantidad: "1",
-            concepto: meta.concepto || "Cobro CoDi",
+            concepto: meta.concepto || "Cobro Mostrito",
             precio_unitario: meta.monto,
             subtotal: meta.monto,
           },
@@ -386,7 +386,7 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#FFFEF8" />
-  <title>Ticket #${meta.ordenId} · CoDiPey</title>
+  <title>Ticket #${meta.ordenId} · Mostrito</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -443,13 +443,13 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
 </head>
 <body>
   <article class="paper">
-    <div class="brand">CoDiPey</div>
+    <div class="brand">Mostrito</div>
     <div class="sub">TICKET DE COBRO</div>
-    <div class="sub">WhatsApp + CoDi · $0 comisión</div>
+    <div class="sub">WhatsApp + QR · $0 comisión</div>
     <div class="center"><span class="status ${statusClass}">${statusLabel}</span></div>
     <div class="dots"></div>
     <div class="meta"><span>Orden #${meta.ordenId}</span><span>Vig. ${vigencia} min</span></div>
-    <div class="meta"><span>Pago: CoDi Banxico</span><span>$${esc(money(meta.monto))} MXN</span></div>
+    <div class="meta"><span>Pago: app de tu banco</span><span>$${esc(money(meta.monto))} MXN</span></div>
     <div class="dots"></div>
     ${itemRows}
     <div class="row"><div class="name" style="font-weight:500;color:#444">Comisión tarjeta</div><div class="amt">$0.00</div></div>
@@ -459,8 +459,8 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
       showQr
         ? `<div class="dots"></div>
     <p class="scan">*** ESCANEA PARA PAGAR ***</p>
-    <div class="qr-wrap"><img src="${esc(qrImageUrl)}" alt="QR CoDi orden ${meta.ordenId}" width="600" height="600" /></div>
-    <p class="foot">QR CoDi · app de tu banco${meta.peyQrId ? `<br/>Ref ${esc(truncate(String(meta.peyQrId), 24))}` : ""}</p>${
+    <div class="qr-wrap"><img src="${esc(qrImageUrl)}" alt="QR de pago orden ${meta.ordenId}" width="600" height="600" /></div>
+    <p class="foot">QR · app de tu banco${meta.peyQrId ? `<br/>Ref ${esc(truncate(String(meta.peyQrId), 24))}` : ""}</p>${
             paymentUrl
               ? `<a class="paybtn" href="${esc(paymentUrl)}">Pagar sin escanear</a>`
               : ""

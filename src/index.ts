@@ -248,7 +248,7 @@ app.post("/api/demo/registrar-whatsapp", async (c) => {
   return c.json(result.body, result.status as 200 | 400 | 503);
 });
 
-/** Demo: crea cobro + QR CoDi (requiere operador). */
+/** Demo: crea cobro + QR (requiere operador). */
 app.post("/api/demo/simular-cobro", async (c) => {
   const denied = await guardOperator(c);
   if (denied) return denied;
@@ -453,7 +453,7 @@ app.post("/pey/webhook", async (c) => {
   await sendWhatsapp(
     c.env,
     orden.telefono,
-    `💰 Pago CoDi confirmado: $${orden.monto} MXN (orden #${orden.id}).`,
+    `💰 Pago confirmado: $${orden.monto} MXN (orden #${orden.id}).`,
   );
   await evaluarYTimbrar(c.env, publicUrl(c), orden.id);
   return c.json({ ok: true, orden_id: orden.id, pago: "PAGADO" });

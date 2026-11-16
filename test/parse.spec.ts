@@ -10,11 +10,11 @@ import { ensureMenuActions } from "../src/lib/twilio";
 
 describe("parseProductLines", () => {
   it("parses single and multi line products", () => {
-    const one = parseProductLines("1 Prueba CoDi 0.01");
+    const one = parseProductLines("1 Prueba Mostrito 0.01");
     expect(one.error).toBeNull();
     expect(one.items?.[0]).toMatchObject({
       cantidad: "1",
-      concepto: "Prueba CoDi",
+      concepto: "Prueba Mostrito",
       precio_unitario: "0.01",
       subtotal: "0.01",
     });

@@ -23,7 +23,7 @@ const DEMO_FISCAL = {
 const DEMO_ITEMS = [
   {
     cantidad: "1",
-    concepto: "Demo CoDiPey abarrotes",
+    concepto: "Demo Mostrito abarrotes",
     precio_unitario: "25.00",
     subtotal: "25.00",
   },
@@ -72,7 +72,7 @@ async function ensureDemoFiscal(env: Env): Promise<number> {
   return Number(res.meta.last_row_id);
 }
 
-/** Crea orden pendiente + QR CoDi (+ payment link si hay HTTPS) sin WhatsApp. */
+/** Crea orden pendiente + QR (+ payment link si hay HTTPS) sin WhatsApp. */
 export async function simularCobroDemo(
   env: Env,
   publicUrl = "",
@@ -80,7 +80,7 @@ export async function simularCobroDemo(
   const fiscalId = await ensureDemoFiscal(env);
   const ts = nowIso();
   const monto = "25.00";
-  const concepto = "Demo CoDiPey";
+  const concepto = "Demo Mostrito";
   const inserted = await env.DB.prepare(
     `INSERT INTO ordenes
       (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,

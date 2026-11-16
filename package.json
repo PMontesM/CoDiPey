@@ -2,7 +2,7 @@
   "name": "cobro-whatsapp-codi",
   "private": true,
   "version": "2.0.0",
-  "description": "WhatsApp + CoDi + CFDI 4.0 — Cloudflare Worker (D1)",
+  "description": "Mostrito — WhatsApp cobros + CFDI 4.0 (Cloudflare Worker + D1)",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",

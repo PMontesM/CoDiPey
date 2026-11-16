@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel CoDiPey · CFDI 4.0</title>
+  <title>Panel Mostrito · CFDI 4.0</title>
+  <link rel="icon" href="/mostrito-icon.jpg" type="image/jpeg" />
 
   <!-- Google Fonts: Plus Jakarta Sans, Fraunces & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -275,7 +276,10 @@
         </div>
 
         <h1 class="editorial-serif text-xl sm:text-[30px] font-semibold tracking-tight text-[#0F1A17] leading-tight">
-          CoDiPey <span class="text-[#C2185B] font-normal">·</span> CFDI 4.0
+          <span class="inline-flex items-center gap-2">
+            <img src="/mostrito-icon.jpg" alt="" width="36" height="36" class="w-9 h-9 rounded-full object-cover border-2 border-white/70 shadow-sheet" />
+            <span>Mostrito <span class="text-[#C2185B] font-normal">·</span> CFDI 4.0</span>
+          </span>
         </h1>
       </div>
 
@@ -361,10 +365,10 @@
     <!-- Unified Horizontal Treasury Strip -->
     <div id="kpiStrip" class="bg-[rgba(244,248,246,0.9)] backdrop-blur-md border border-white/35 rounded-xl shadow-sheet grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#D0D9D4]">
 
-      <!-- Metric 1: Volumen Liquidado (CoDi) -->
+      <!-- Metric 1: Volumen liquidado -->
       <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
         <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-xs font-medium text-[#4A5C55]">Volumen Liquidado (CoDi)</span>
+          <span class="text-xs font-medium text-[#4A5C55]">Volumen liquidado</span>
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] text-[10px] font-semibold tracking-wide">
             BANXICO SPEI
           </span>
@@ -489,7 +493,7 @@
         <div class="px-5 py-2.5 bg-[#EAF0ED] border-t border-[#D0D9D4] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#4A5C55]">
           <span class="inline-flex items-center gap-1.5">
             <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#0F2A24]"></i>
-            <span>Conciliación automática vía <strong class="font-semibold text-[#0F1A17]">pey CoDi</strong> &amp; <strong class="font-semibold text-[#0F1A17]">Facturapi</strong></span>
+            <span>Conciliación automática vía <strong class="font-semibold text-[#0F1A17]">pasarela bancaria</strong> &amp; <strong class="font-semibold text-[#0F1A17]">Facturapi</strong></span>
           </span>
           <span id="pollingHint" class="tabular-mono text-[10px]">POLLING: GET /api/ordenes · adaptativo</span>
         </div>
@@ -540,7 +544,7 @@
         id: "ORD-8F2A1C",
         telefono: "whatsapp:+5215510076571",
         conceptos: [
-          { quantity: 1, description: "Prueba CoDi", price: 0.01, importe: 0.01 }
+          { quantity: 1, description: "Prueba Mostrito", price: 0.01, importe: 0.01 }
         ],
         total: 0.01,
         requiere_factura: 1,
@@ -659,7 +663,7 @@
     // =========================================================================
     // 2. APPLICATION STATE
     // =========================================================================
-    const ADMIN_TOKEN_KEY = "codipey_admin_token";
+    const ADMIN_TOKEN_KEY = "mostrito_admin_token";
 
     function getAdminToken() {
       try {
@@ -1453,7 +1457,7 @@
       const qrVisual = useLiveQrImg
         ? `<img
              src="/files/qr_${encodeURIComponent(order.id)}.png"
-             alt="Ticket CoDi ${escapeHtml(order.id)}"
+             alt="Ticket Mostrito ${escapeHtml(order.id)}"
              onerror="handleQrImgError('${escapeHtml(order.id)}')"
              class="w-36 h-52 object-contain rounded bg-[#F4F8F6]"
            />`
@@ -1503,7 +1507,7 @@
                 </div>
 
                 <div class="flex justify-between">
-                  <span class="text-[#4A5C55]">Comisión CoDi</span>
+                  <span class="text-[#4A5C55]">Comisión</span>
                   <span class="tabular-mono font-semibold text-[#15803D]">$0.00 MXN</span>
                 </div>
 
@@ -1776,7 +1780,7 @@
           <div class="flex items-center justify-between border-b border-[#D0D9D4] pb-3">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-[#15803D]">OPERACIÓN LIQUIDADA</span>
-              <h3 class="editorial-serif text-lg font-semibold text-[#0F1A17] mt-0.5">Comprobante Digital CoDi</h3>
+              <h3 class="editorial-serif text-lg font-semibold text-[#0F1A17] mt-0.5">Comprobante de pago</h3>
             </div>
             <span class="px-2.5 py-0.5 rounded-full bg-[#E4EBE7] text-[#4A5C55] text-[11px] font-medium">Sin factura</span>
           </div>
@@ -1894,7 +1898,7 @@
     // =========================================================================
     async function simulateIncomingWhatsappOrder() {
       if (state.isLiveApi) {
-        showToast("Creando cobro demo + QR CoDi…", "info");
+        showToast("Creando cobro demo + QR…", "info");
         try {
           const res = await fetch("/api/demo/simular-cobro", {
             method: "POST",

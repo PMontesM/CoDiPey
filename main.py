@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="CoDiPey (deprecated)", docs_url=None, redoc_url=None)
+app = FastAPI(title="Mostrito (deprecated)", docs_url=None, redoc_url=None)
 
 
 @app.get("/health")
