@@ -355,15 +355,23 @@
         </button>
       </div>
 
-      <div class="relative w-full xl:w-64">
-        <i data-lucide="search" class="w-3.5 h-3.5 text-[#4A5C55] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-        <input
-          id="searchInput"
-          type="text"
-          oninput="handleSearch(this.value)"
-          placeholder="Buscar orden, teléfono o RFC..."
-          class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#E8EEEB] border border-[#D0D9D4] text-xs text-[#0F1A17] placeholder:text-[#6A7A73] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#C2185B] transition"
-        />
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full xl:w-auto">
+        <div class="flex items-center gap-1 overflow-x-auto" role="group" aria-label="Rango de fechas">
+          <button type="button" data-day="today" onclick="setDayScope('today')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">Hoy</button>
+          <button type="button" data-day="yesterday" onclick="setDayScope('yesterday')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">Ayer</button>
+          <button type="button" data-day="7d" onclick="setDayScope('7d')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-[#C2185B] text-[#F4F8F6] cursor-pointer">7 días</button>
+          <button type="button" data-day="all" onclick="setDayScope('all')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">Todas</button>
+        </div>
+        <div class="relative w-full sm:w-64">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-[#4A5C55] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input
+            id="searchInput"
+            type="text"
+            oninput="handleSearch(this.value)"
+            placeholder="Buscar orden, teléfono o RFC..."
+            class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#E8EEEB] border border-[#D0D9D4] text-xs text-[#0F1A17] placeholder:text-[#6A7A73] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#C2185B] transition"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -494,7 +502,17 @@
             <i data-lucide="file-search" class="w-4 h-4"></i>
           </div>
           <p class="text-sm font-semibold text-[#0F1A17]">No hay operaciones que coincidan</p>
-          <p class="text-xs text-[#4A5C55] mt-1">Ajusta el filtro superior o limpia el término de búsqueda.</p>
+          <p class="text-xs text-[#4A5C55] mt-1">Ajusta el día, el filtro o limpia la búsqueda.</p>
+        </div>
+
+        <!-- Paginación -->
+        <div id="ledgerPager" class="px-4 py-2.5 bg-[#F4F8F6] border-t border-[#D0D9D4] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#4A5C55]">
+          <span id="ledgerPageMeta" class="tabular-mono text-[11px] text-[#0F1A17]">—</span>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="ledgerPrevBtn" onclick="changeLedgerPage(-1)" class="px-2.5 py-1 rounded-md border border-[#D0D9D4] bg-white hover:bg-[#E4EBE7] text-[#0F1A17] font-medium disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">Anterior</button>
+            <span id="ledgerPageLabel" class="tabular-mono px-2 text-[#0F1A17]">1 / 1</span>
+            <button type="button" id="ledgerNextBtn" onclick="changeLedgerPage(1)" class="px-2.5 py-1 rounded-md border border-[#D0D9D4] bg-white hover:bg-[#E4EBE7] text-[#0F1A17] font-medium disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">Siguiente</button>
+          </div>
         </div>
 
         <!-- Ledger Footer -->
@@ -569,6 +587,7 @@
         regimen: "601",
         uso_cfdi: "G03",
         creado_en: "Hoy · 20:11",
+        created_at: new Date().toISOString(),
         expires_in_sec: 540
       },
       {
@@ -593,6 +612,7 @@
         regimen: "601",
         uso_cfdi: "G03",
         creado_en: "Hoy · 19:54",
+        created_at: new Date().toISOString(),
         expires_in_sec: 0
       },
       {
@@ -617,6 +637,7 @@
         regimen: "601",
         uso_cfdi: "G03",
         creado_en: "Hoy · 19:41",
+        created_at: new Date().toISOString(),
         expires_in_sec: 0
       },
       {
@@ -640,6 +661,7 @@
         regimen: null,
         uso_cfdi: "G03",
         creado_en: "Hoy · 19:18",
+        created_at: new Date().toISOString(),
         expires_in_sec: 0
       }
     ];
@@ -713,6 +735,9 @@
         codigo_postal: "06010"
       },
       activeFilter: "ALL",
+      dayScope: "7d",
+      page: 1,
+      pageSize: 15,
       searchQuery: "",
       selectedId: null,
       webhookLogs: JSON.parse(JSON.stringify(INITIAL_WEBHOOK_LOGS)),
@@ -799,6 +824,11 @@
         uso_cfdi: raw.uso_cfdi || null,
         factura_pdf_url: raw.factura_pdf_url || null,
         factura_xml_url: raw.factura_xml_url || null,
+        created_at: (() => {
+          const rawAt = raw.created_at || null;
+          if (rawAt && !Number.isNaN(new Date(rawAt).getTime())) return rawAt;
+          return new Date().toISOString();
+        })(),
         creado_en: formatCreadoEn(raw.creado_en || raw.created_at),
         expires_in_sec: typeof raw.expires_in_sec === "number" ? raw.expires_in_sec : 540
       };
@@ -1036,8 +1066,52 @@
     // =========================================================================
     // 5. FILTERING & SEARCH
     // =========================================================================
+    function mexicoDayKey(raw) {
+      const d = raw ? new Date(raw) : new Date();
+      if (Number.isNaN(d.getTime())) return null;
+      try {
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/Mexico_City",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).format(d);
+      } catch (_e) {
+        return d.toISOString().slice(0, 10);
+      }
+    }
+
+    function dayScopeBounds() {
+      const today = mexicoDayKey(new Date());
+      if (state.dayScope === "all") return null;
+      if (state.dayScope === "today") return { from: today, to: today };
+      if (state.dayScope === "yesterday") {
+        const y = new Date();
+        y.setDate(y.getDate() - 1);
+        // Use noon UTC+shift-safe: compute via formatter on Date shifted by local Mexico approx
+        const yKey = mexicoDayKey(new Date(Date.now() - 24 * 3600 * 1000));
+        return { from: yKey, to: yKey };
+      }
+      // 7d inclusive of today
+      const fromDate = new Date(Date.now() - 6 * 24 * 3600 * 1000);
+      return { from: mexicoDayKey(fromDate), to: today };
+    }
+
+    function setDayScope(scope) {
+      state.dayScope = scope;
+      state.page = 1;
+      document.querySelectorAll(".day-pill").forEach(btn => {
+        const active = btn.getAttribute("data-day") === scope;
+        btn.className = active
+          ? "day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-[#C2185B] text-[#F4F8F6] cursor-pointer"
+          : "day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer";
+      });
+      renderLedger();
+    }
+
     function setFilter(filterKey) {
       state.activeFilter = filterKey;
+      state.page = 1;
       document.querySelectorAll(".filter-pill").forEach(btn => {
         const active = btn.getAttribute("data-filter") === filterKey;
         btn.className = active
@@ -1049,11 +1123,22 @@
 
     function handleSearch(val) {
       state.searchQuery = val.trim().toLowerCase();
+      state.page = 1;
+      renderLedger();
+    }
+
+    function changeLedgerPage(delta) {
+      state.page = Math.max(1, Number(state.page || 1) + delta);
       renderLedger();
     }
 
     function getFilteredOrders() {
+      const bounds = dayScopeBounds();
       return state.orders.filter(o => {
+        if (bounds) {
+          const key = mexicoDayKey(o.created_at);
+          if (!key || key < bounds.from || key > bounds.to) return false;
+        }
         if (state.activeFilter === "LIQUIDADAS" && o.pago_estado !== "PAGADO") return false;
         if (
           state.activeFilter === "PENDIENTES" &&
@@ -1082,6 +1167,23 @@
         }
         return true;
       });
+    }
+
+    function getPagedOrders(rows) {
+      const size = state.pageSize || 15;
+      const total = rows.length;
+      const pages = Math.max(1, Math.ceil(total / size));
+      if (state.page > pages) state.page = pages;
+      if (state.page < 1) state.page = 1;
+      const start = (state.page - 1) * size;
+      return {
+        rows: rows.slice(start, start + size),
+        total,
+        pages,
+        page: state.page,
+        start: total === 0 ? 0 : start + 1,
+        end: Math.min(total, start + size)
+      };
     }
 
     function selectOrder(id) {
@@ -1155,10 +1257,17 @@
         `${computed.pendientes_pago} por liquidar · ${computed.atencion_fiscal} atención fiscal`;
 
       // Update Filter Counters
-      document.getElementById("countAll").textContent = state.orders.length;
-      document.getElementById("countLiquidadas").textContent = computed.paid_count;
-      document.getElementById("countPendientes").textContent = computed.pendientes_pago;
-      document.getElementById("countFiscal").textContent = computed.atencion_fiscal;
+      const dayOrders = state.orders.filter((o) => {
+        const bounds = dayScopeBounds();
+        if (!bounds) return true;
+        const key = mexicoDayKey(o.created_at);
+        return key && key >= bounds.from && key <= bounds.to;
+      });
+      const dayMetrics = calculateMetrics(dayOrders);
+      document.getElementById("countAll").textContent = dayOrders.length;
+      document.getElementById("countLiquidadas").textContent = dayMetrics.paid_count;
+      document.getElementById("countPendientes").textContent = dayMetrics.pendientes_pago;
+      document.getElementById("countFiscal").textContent = dayMetrics.atencion_fiscal;
     }
 
     function paymentBadgeHtml(order) {
@@ -1189,12 +1298,49 @@
       const tbody = document.getElementById("ledgerTableBody");
       const cards = document.getElementById("ledgerCards");
       const emptyState = document.getElementById("ledgerEmptyState");
-      const rows = getFilteredOrders();
+      const filtered = getFilteredOrders();
+      const pageInfo = getPagedOrders(filtered);
+      const rows = pageInfo.rows;
 
-      if (rows.length === 0) {
+      const meta = document.getElementById("ledgerPageMeta");
+      const label = document.getElementById("ledgerPageLabel");
+      const prev = document.getElementById("ledgerPrevBtn");
+      const next = document.getElementById("ledgerNextBtn");
+      if (meta) {
+        meta.textContent = pageInfo.total
+          ? `${pageInfo.start}–${pageInfo.end} de ${pageInfo.total}`
+          : "0 operaciones";
+      }
+      if (label) label.textContent = `${pageInfo.page} / ${pageInfo.pages}`;
+      if (prev) prev.disabled = pageInfo.page <= 1;
+      if (next) next.disabled = pageInfo.page >= pageInfo.pages;
+      // Contadores del filtro alineados al día visible
+      const dayOrders = state.orders.filter((o) => {
+        const bounds = dayScopeBounds();
+        if (!bounds) return true;
+        const key = mexicoDayKey(o.created_at);
+        return key && key >= bounds.from && key <= bounds.to;
+      });
+      const dayMetrics = calculateMetrics(dayOrders);
+      const elAll = document.getElementById("countAll");
+      if (elAll) {
+        elAll.textContent = dayOrders.length;
+        document.getElementById("countLiquidadas").textContent = dayMetrics.paid_count;
+        document.getElementById("countPendientes").textContent = dayMetrics.pendientes_pago;
+        document.getElementById("countFiscal").textContent = dayMetrics.atencion_fiscal;
+      }
+
+
+      if (filtered.length === 0) {
         tbody.innerHTML = "";
         if (cards) cards.innerHTML = "";
         emptyState.classList.remove("hidden");
+        const emptyCopy = emptyState.querySelector("p.text-xs");
+        if (emptyCopy) {
+          emptyCopy.textContent = state.dayScope === "today"
+            ? "No hay operaciones de hoy. Prueba Ayer, 7 días o Todas."
+            : "Ajusta el día, el filtro o limpia la búsqueda.";
+        }
         lucide.createIcons();
         return;
       }
@@ -1967,6 +2113,7 @@
         cp: "86991",
         regimen: "601",
         uso_cfdi: "G03",
+        created_at: new Date().toISOString(),
         creado_en: `Hoy · ${nowTimeStr().slice(0, 5)}`,
         expires_in_sec: 600
       };
