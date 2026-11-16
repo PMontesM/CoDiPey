@@ -24,6 +24,54 @@ Mascota: ajolote **Mostrito**.
 
 Rail de pago: **CoDi Banxico** vía **pey** (QR + payment link opcional). Timbrado: **Facturapi**.
 
+Runtime: **solo Cloudflare Worker** (`src/index.ts` + `public/` + D1). No hay backend Python.
+
+---
+
+## Clonar y levantar (reproducible)
+
+Requisitos: **Node ≥ 20**, cuenta Cloudflare, cuentas pey / Facturapi / Twilio (o mocks parciales en tests).
+
+### Misma cuenta Cloudflare (este proyecto)
+
+```bash
+git clone https://github.com/PMontesM/CoDiPey.git
+cd CoDiPey
+npm install
+cp .dev.vars.example .dev.vars   # rellena keys para local
+npm run db:migrate:local
+npm test
+npm run dev                      # http://127.0.0.1:8787
+```
+
+Producción (Worker ya existente `cobro-codi` + D1 `cobro-db`):
+
+```bash
+npx wrangler login
+npm run db:migrate:remote
+# secrets: ver sección Deploy
+npm run deploy
+```
+
+### Cuenta Cloudflare nueva (fork / otro tenant)
+
+1. `npm install` + `npx wrangler login`
+2. `npx wrangler d1 create cobro-db` → pega el `database_id` en `wrangler.jsonc`
+3. Opcional: cambia `"name"` del Worker en `wrangler.jsonc`
+4. `npm run db:migrate:remote`
+5. Pon secrets (`wrangler secret put …` o carga desde `.env.example`)
+6. `PUBLIC_URL=https://<worker>.<account>.workers.dev`
+7. `npm run deploy`
+8. En `/superadmin`: contraseña, webhooks, probar conexiones
+
+Archivos de entorno:
+
+| Archivo | Uso |
+|---|---|
+| `.env.example` | Plantilla / documentación de secrets |
+| `.dev.vars.example` → `.dev.vars` | Vars locales de Wrangler (`npm run dev`) |
+| `.dev.vars` / `.env` | **No** se commitean |
+
 ---
 
 ## Demo en vivo
@@ -220,7 +268,7 @@ npm run db:seed:local    # D1 local
 ```bash
 npm install
 npx wrangler login
-npx wrangler d1 migrations apply cobro-db --remote
+npm run db:migrate:remote
 npx wrangler secret put PEY_API_KEY
 npx wrangler secret put PEY_WEBHOOK_SECRET
 npx wrangler secret put FACTURAPI_KEY
@@ -229,33 +277,44 @@ npx wrangler secret put TWILIO_AUTH_TOKEN
 npx wrangler secret put TWILIO_WHATSAPP_FROM
 npx wrangler secret put TWILIO_SANDBOX_JOIN_CODE
 npx wrangler secret put PUBLIC_URL   # https://cobro-codi.inomali.workers.dev
-# Opcional endurecimiento:
+# Opcional:
 # npx wrangler secret put ADMIN_API_SECRET
 # npx wrangler secret put FILE_SIGNING_SECRET
-# Superadmin:
 # npx wrangler secret put SUPERADMIN_SECRET
+# npx wrangler secret put BUSINESS_NAME
 npm run deploy
 ```
 
-Migraciones en `migrations/` (`0001` … `0006_error_log`).
+Migraciones: `migrations/0001` … `0006_error_log` (también se auto-crean `settings` / `error_log` al usarse).
 
-Webhook pey → `https://cobro-codi.inomali.workers.dev/pey/webhook`.  
-Webhook Twilio → `https://cobro-codi.inomali.workers.dev/whatsapp/webhook`.  
-(También las copias desde `/superadmin`.)
+Webhooks (o cópialos desde `/superadmin`):
+
+- pey → `https://cobro-codi.inomali.workers.dev/pey/webhook`
+- Twilio → `https://cobro-codi.inomali.workers.dev/whatsapp/webhook`
 
 ---
 
 ## Dev / tests
 
 ```bash
-npm run dev              # wrangler dev
+cp .dev.vars.example .dev.vars   # keys locales
 npm run db:migrate:local
-npm run db:seed:local
-npm test                 # vitest
-npm run smoke            # health + smoke contra prod
-npm run check            # test + smoke
+npm run db:seed:local            # opcional, datos de demo
+npm run dev                      # wrangler dev
+npm test                         # vitest (plugin Cloudflare)
 npm run typecheck
+npm run smoke                    # health contra prod (SMOKE_URL opcional)
+npm run check                    # test + smoke
 ```
+
+Scripts opcionales (no hacen falta para clonar):
+
+| Script | Uso |
+|---|---|
+| `scripts/seed-presentacion.mjs` | Semilla D1 de demo |
+| `scripts/smoke-live.mjs` | Smoke contra URL pública |
+| `scripts/demo-video.mjs` | Grabación Playwright (requiere `npm i -D playwright`) |
+| `scripts/ticket-preview.mjs` / `wa-shots.html` | Helpers visuales de marketing |
 
 ---
 
@@ -263,41 +322,33 @@ npm run typecheck
 
 | Ruta | Rol |
 |---|---|
+| `wrangler.jsonc` | Worker `cobro-codi` + D1 `cobro-db` |
 | `src/index.ts` | Rutas Hono |
-| `src/lib/chat.ts` | FSM WhatsApp |
-| `src/lib/fiscal-wizard.ts` | Wizard fiscal + reintentos SAT |
-| `src/lib/pey.ts` | QR + payment link + blobs |
-| `src/lib/ticket.ts` | Ticket PNG/HTML |
-| `src/lib/facturapi.ts` | Timbrado + links firmados |
-| `src/lib/security.ts` | Firmas Twilio/pey + operador + facturas |
-| `src/lib/privacy.ts` | Enmascarado de WhatsApp en APIs / logs |
-| `src/lib/settings.ts` | Overrides D1 + `withSettings` |
-| `src/lib/superadmin.ts` | Auth secret + contraseña del panel |
-| `public/superadmin.html` | UI Superadmin (rail / chips / pestañas) |
-| `src/lib/connection-tests.ts` | Ping pey / Facturapi / Twilio |
-| `src/lib/error-log.ts` | Errores recientes (D1 → Superadmin) |
-| `src/lib/demo.ts` / `demo-whatsapp.ts` | Simulación y join |
-| `public/` | Landing, panel, superadmin, mascota, video, shots |
+| `src/lib/*` | Chat, pey, Facturapi, ticket, security, settings, superadmin, privacy, error-log… |
+| `src/wasm/resvg.wasm` | Render de ticket PNG |
+| `public/index.html` | Landing |
+| `public/admin.html` | Panel operador |
+| `public/superadmin.html` | Superadmin (rail / chips) |
 | `migrations/` | Schema D1 |
-| `scripts/` | Seed, smoke |
+| `cursor/identity.ts` | Identidad Cursor (panel publicado privado/team) |
+| `scripts/` | Seed, smoke, helpers |
 | `test/` | Vitest |
-
-`main.py` y `templates/` son **legacy** (no se despliegan).
 
 ---
 
-## Marca y assets
+## Marca y assets (en uso)
 
 | Archivo | Uso |
 |---|---|
-| `public/mostrito-mascot.png` | Ajolote (PNG transparente) en landing |
+| `public/mostrito-mascot.png` | Ajolote en landing |
 | `public/mostrito-icon.jpg` | Avatar / favicon |
-| `public/hero-barrio.jpg` | Fondo de barrio |
-| `public/wa-*.png` | Mockups WhatsApp (marca Mostrito) |
-| `public/demo-codipey.mp4` | Video de la landing |
+| `public/hero-barrio.jpg` | Fondo |
+| `public/wa-*.png` | Mockups WhatsApp |
+| `public/shot-admin-ticket.png` | Shot del panel en landing |
+| `public/demo-mostrito.mp4` (+ poster) | Video de la landing |
 
 ---
 
 ## Licencia
 
-Hackathon / demo educativo. No uses las marcas **CoDi** ni **pey** en el nombre del producto; Mostrito es la marca propia. El rail de pago y los proveedores se mencionan solo como integración técnica.
+Hackathon / demo educativo. No uses las marcas **CoDi** ni **pey** en el nombre del producto; Mostrito es la marca propia. El rail de pago y los proveedores se mencionan solo como integración técnica. El nombre del repo en GitHub (`CoDiPey`) es histórico; el producto se llama **Mostrito**.

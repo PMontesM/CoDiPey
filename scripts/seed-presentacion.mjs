@@ -293,9 +293,9 @@ const ordenes = [
   // 8 — Pendiente con QR fresco → listo para «Simular Webhook Pago pey»
   {
     telefono: DEMO_WA,
-    conceptos: items([1, "Demo CoDiPey abarrotes", 25]),
+    conceptos: items([1, "Demo Mostrito abarrotes", 25]),
     monto: "25.00",
-    concepto_pey: "Demo CoDiPey · listo para liquidar",
+    concepto_pey: "Demo Mostrito · listo para liquidar",
     pago_estado: "PENDIENTE",
     requiere_factura: 1,
     datos_fiscales_ok: 1,
@@ -313,7 +313,7 @@ const ordenes = [
 ];
 
 const lines = [
-  "-- Seed presentación CoDiPey (generado por scripts/seed-presentacion.mjs)",
+  "-- Seed presentación Mostrito (generado por scripts/seed-presentacion.mjs)",
   "PRAGMA foreign_keys = OFF;",
   "DELETE FROM blobs;",
   "DELETE FROM ordenes;",
@@ -385,7 +385,7 @@ lines.push(
   "PRAGMA foreign_keys = ON;",
 );
 
-const dir = mkdtempSync(join(tmpdir(), "codipey-seed-"));
+const dir = mkdtempSync(join(tmpdir(), "mostrito-seed-"));
 const file = join(dir, "seed-presentacion.sql");
 writeFileSync(file, lines.join("\n") + "\n", "utf8");
 

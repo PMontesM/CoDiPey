@@ -1,12 +1,16 @@
 {
-  "name": "cobro-whatsapp-codi",
+  "name": "mostrito",
   "private": true,
   "version": "2.0.0",
-  "description": "Mostrito — WhatsApp cobros + CFDI 4.0 (Cloudflare Worker + D1)",
+  "description": "Mostrito — cobro por WhatsApp + CFDI 4.0 (Cloudflare Worker + D1)",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "db:migrate:local": "wrangler d1 migrations apply cobro-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply cobro-db --remote",
     "db:seed:local": "node scripts/seed-presentacion.mjs --local",
     "db:seed:remote": "node scripts/seed-presentacion.mjs --remote",
     "tail": "wrangler tail",
@@ -22,7 +26,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.8.2",
-    "playwright-core": "^1.65.1",
+    "@types/node": "^22.19.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.12",
     "wrangler": "^4.162.0"

@@ -1,5 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  // Worker name on workers.dev → https://cobro-codi.<account>.workers.dev
   "name": "cobro-codi",
   "main": "src/index.ts",
   "compatibility_date": "2025-11-01",
@@ -19,6 +20,7 @@
     {
       "binding": "DB",
       "database_name": "cobro-db",
+      // Al clonar en OTRA cuenta CF: `npx wrangler d1 create cobro-db` y pega el id aquí.
       "database_id": "1c535acb-5335-4f48-abab-e3525bb19925",
       "migrations_dir": "migrations"
     }

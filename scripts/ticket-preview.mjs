@@ -69,7 +69,7 @@ export function buildForPreview(qrPngBase64, meta) {
   let y = 36;
 
   body.push(
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="22" font-weight="700" fill="#111">CoDiPey</text>`,
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="22" font-weight="700" fill="#111">Mostrito</text>`,
   );
   y += 22;
   body.push(

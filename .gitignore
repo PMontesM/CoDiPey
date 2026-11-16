@@ -2,39 +2,22 @@
 .env
 .env.*
 !.env.example
-
-# Bases de datos locales
-*.db
-*.sqlite3
-
-# Archivos generados (QR, facturas)
-public_files/*.png
-public_files/*.pdf
-public_files/*.xml
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-*.egg-info/
-dist/
-build/
-
-# IDE / OS
-.idea/
-.vscode/
-.DS_Store
-Thumbs.db
+.dev.vars
+!.dev.vars.example
+/tmp-cf-secrets.env
 
 # Cloudflare / Node
 node_modules/
 .wrangler/
 dist/
 *.tsbuildinfo
-.dev.vars
-/tmp-cf-secrets.env
+
+# Bases / artefactos locales
+*.db
+*.sqlite3
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

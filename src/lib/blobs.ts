@@ -24,7 +24,9 @@ function coerceToArrayBuffer(data: unknown): ArrayBuffer | null {
   if (data instanceof ArrayBuffer) return data;
   if (ArrayBuffer.isView(data)) {
     const v = data as ArrayBufferView;
-    return v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength);
+    const copy = new Uint8Array(v.byteLength);
+    copy.set(new Uint8Array(v.buffer, v.byteOffset, v.byteLength));
+    return copy.buffer;
   }
   if (Array.isArray(data)) {
     return Uint8Array.from(data.map((n) => Number(n))).buffer;
