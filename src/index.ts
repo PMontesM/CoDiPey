@@ -218,7 +218,7 @@ app.post("/api/ordenes/:id/cancelar", async (c) => {
   return c.json({ orden: updated, message: "Orden cancelada" });
 });
 
-/** Config pública para que el juez abra WhatsApp con el join listo. */
+/** Config pública para unirse al WhatsApp de Mostrito (Sandbox Twilio). */
 app.get("/api/demo/whatsapp-join", (c) => {
   const payload = buildJoinPayload(c.env);
   return c.json({
@@ -228,15 +228,13 @@ app.get("/api/demo/whatsapp-join", (c) => {
     wa_link: payload.configured ? payload.wa_link : null,
     sms_disponible: Boolean((c.env.TWILIO_SMS_FROM || "").trim()),
     nota: payload.configured
-      ? "Registra tu número y abre WhatsApp con el join listo. Tú no necesitas aprobación manual."
-      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker. Usa /admin para demostrar sin WhatsApp.",
+      ? "Pon tu número, abre WhatsApp con el mensaje listo y escribe hola."
+      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker.",
   });
 });
 
-/** Registra número de juez; opcionalmente SMS; siempre devuelve wa.me con join. */
+/** Registro público de WhatsApp: guarda el número y devuelve wa.me con join. */
 app.post("/api/demo/registrar-whatsapp", async (c) => {
-  const denied = await guardOperator(c);
-  if (denied) return denied;
   let telefono = "";
   try {
     const body = (await c.req.json()) as { telefono?: string };

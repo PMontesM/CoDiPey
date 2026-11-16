@@ -749,10 +749,10 @@
 
   <section class="join section-pad" id="probar-whatsapp">
     <div class="join-inner">
-      <p class="eyebrow">Demo para el jurado</p>
+      <p class="eyebrow">Prueba real</p>
       <h2 class="section-title">Pruébalo en tu WhatsApp.</h2>
       <p class="join-lead">
-        Tú te unes solo: pones tu número, abres WhatsApp con el mensaje listo, lo envías y escribes <strong>hola</strong>. Nadie tiene que aprobarte.
+        Pon tu número, abre WhatsApp, envía el mensaje y escribe <strong>hola</strong>. Mostrito arma el pedido, el QR y la factura si la piden.
       </p>
       <form class="join-form" id="joinForm">
         <label for="waPhone">Tu WhatsApp (México)</label>
@@ -761,18 +761,18 @@
           <input id="waPhone" name="telefono" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="5512345678" maxlength="14" required />
           <button type="submit" class="btn btn-dark" id="joinSubmit">Continuar</button>
         </div>
-        <p class="join-hint" id="joinHint">Te damos un botón con el <em>join</em> ya escrito. Si hay SMS, también te llega por texto.</p>
+        <p class="join-hint" id="joinHint">Te abrimos WhatsApp con el mensaje listo para unirte y empezar a cobrar.</p>
       </form>
       <div class="join-result" id="joinResult" hidden>
         <p id="joinNext"></p>
         <div class="join-actions">
-          <a class="btn btn-wa" id="joinWaBtn" href="#" target="_blank" rel="noopener">Abrir WhatsApp con el join</a>
+          <a class="btn btn-wa" id="joinWaBtn" href="#" target="_blank" rel="noopener">Abrir WhatsApp</a>
           <button type="button" class="btn btn-line" id="joinCopyBtn">Copiar mensaje</button>
         </div>
         <p class="join-code" id="joinCodeLine"></p>
       </div>
       <p class="join-status" id="joinStatus" role="status"></p>
-      <p class="join-alt">¿Sin WhatsApp? <a href="/admin">Simula el cobro en el panel</a>.</p>
+      <p class="join-alt">¿Prefieres ver la operación? <a href="/admin">Abre el panel</a>.</p>
     </div>
   </section>
 
@@ -780,7 +780,7 @@
     <div class="console-inner">
       <p class="eyebrow">Panel de control</p>
       <h2 class="section-title">WhatsApp cobra. El panel vigila.</h2>
-      <p>Ves quién debe, quién ya pagó y las facturas. También puedes simular un cobro completo sin unir tu número.</p>
+      <p>Órdenes en vivo, pagos y CFDI: lo que ya cobraste y lo que sigue pendiente.</p>
       <a class="btn btn-dark" href="/admin">
         Abrir panel
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -792,8 +792,8 @@
   </section>
 
   <section class="close">
-    <h2>Dos formas de demostrar.</h2>
-    <p>WhatsApp real con tu número, o simulación en el panel en dos toques.</p>
+    <h2>Listo para cobrar en el mostrador.</h2>
+    <p>Pruébalo por WhatsApp o revisa la operación en el panel.</p>
     <div class="close-actions">
       <a class="btn btn-wa" href="#probar-whatsapp">Probar WhatsApp</a>
       <a class="btn btn-light" href="/admin">Ir al panel</a>
@@ -824,10 +824,8 @@
         .then((cfg) => {
           if (!cfg.configured) {
             status.className = "join-status is-error";
-            status.textContent = "El join aún no está configurado. Usa el panel mientras tanto.";
+            status.textContent = "WhatsApp aún no está configurado. Mientras tanto puedes usar el panel.";
             submit.disabled = true;
-          } else if (cfg.sms_disponible) {
-            status.textContent = "Al continuar también intentamos mandarte SMS.";
           }
         })
         .catch(() => {});
@@ -835,39 +833,29 @@
       form.addEventListener("submit", async (ev) => {
         ev.preventDefault();
         status.className = "join-status";
-        status.textContent = "Registrando…";
+        status.textContent = "Preparando WhatsApp…";
         result.hidden = true;
         submit.disabled = true;
         try {
-          const headers = { "Content-Type": "application/json" };
-          try {
-            const token = sessionStorage.getItem("mostrito_admin_token");
-            if (token) headers["x-admin-token"] = token;
-          } catch { /* ignore */ }
           const res = await fetch("/api/demo/registrar-whatsapp", {
             method: "POST",
-            headers,
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ telefono: phone.value }),
           });
           const data = await res.json().catch(() => ({}));
-          if (res.status === 401) {
-            throw new Error(
-              "Registro protegido: abre /admin, configura API token, o usa la app firmada en Cursor.",
-            );
-          }
           if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
           lastJoinText = data.join_text || "";
-          next.textContent = data.siguiente || "Abre WhatsApp y envía el join.";
+          next.textContent = data.siguiente || "Abre WhatsApp, envía el mensaje y luego escribe hola.";
           waBtn.href = data.wa_link || "#";
-          codeLine.textContent = `Mensaje: ${data.join_text}  →  ${data.sandbox}`;
+          codeLine.textContent = data.join_text
+            ? `Mensaje listo: ${data.join_text}`
+            : "";
           result.hidden = false;
           status.className = "join-status is-ok";
-          status.textContent = data.sms_enviado
-            ? "Listo. SMS enviado y botón de WhatsApp abajo."
-            : "Listo. Toca Abrir WhatsApp — el mensaje ya va escrito.";
+          status.textContent = "Listo. Toca Abrir WhatsApp.";
         } catch (err) {
           status.className = "join-status is-error";
-          status.textContent = err.message || "No se pudo registrar.";
+          status.textContent = err.message || "No se pudo preparar WhatsApp.";
         } finally {
           submit.disabled = false;
         }

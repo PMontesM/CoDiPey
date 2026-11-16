@@ -67,7 +67,7 @@ export async function sendJoinSms(
     return { sent: false, error: "twilio_missing" };
   }
   const body =
-    `Mostrito demo: abre WhatsApp y envía este mensaje a ${sandbox}:\n\n` +
+    `Mostrito: abre WhatsApp y envía este mensaje a ${sandbox}:\n\n` +
     `${joinText}\n\n` +
     `O toca: ${waLink}\n` +
     `Cuando te confirmen, escribe: hola`;

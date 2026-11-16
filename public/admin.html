@@ -258,7 +258,7 @@
           <!-- Live Backend / Demo Mode Pill -->
           <div id="connectionPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FCE7F0] border border-[#F5C6D8] text-[11px] font-medium text-[#A0144A]">
             <span id="connectionDot" class="w-1.5 h-1.5 rounded-full bg-[#A0144A] pulse-dot"></span>
-            <span id="connectionLabel">Modo Demo Interactivo</span>
+            <span id="connectionLabel">Conectando…</span>
           </div>
 
           <span id="lastSyncText" class="tabular-mono text-[11px] text-[#4A5C55] hidden sm:inline">
@@ -269,9 +269,9 @@
             id="btnAdminToken"
             onclick="promptAdminToken()"
             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#D0D9D4] text-[10px] font-medium text-[#4A5C55] hover:bg-[#E4EBE7] cursor-pointer"
-            title="Token de operador (ADMIN_API_SECRET) si no hay sesión Cursor"
+            title="Token de operador (ADMIN_API_SECRET) si el panel está bloqueado"
           >
-            API token
+            Token
           </button>
         </div>
 
@@ -683,7 +683,7 @@
     function promptAdminToken() {
       const current = getAdminToken();
       const next = window.prompt(
-        "Token de operador (ADMIN_API_SECRET). Vacío = borrar. En apps Cursor private/team no hace falta.",
+        "Token de operador (ADMIN_API_SECRET). Déjalo vacío para borrar el guardado.",
         current,
       );
       if (next === null) return;
@@ -696,7 +696,7 @@
 
     const state = {
       isLiveApi: false,
-      orders: JSON.parse(JSON.stringify(DEMO_ORDERS)),
+      orders: [],
       kpis: null,
       emisor: {
         rfc: "XIA190128J61",
@@ -919,7 +919,7 @@
         clearTimeout(timeoutId);
 
         if (res.status === 401) {
-          throw new Error("No autorizado: configura API token o inicia sesión en Cursor");
+          throw new Error("AUTH_REQUIRED");
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -956,14 +956,26 @@
         }
 
         setConnectionStatus(true);
-        if (manual) showToast("Sincronizado con GET /api/ordenes", "success");
-      } catch (_err) {
-        if (state.isLiveApi) {
+        if (manual) showToast("Panel sincronizado con órdenes reales", "success");
+      } catch (err) {
+        const needsAuth = err && err.message === "AUTH_REQUIRED";
+        if (needsAuth && !window.__mostritoAuthPrompted) {
+          window.__mostritoAuthPrompted = true;
+          try { promptAdminToken(); } catch { /* ignore */ }
+        }
+        if (state.isLiveApi || !state.orders.length) {
           state.orders = JSON.parse(JSON.stringify(DEMO_ORDERS));
         }
-        setConnectionStatus(false);
+        setConnectionStatus(false, needsAuth ? "Token de operador requerido" : "Sin conexión al API");
         state.kpis = calculateMetrics(state.orders);
-        if (manual) showToast("Backend local no detectado · Operando en Modo Demo Interactivo", "info");
+        if (manual) {
+          showToast(
+            needsAuth
+              ? "El panel está bloqueado: configura el token de operador"
+              : "No se pudo hablar con el API · mostrando muestra local",
+            needsAuth ? "error" : "info"
+          );
+        }
       } finally {
         pollInFlight = false;
       }
@@ -978,7 +990,7 @@
       scheduleNextPoll();
     }
 
-    function setConnectionStatus(live) {
+    function setConnectionStatus(live, offlineLabel) {
       state.isLiveApi = live;
       const pill = document.getElementById("connectionPill");
       const dot = document.getElementById("connectionDot");
@@ -987,11 +999,11 @@
       if (live) {
         pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#DCFCE7] border border-[#BBF7D0] text-[11px] font-semibold text-[#15803D]";
         dot.className = "w-1.5 h-1.5 rounded-full bg-[#15803D] pulse-dot";
-        label.textContent = "Conectado a API";
+        label.textContent = "Órdenes en vivo";
       } else {
         pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FCE7F0] border border-[#F5C6D8] text-[11px] font-semibold text-[#A0144A]";
         dot.className = "w-1.5 h-1.5 rounded-full bg-[#A0144A] pulse-dot";
-        label.textContent = "Modo Demo Interactivo";
+        label.textContent = offlineLabel || "Muestra local";
       }
     }
 

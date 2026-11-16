@@ -79,7 +79,11 @@ function signingSecret(env: Env): string {
   );
 }
 
-/** Cursor identity (no simulada) o Bearer / x-admin-token = ADMIN_API_SECRET. */
+/**
+ * Operador: identidad Cursor verificada (no simulada) o Bearer / x-admin-token.
+ * Si ADMIN_API_SECRET no está configurado, el Worker es single-tenant abierto
+ * (panel real contra D1). Con secret definido, exige token o sesión Cursor.
+ */
 export async function requireOperator(
   request: Request,
   env: Env,
@@ -90,10 +94,7 @@ export async function requireOperator(
   }
   const secret = (env.ADMIN_API_SECRET || "").trim();
   if (!secret) {
-    return Response.json(
-      { detail: "No autorizado: falta identidad o ADMIN_API_SECRET" },
-      { status: 401, headers: { "cache-control": "private, no-store" } },
-    );
+    return null;
   }
   const auth = request.headers.get("authorization") || "";
   const headerToken = request.headers.get("x-admin-token") || "";
@@ -104,7 +105,7 @@ export async function requireOperator(
     return null;
   }
   return Response.json(
-    { detail: "No autorizado" },
+    { detail: "No autorizado: configura el token de operador en el panel" },
     { status: 401, headers: { "cache-control": "private, no-store" } },
   );
 }
