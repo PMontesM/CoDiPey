@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel CoDiPey · CFDI 4.0</title>
 
-  <!-- Google Fonts: Plus Jakarta Sans, Newsreader & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans, Fraunces & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500;1,9..144,600&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,24 +22,29 @@
         extend: {
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-            serif: ['"Newsreader"', 'Georgia', 'serif'],
+            serif: ['"Fraunces"', 'Georgia', 'serif'],
             mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
           },
           colors: {
-            oat: '#F6F3EC',
-            ivory: '#FCFBF8',
-            espresso: '#1C1917',
-            taupe: '#686158',
+            oat: '#E8EEEB',
+            ivory: '#F4F8F6',
+            espresso: '#0F1A17',
+            taupe: '#4A5C55',
             forest: {
-              DEFAULT: '#16302B',
-              hover: '#1F423B',
+              DEFAULT: '#0F2A24',
+              hover: '#174038',
               soft: '#E8EFECE6',
             },
-            hairline: '#E4DFD3',
+            accent: {
+              DEFAULT: '#C2185B',
+              hover: '#A0144A',
+              soft: '#FCE7F0',
+            },
+            hairline: '#D0D9D4',
           },
           boxShadow: {
-            warm: '0 2px 8px rgba(28, 25, 23, 0.04)',
-            sheet: '0 6px 24px rgba(28, 25, 23, 0.06)',
+            warm: '0 2px 10px rgba(15, 42, 36, 0.06)',
+            sheet: '0 10px 28px rgba(8, 18, 16, 0.18)',
           }
         }
       }
@@ -48,28 +53,49 @@
 
   <style>
     :root {
-      --bg-oat: #F3EFE6;
-      --bg-ivory: #FFFFFF;
-      --border-hairline: #D6CFC0;
-      --ink-espresso: #141210;
-      --ink-taupe: #4A443D;
-      --brand-forest: #16302B;
+      --bg-oat: #E4EBE7;
+      --bg-ivory: #F4F8F6;
+      --border-hairline: #C5D0CA;
+      --ink-espresso: #0F1A17;
+      --ink-taupe: #3F524B;
+      --brand-forest: #0F2A24;
+      --brand-accent: #C2185B;
+      --glass: rgba(244, 248, 246, 0.88);
     }
 
     body {
-      background-color: var(--bg-oat);
+      background-color: #0B1613;
       color: var(--ink-espresso);
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       font-size: 15px;
       line-height: 1.45;
       -webkit-font-smoothing: antialiased;
+      position: relative;
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background: url("/hero-barrio.jpg") center / cover no-repeat;
+      transform: scale(1.02);
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(180deg, rgba(8, 18, 16, 0.45) 0%, rgba(8, 18, 16, 0.62) 50%, rgba(8, 18, 16, 0.78) 100%),
+        linear-gradient(115deg, rgba(8, 18, 16, 0.55) 0%, rgba(8, 18, 16, 0.2) 55%, rgba(8, 18, 16, 0.45) 100%);
     }
 
     #ledgerTableBody td {
       font-size: 13px;
     }
     #ledgerTableBody .cell-meta {
-      color: #4A443D;
+      color: #4A5C55;
       font-size: 12px;
       margin-top: 3px;
     }
@@ -91,8 +117,8 @@
     }
 
     .editorial-serif {
-      font-family: 'Newsreader', Georgia, serif;
-      /* Sin tabular-nums: en Newsreader el glifo $ se ve “doble” */
+      font-family: 'Fraunces', Georgia, serif;
+      /* Sin tabular-nums: en Fraunces el glifo $ se ve “doble” */
     }
 
     /* Montos: mono tabular; el $ nunca va en serif editorial */
@@ -108,20 +134,20 @@
       line-height: 1;
     }
 
-    /* Warm subtle scrollbars */
+    /* Cool mist scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #F6F3EC;
+      background: #E8EEEB;
     }
     ::-webkit-scrollbar-thumb {
-      background: #D5CEBF;
+      background: #B8C5BE;
       border-radius: 9999px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #B8AFA0;
+      background: #95A69E;
     }
 
     @keyframes pulseLive {
@@ -136,11 +162,11 @@
       position: sticky;
       top: 0;
       z-index: 30;
-      background: rgba(243, 239, 230, 0.97);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border-bottom: 1px solid #D6CFC0;
-      box-shadow: 0 8px 20px rgba(28, 25, 23, 0.06);
+      background: rgba(244, 248, 246, 0.86);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,0.28);
+      box-shadow: 0 8px 24px rgba(8, 18, 16, 0.14);
     }
 
     /*
@@ -155,8 +181,8 @@
       position: sticky;
       top: var(--sticky-chrome-h, 280px);
       z-index: 20;
-      background: #EFEAE0;
-      box-shadow: inset 0 -2px 0 #D6CFC0;
+      background: #DDE6E1;
+      box-shadow: inset 0 -2px 0 #C5D0CA;
     }
 
     /* Móvil: el chrome sticky (header+4 KPIs+filtros) tapa toda la pantalla.
@@ -174,11 +200,11 @@
         position: sticky;
         top: 0;
         z-index: 30;
-        background: rgba(243, 239, 230, 0.97);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-bottom: 1px solid #D6CFC0;
-        box-shadow: 0 6px 16px rgba(28, 25, 23, 0.06);
+        background: rgba(244, 248, 246, 0.9);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid rgba(255,255,255,0.28);
+        box-shadow: 0 6px 18px rgba(8, 18, 16, 0.14);
       }
       #kpiStrip {
         grid-template-columns: 1fr 1fr !important;
@@ -210,7 +236,7 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-[#16302B] selection:text-[#FCFBF8]">
+<body class="min-h-screen flex flex-col selection:bg-[#C2185B] selection:text-[#F4F8F6]">
 
   <!-- ===================================================================== -->
   <!-- 1. STICKY CHROME: header + KPIs + filtros                             -->
@@ -222,33 +248,33 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 pb-3 md:pb-4">
       <div>
         <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ECE7DC] border border-[#DFD8C8] text-[11px] font-semibold tracking-wider uppercase text-[#4A443D]">
-            <span class="w-1.5 h-1.5 rounded-full bg-[#16302B]"></span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E4EBE7] border border-[#C5D0CA] text-[11px] font-semibold tracking-wider uppercase text-[#3F524B]">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0F2A24]"></span>
             TESORERÍA &amp; FACTURACIÓN
           </span>
 
           <!-- Live Backend / Demo Mode Pill -->
-          <div id="connectionPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[11px] font-medium text-[#B45309]">
-            <span id="connectionDot" class="w-1.5 h-1.5 rounded-full bg-[#B45309] pulse-dot"></span>
+          <div id="connectionPill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FCE7F0] border border-[#F5C6D8] text-[11px] font-medium text-[#A0144A]">
+            <span id="connectionDot" class="w-1.5 h-1.5 rounded-full bg-[#A0144A] pulse-dot"></span>
             <span id="connectionLabel">Modo Demo Interactivo</span>
           </div>
 
-          <span id="lastSyncText" class="tabular-mono text-[11px] text-[#686158] hidden sm:inline">
+          <span id="lastSyncText" class="tabular-mono text-[11px] text-[#4A5C55] hidden sm:inline">
             Sincronizado · --:--:--
           </span>
           <button
             type="button"
             id="btnAdminToken"
             onclick="promptAdminToken()"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#E4DFD3] text-[10px] font-medium text-[#686158] hover:bg-[#F3EFE6] cursor-pointer"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#D0D9D4] text-[10px] font-medium text-[#4A5C55] hover:bg-[#E4EBE7] cursor-pointer"
             title="Token de operador (ADMIN_API_SECRET) si no hay sesión Cursor"
           >
             API token
           </button>
         </div>
 
-        <h1 class="editorial-serif text-xl sm:text-[30px] font-semibold tracking-tight text-[#1C1917] leading-tight">
-          CoDiPey <span class="text-[#9A9083] font-normal">·</span> CFDI 4.0
+        <h1 class="editorial-serif text-xl sm:text-[30px] font-semibold tracking-tight text-[#0F1A17] leading-tight">
+          CoDiPey <span class="text-[#C2185B] font-normal">·</span> CFDI 4.0
         </h1>
       </div>
 
@@ -257,10 +283,10 @@
         <button
           type="button"
           onclick="pollOrders(true)"
-          class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#FCFBF8] hover:bg-[#F3EFE6] text-[#1C1917] border border-[#E4DFD3] shadow-warm text-xs font-medium transition cursor-pointer"
+          class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#F4F8F6] hover:bg-[#E4EBE7] text-[#0F1A17] border border-[#D0D9D4] shadow-warm text-xs font-medium transition cursor-pointer"
           title="Forzar consulta a GET /api/ordenes"
         >
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#686158]"></i>
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#4A5C55]"></i>
           <span class="hidden sm:inline">Actualizar</span>
         </button>
 
@@ -268,7 +294,7 @@
           id="btnSimularCobro"
           type="button"
           onclick="simulateIncomingWhatsappOrder()"
-          class="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[#16302B] hover:bg-[#1F423B] text-[#FCFBF8] shadow-warm text-xs font-semibold tracking-wide transition cursor-pointer"
+          class="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-[#F4F8F6] shadow-warm text-xs font-semibold tracking-wide transition cursor-pointer"
         >
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
           <span class="sm:hidden">Simular cobro</span>
@@ -280,13 +306,13 @@
 
   <!-- Filtros + búsqueda (fijos en móvil junto a la barra) -->
   <div class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-3">
-    <div class="p-3 sm:px-4 bg-[#FCFBF8] border border-[#D6CFC0] rounded-xl shadow-warm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+    <div class="p-3 sm:px-4 bg-[rgba(244,248,246,0.9)] backdrop-blur-md border border-white/40 rounded-xl shadow-sheet flex flex-col xl:flex-row xl:items-center justify-between gap-3">
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" role="tablist">
         <button
           type="button"
           data-filter="ALL"
           onclick="setFilter('ALL')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#C2185B] text-[#F4F8F6] cursor-pointer"
         >
           Todas <span id="countAll" class="tabular-mono text-[11px] opacity-80 ml-1">4</span>
         </button>
@@ -294,7 +320,7 @@
           type="button"
           data-filter="LIQUIDADAS"
           onclick="setFilter('LIQUIDADAS')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer"
         >
           Liquidadas <span id="countLiquidadas" class="tabular-mono text-[11px] ml-1">3</span>
         </button>
@@ -302,7 +328,7 @@
           type="button"
           data-filter="PENDIENTES"
           onclick="setFilter('PENDIENTES')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer"
         >
           Pendientes <span id="countPendientes" class="tabular-mono text-[11px] ml-1">1</span>
         </button>
@@ -310,20 +336,20 @@
           type="button"
           data-filter="FISCAL"
           onclick="setFilter('FISCAL')"
-          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer"
+          class="filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer"
         >
           Atención Fiscal <span id="countFiscal" class="tabular-mono text-[11px] ml-1">1</span>
         </button>
       </div>
 
       <div class="relative w-full xl:w-64">
-        <i data-lucide="search" class="w-3.5 h-3.5 text-[#686158] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <i data-lucide="search" class="w-3.5 h-3.5 text-[#4A5C55] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
         <input
           id="searchInput"
           type="text"
           oninput="handleSearch(this.value)"
           placeholder="Buscar orden, teléfono o RFC..."
-          class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#F6F3EC] border border-[#E4DFD3] text-xs text-[#1C1917] placeholder:text-[#8C8377] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#16302B] transition"
+          class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#E8EEEB] border border-[#D0D9D4] text-xs text-[#0F1A17] placeholder:text-[#6A7A73] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#C2185B] transition"
         />
       </div>
     </div>
@@ -332,23 +358,23 @@
 
   <div class="w-full max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pb-3">
     <!-- Unified Horizontal Treasury Strip -->
-    <div id="kpiStrip" class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E4DFD3]">
+    <div id="kpiStrip" class="bg-[rgba(244,248,246,0.9)] backdrop-blur-md border border-white/35 rounded-xl shadow-sheet grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#D0D9D4]">
 
       <!-- Metric 1: Volumen Liquidado (CoDi) -->
       <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
         <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-xs font-medium text-[#686158]">Volumen Liquidado (CoDi)</span>
+          <span class="text-xs font-medium text-[#4A5C55]">Volumen Liquidado (CoDi)</span>
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] text-[10px] font-semibold tracking-wide">
             BANXICO SPEI
           </span>
         </div>
         <div class="flex items-baseline gap-2">
-          <span id="kpiVolumen" class="money money-lg text-[#1C1917]">
+          <span id="kpiVolumen" class="money money-lg text-[#0F1A17]">
             $2,270.00
           </span>
-          <span class="tabular-mono text-[11px] font-medium text-[#686158]">MXN</span>
+          <span class="tabular-mono text-[11px] font-medium text-[#4A5C55]">MXN</span>
         </div>
-        <p id="kpiVolumenSub" class="text-[11px] text-[#686158] mt-1.5">
+        <p id="kpiVolumenSub" class="text-[11px] text-[#4A5C55] mt-1.5">
           3 operaciones liquidadas al instante
         </p>
       </div>
@@ -356,8 +382,8 @@
       <!-- Metric 2: Comisiones Ahorradas -->
       <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
         <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-xs font-medium text-[#686158]">Comisiones Ahorradas</span>
-          <span class="tabular-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#F3EFE6] text-[#16302B] border border-[#E4DFD3]">
+          <span class="text-xs font-medium text-[#4A5C55]">Comisiones Ahorradas</span>
+          <span class="tabular-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#E4EBE7] text-[#0F2A24] border border-[#D0D9D4]">
             $0.00 COSTO CODI
           </span>
         </div>
@@ -365,47 +391,47 @@
           <span id="kpiAhorro" class="money money-lg text-[#15803D]">
             $79.45
           </span>
-          <span class="tabular-mono text-[11px] font-medium text-[#686158]">MXN</span>
+          <span class="tabular-mono text-[11px] font-medium text-[#4A5C55]">MXN</span>
         </div>
-        <p class="text-[11px] text-[#686158] mt-1.5">
-          vs. tasa promedio tarjeta <span class="tabular-mono font-medium text-[#1C1917]">3.50%</span>
+        <p class="text-[11px] text-[#4A5C55] mt-1.5">
+          vs. tasa promedio tarjeta <span class="tabular-mono font-medium text-[#0F1A17]">3.50%</span>
         </p>
       </div>
 
       <!-- Metric 3: CFDIs 4.0 Timbrados -->
       <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
         <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-xs font-medium text-[#686158]">CFDIs 4.0 Timbrados</span>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E8EFECE6] text-[#16302B] text-[10px] font-semibold">
+          <span class="text-xs font-medium text-[#4A5C55]">CFDIs 4.0 Timbrados</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E8EFECE6] text-[#0F2A24] text-[10px] font-semibold">
             SAT · PAC ACTIVO
           </span>
         </div>
         <div class="flex items-baseline gap-2">
-          <span id="kpiTimbrados" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#1C1917] leading-none">
+          <span id="kpiTimbrados" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#0F1A17] leading-none">
             1
           </span>
-          <span class="text-xs text-[#686158]">comprobantes fiscales</span>
+          <span class="text-xs text-[#4A5C55]">comprobantes fiscales</span>
         </div>
-        <p class="text-[11px] text-[#686158] mt-1.5">
-          Forma de pago <span class="tabular-mono font-medium text-[#1C1917]">03 · PUE</span> automática
+        <p class="text-[11px] text-[#4A5C55] mt-1.5">
+          Forma de pago <span class="tabular-mono font-medium text-[#0F1A17]">03 · PUE</span> automática
         </p>
       </div>
 
       <!-- Metric 4: Órdenes en Curso -->
       <div class="p-4 sm:px-5 sm:py-4 flex flex-col justify-between">
         <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-xs font-medium text-[#686158]">Órdenes en Curso</span>
-          <span id="kpiAlertBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] text-[10px] font-semibold">
+          <span class="text-xs font-medium text-[#4A5C55]">Órdenes en Curso</span>
+          <span id="kpiAlertBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FCE7F0] text-[#A0144A] text-[10px] font-semibold">
             2 REQUIEREN ACCIÓN
           </span>
         </div>
         <div class="flex items-baseline gap-2">
-          <span id="kpiEnCurso" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#1C1917] leading-none">
+          <span id="kpiEnCurso" class="editorial-serif text-2xl sm:text-[28px] font-semibold text-[#0F1A17] leading-none">
             2
           </span>
-          <span class="text-xs text-[#686158]">en seguimiento</span>
+          <span class="text-xs text-[#4A5C55]">en seguimiento</span>
         </div>
-        <p id="kpiEnCursoSub" class="text-[11px] text-[#686158] mt-1.5">
+        <p id="kpiEnCursoSub" class="text-[11px] text-[#4A5C55] mt-1.5">
           1 por liquidar · 1 atención fiscal
         </p>
       </div>
@@ -423,7 +449,7 @@
       <!-- ================================================================= -->
       <!-- LIBRO MAYOR DE OPERACIONES (ancho completo; ticket a la derecha)  -->
       <!-- ================================================================= -->
-      <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm flex flex-col min-h-0">
+      <section aria-label="Libro Mayor de Operaciones" class="w-full bg-[rgba(244,248,246,0.9)] backdrop-blur-md border border-white/35 rounded-xl shadow-sheet flex flex-col min-h-0">
 
         <!-- Desktop High-Density Table (thead sticky al scroll de página) -->
         <div id="ledgerScroll" class="rounded-t-xl">
@@ -438,48 +464,48 @@
                 <th class="py-3.5 pl-3 pr-5 font-bold text-right">Factura CFDI</th>
               </tr>
             </thead>
-            <tbody id="ledgerTableBody" class="divide-y divide-[#D6CFC0] bg-white">
+            <tbody id="ledgerTableBody" class="divide-y divide-[#C5D0CA] bg-white">
               <!-- Rows dynamically rendered -->
             </tbody>
           </table>
         </div>
 
         <!-- Mobile card list (visible &lt; 900px) -->
-        <div id="ledgerCards" class="hidden divide-y divide-[#D6CFC0] bg-white rounded-t-xl">
+        <div id="ledgerCards" class="hidden divide-y divide-[#C5D0CA] bg-white rounded-t-xl">
           <!-- Cards dynamically rendered -->
         </div>
 
         <!-- Empty Search State -->
         <div id="ledgerEmptyState" class="hidden py-14 px-6 text-center">
-          <div class="w-10 h-10 rounded-full bg-[#F3EFE6] border border-[#E4DFD3] flex items-center justify-center mx-auto mb-3 text-[#686158]">
+          <div class="w-10 h-10 rounded-full bg-[#E4EBE7] border border-[#D0D9D4] flex items-center justify-center mx-auto mb-3 text-[#4A5C55]">
             <i data-lucide="file-search" class="w-4 h-4"></i>
           </div>
-          <p class="text-sm font-semibold text-[#1C1917]">No hay operaciones que coincidan</p>
-          <p class="text-xs text-[#686158] mt-1">Ajusta el filtro superior o limpia el término de búsqueda.</p>
+          <p class="text-sm font-semibold text-[#0F1A17]">No hay operaciones que coincidan</p>
+          <p class="text-xs text-[#4A5C55] mt-1">Ajusta el filtro superior o limpia el término de búsqueda.</p>
         </div>
 
         <!-- Ledger Footer -->
-        <div class="px-5 py-2.5 bg-[#F7F4EC] border-t border-[#E4DFD3] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#686158]">
+        <div class="px-5 py-2.5 bg-[#EAF0ED] border-t border-[#D0D9D4] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#4A5C55]">
           <span class="inline-flex items-center gap-1.5">
-            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#16302B]"></i>
-            <span>Conciliación automática vía <strong class="font-semibold text-[#1C1917]">pey CoDi</strong> &amp; <strong class="font-semibold text-[#1C1917]">Facturapi</strong></span>
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#0F2A24]"></i>
+            <span>Conciliación automática vía <strong class="font-semibold text-[#0F1A17]">pey CoDi</strong> &amp; <strong class="font-semibold text-[#0F1A17]">Facturapi</strong></span>
           </span>
           <span id="pollingHint" class="tabular-mono text-[10px]">POLLING: GET /api/ordenes · adaptativo</span>
         </div>
       </section>
 
       <!-- Bitácora compacta bajo el libro (siempre visible) -->
-      <div class="bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl shadow-warm overflow-hidden">
-        <div class="px-4 py-2.5 bg-[#F7F4EC] border-b border-[#E4DFD3] flex items-center justify-between">
+      <div class="bg-[rgba(244,248,246,0.9)] backdrop-blur-md border border-white/35 rounded-xl shadow-sheet overflow-hidden">
+        <div class="px-4 py-2.5 bg-[#EAF0ED] border-b border-[#D0D9D4] flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-[#15803D] pulse-dot"></span>
-            <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#1C1917]">
+            <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#0F1A17]">
               Bitácora de Webhooks en Vivo
             </span>
           </div>
-          <span class="tabular-mono text-[10px] text-[#686158]">ÚLTIMOS 3 EVENTOS</span>
+          <span class="tabular-mono text-[10px] text-[#4A5C55]">ÚLTIMOS 3 EVENTOS</span>
         </div>
-        <div id="webhookLogList" class="divide-y divide-[#E4DFD3]/70 bg-[#FCFBF8]">
+        <div id="webhookLogList" class="divide-y divide-[#D0D9D4]/70 bg-[rgba(244,248,246,0.72)]">
           <!-- Webhook events injected via JS -->
         </div>
       </div>
@@ -489,11 +515,11 @@
 
   <!-- Ticket / inspector: drawer derecho, solo al seleccionar una orden -->
   <div id="ticketDrawerRoot" class="fixed inset-0 z-40 hidden" aria-hidden="true">
-    <div id="ticketBackdrop" onclick="closeTicket()" class="absolute inset-0 bg-[#1C1917]/25 opacity-0 transition-opacity duration-200"></div>
+    <div id="ticketBackdrop" onclick="closeTicket()" class="absolute inset-0 bg-[#0F1A17]/25 opacity-0 transition-opacity duration-200"></div>
     <aside
       id="ticketDrawer"
       aria-label="Inspector de Auditoría y Comprobante"
-      class="absolute inset-y-0 right-0 w-full max-w-[440px] bg-[#FCFBF8] border-l border-[#E4DFD3] shadow-sheet flex flex-col translate-x-full transition-transform duration-250 ease-out overflow-hidden"
+      class="absolute inset-y-0 right-0 w-full max-w-[440px] bg-[rgba(244,248,246,0.94)] backdrop-blur-xl border-l border-white/40 shadow-sheet flex flex-col translate-x-full transition-transform duration-250 ease-out overflow-hidden"
     >
       <div id="inspectorSheet" class="flex-1 overflow-y-auto">
         <!-- Dynamically rendered based on selected order -->
@@ -958,8 +984,8 @@
         dot.className = "w-1.5 h-1.5 rounded-full bg-[#15803D] pulse-dot";
         label.textContent = "Conectado a API";
       } else {
-        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[11px] font-semibold text-[#B45309]";
-        dot.className = "w-1.5 h-1.5 rounded-full bg-[#B45309] pulse-dot";
+        pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FCE7F0] border border-[#F5C6D8] text-[11px] font-semibold text-[#A0144A]";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-[#A0144A] pulse-dot";
         label.textContent = "Modo Demo Interactivo";
       }
     }
@@ -988,8 +1014,8 @@
       document.querySelectorAll(".filter-pill").forEach(btn => {
         const active = btn.getAttribute("data-filter") === filterKey;
         btn.className = active
-          ? "filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#16302B] text-[#FCFBF8] cursor-pointer"
-          : "filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#F3EFE6] text-[#686158] hover:text-[#1C1917] cursor-pointer";
+          ? "filter-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap bg-[#C2185B] text-[#F4F8F6] cursor-pointer"
+          : "filter-pill px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer";
       });
       renderLedger();
     }
@@ -1091,7 +1117,7 @@
 
       const alertBadge = document.getElementById("kpiAlertBadge");
       if (enCurso > 0) {
-        alertBadge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] text-[10px] font-semibold";
+        alertBadge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FCE7F0] text-[#A0144A] text-[10px] font-semibold";
         alertBadge.textContent = `${enCurso} EN SEGUIMIENTO`;
       } else {
         alertBadge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] text-[10px] font-semibold";
@@ -1125,7 +1151,7 @@
            </span>
            <div class="cell-meta">No se cobrará</div>`;
       }
-      return `<span class="status-pill bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]">
+      return `<span class="status-pill bg-[#FCE7F0] text-[#A0144A] border-[#F5C6D8]">
            <span class="w-2 h-2 rounded-full bg-[#D97706]"></span>
            Pendiente
          </span>
@@ -1162,12 +1188,12 @@
             onclick="selectOrder('${escapeHtml(order.id)}')"
             class="transition-colors cursor-pointer ${
               isSelected
-                ? "bg-[#E8EFECE6] border-l-4 border-l-[#16302B]"
-                : "bg-white hover:bg-[#F7F4EC] border-l-4 border-l-transparent"
+                ? "bg-[#E8EFECE6] border-l-4 border-l-[#0F2A24]"
+                : "bg-white hover:bg-[#EAF0ED] border-l-4 border-l-transparent"
             }"
           >
             <td class="py-4 pl-5 pr-3 align-middle whitespace-nowrap">
-              <div class="tabular-mono font-bold text-[14px] ${isSelected ? "text-[#16302B]" : "text-[#141210]"}">
+              <div class="tabular-mono font-bold text-[14px] ${isSelected ? "text-[#0F2A24]" : "text-[#141210]"}">
                 #${escapeHtml(order.id)}
               </div>
               <div class="cell-meta">${escapeHtml(order.creado_en)}</div>
@@ -1212,7 +1238,7 @@
               type="button"
               onclick="selectOrder('${escapeHtml(order.id)}')"
               class="w-full text-left px-4 py-3.5 transition-colors ${
-                isSelected ? "bg-[#E8EFECE6] border-l-4 border-l-[#16302B]" : "bg-white border-l-4 border-l-transparent"
+                isSelected ? "bg-[#E8EFECE6] border-l-4 border-l-[#0F2A24]" : "bg-white border-l-4 border-l-transparent"
               }"
             >
               <div class="flex items-start justify-between gap-3">
@@ -1222,7 +1248,7 @@
                     <span class="cell-meta !mt-0">${escapeHtml(order.creado_en)}</span>
                   </div>
                   <div class="tabular-mono text-[12px] font-semibold text-[#141210] mt-1 truncate">${escapeHtml(phoneClean)}</div>
-                  <div class="text-[12px] text-[#4A443D] mt-1 line-clamp-2">${escapeHtml(conceptSummary)}</div>
+                  <div class="text-[12px] text-[#4A5C55] mt-1 line-clamp-2">${escapeHtml(conceptSummary)}</div>
                 </div>
                 <div class="text-right shrink-0 space-y-1.5">
                   <div class="money text-[15px] font-bold text-[#141210]">${formatMXN(order.total)}</div>
@@ -1250,30 +1276,30 @@
       }
       if (order.error_fiscal) {
         return `
-          <span class="status-pill bg-[#FFEDD5] text-[#9A3412] border-[#FDBA74] ml-auto">
+          <span class="status-pill bg-[#FCE7F0] text-[#A0144A] border-[#F5C6D8] ml-auto">
             <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
             Error fiscal
           </span>
-          <div class="cell-meta text-[#9A3412]">Reintentar</div>
+          <div class="cell-meta text-[#A0144A]">Reintentar</div>
         `;
       }
       if (order.requiere_factura === 0) {
         return `
-          <span class="status-pill bg-[#F5F5F4] text-[#44403C] border-[#D6D3D1] ml-auto">
+          <span class="status-pill bg-[#E8EEEB] text-[#3F524B] border-[#D0D9D4] ml-auto">
             Sin factura
           </span>
         `;
       }
       if (order.datos_fiscales_ok === 0) {
         return `
-          <span class="status-pill bg-[#FEF3C7] text-[#92400E] border-[#FCD34D] ml-auto">
+          <span class="status-pill bg-[#FCE7F0] text-[#A0144A] border-[#F5C6D8] ml-auto">
             Falta RFC
           </span>
           <div class="cell-meta">En chat</div>
         `;
       }
       return `
-        <span class="status-pill bg-[#E8EFECE6] text-[#16302B] border-[#16302B]/25 ml-auto">
+        <span class="status-pill bg-[#E8EFECE6] text-[#0F2A24] border-[#0F2A24]/25 ml-auto">
           RFC listo
         </span>
         <div class="cell-meta">Al pagar</div>
@@ -1305,10 +1331,10 @@
       let contextualHtml = "";
       if (isCancelled) {
         contextualHtml = `
-          <div class="p-4 rounded-xl bg-[#F7F4EC] border border-[#E4DFD3] space-y-2">
-            <span class="text-[10px] font-semibold uppercase tracking-wider text-[#686158]">Estado</span>
-            <h3 class="text-sm font-semibold text-[#1C1917]">Cobro cancelado</h3>
-            <p class="text-xs text-[#686158]">
+          <div class="p-4 rounded-xl bg-[#EAF0ED] border border-[#D0D9D4] space-y-2">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-[#4A5C55]">Estado</span>
+            <h3 class="text-sm font-semibold text-[#0F1A17]">Cobro cancelado</h3>
+            <p class="text-xs text-[#4A5C55]">
               La orden #${escapeHtml(order.id)} quedó en <span class="tabular-mono font-semibold">CANCELADO</span>
               y ya no cuenta como pendiente.
             </p>
@@ -1329,16 +1355,16 @@
 
       container.innerHTML = `
         <!-- Inspector Top Header -->
-        <div class="px-5 py-4 bg-[#F7F4EC] border-b border-[#E4DFD3] flex items-start justify-between gap-3">
+        <div class="px-5 py-4 bg-[#EAF0ED] border-b border-[#D0D9D4] flex items-start justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#686158]">
+              <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#4A5C55]">
                 AUDITORÍA DE OPERACIÓN
               </span>
-              <span class="text-[#C8BFA8]">•</span>
-              <span class="tabular-mono text-xs font-bold text-[#16302B]">${escapeHtml(order.id)}</span>
+              <span class="text-[#95A69E]">•</span>
+              <span class="tabular-mono text-xs font-bold text-[#0F2A24]">${escapeHtml(order.id)}</span>
             </div>
-            <h2 class="editorial-serif text-xl font-semibold text-[#1C1917] mt-0.5">
+            <h2 class="editorial-serif text-xl font-semibold text-[#0F1A17] mt-0.5">
               ${escapeHtml(phoneClean)}
             </h2>
           </div>
@@ -1347,16 +1373,16 @@
             <button
               type="button"
               onclick="copyText('${escapeHtml(order.id)}', 'Referencia ${escapeHtml(order.id)} copiada')"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[#FCFBF8] hover:bg-[#F3EFE6] border border-[#E4DFD3] tabular-mono text-[11px] text-[#1C1917] transition cursor-pointer min-h-[36px]"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[#F4F8F6] hover:bg-[#E4EBE7] border border-[#D0D9D4] tabular-mono text-[11px] text-[#0F1A17] transition cursor-pointer min-h-[36px]"
               title="Copiar referencia numRef"
             >
               <span>numRef</span>
-              <i data-lucide="copy" class="w-3 h-3 text-[#686158]"></i>
+              <i data-lucide="copy" class="w-3 h-3 text-[#4A5C55]"></i>
             </button>
             <button
               type="button"
               onclick="closeTicket()"
-              class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-[#FCFBF8] hover:bg-[#F3EFE6] border border-[#E4DFD3] text-[#686158] hover:text-[#1C1917] transition cursor-pointer"
+              class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-[#F4F8F6] hover:bg-[#E4EBE7] border border-[#D0D9D4] text-[#4A5C55] hover:text-[#0F1A17] transition cursor-pointer"
               aria-label="Cerrar ticket"
               title="Cerrar"
             >
@@ -1366,7 +1392,7 @@
         </div>
 
         <!-- 4-Step Horizontal Settlement Stepper -->
-        <div class="px-5 py-3.5 bg-[#FCFBF8] border-b border-[#E4DFD3]">
+        <div class="px-5 py-3.5 bg-[rgba(244,248,246,0.9)] border-b border-[#D0D9D4]">
           <div class="grid grid-cols-4 gap-2">
             ${renderStepperNode("1", "WhatsApp", "done")}
             ${renderStepperNode("2", "QR pey", "done")}
@@ -1389,29 +1415,29 @@
     }
 
     function renderStepperNode(num, label, status) {
-      let badgeStyle = "bg-[#F3EFE6] text-[#686158] border-[#E4DFD3]";
-      let textStyle = "text-[#686158]";
+      let badgeStyle = "bg-[#E4EBE7] text-[#4A5C55] border-[#D0D9D4]";
+      let textStyle = "text-[#4A5C55]";
       let icon = num;
 
       if (status === "done") {
         badgeStyle = "bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0]";
-        textStyle = "text-[#1C1917] font-semibold";
+        textStyle = "text-[#0F1A17] font-semibold";
         icon = "✓";
       } else if (status === "active") {
-        badgeStyle = "bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]";
-        textStyle = "text-[#B45309] font-semibold";
+        badgeStyle = "bg-[#FCE7F0] text-[#A0144A] border-[#F5C6D8]";
+        textStyle = "text-[#A0144A] font-semibold";
       } else if (status === "error") {
-        badgeStyle = "bg-[#FFEDD5] text-[#C2410C] border-[#FDBA74]";
-        textStyle = "text-[#C2410C] font-semibold";
+        badgeStyle = "bg-[#FCE7F0] text-[#A0144A] border-[#F5C6D8]";
+        textStyle = "text-[#A0144A] font-semibold";
         icon = "!";
       } else if (status === "skipped") {
-        badgeStyle = "bg-[#F3EFE6] text-[#8C8377] border-[#E4DFD3]";
-        textStyle = "text-[#8C8377]";
+        badgeStyle = "bg-[#E4EBE7] text-[#6A7A73] border-[#D0D9D4]";
+        textStyle = "text-[#6A7A73]";
         icon = "—";
       }
 
       return `
-        <div class="flex flex-col items-center text-center p-2 rounded-lg bg-[#F7F4EC]/70 border border-[#E4DFD3]/80">
+        <div class="flex flex-col items-center text-center p-2 rounded-lg bg-[#EAF0ED]/70 border border-[#D0D9D4]/80">
           <span class="w-5 h-5 rounded-full border ${badgeStyle} tabular-mono text-[10px] font-bold flex items-center justify-center mb-1">
             ${icon}
           </span>
@@ -1428,28 +1454,28 @@
              src="/files/qr_${encodeURIComponent(order.id)}.png"
              alt="Ticket CoDi ${escapeHtml(order.id)}"
              onerror="handleQrImgError('${escapeHtml(order.id)}')"
-             class="w-36 h-52 object-contain rounded bg-[#FCFBF8]"
+             class="w-36 h-52 object-contain rounded bg-[#F4F8F6]"
            />`
         : buildWarmCoDiQrSvg(`${order.id}|${order.total}|${order.telefono}`);
 
       return `
         <div class="space-y-4">
           <!-- Tactile QR CoDi Payment Card -->
-          <div class="bg-[#FFFFFF] border border-[#E4DFD3] rounded-xl p-4 shadow-warm">
-            <div class="flex items-center justify-between border-b border-[#E4DFD3] pb-3 mb-3.5">
+          <div class="bg-[rgba(255,255,255,0.82)] backdrop-blur-md border border-white/45 rounded-xl p-4 shadow-sheet">
+            <div class="flex items-center justify-between border-b border-[#D0D9D4] pb-3 mb-3.5">
               <div>
-                <span class="text-[10px] font-semibold uppercase tracking-wider ${order.expires_in_sec > 0 ? "text-[#B45309]" : "text-[#9F1239]"}">
+                <span class="text-[10px] font-semibold uppercase tracking-wider ${order.expires_in_sec > 0 ? "text-[#A0144A]" : "text-[#9F1239]"}">
                   ${order.expires_in_sec > 0
                     ? "SOLICITUD CODI ACTIVA · POST /codi/qr"
                     : "SOLICITUD CODI VENCIDA · POST /codi/qr"}
                 </span>
-                <h3 class="text-sm font-semibold text-[#1C1917] mt-0.5">
+                <h3 class="text-sm font-semibold text-[#0F1A17] mt-0.5">
                   ${order.expires_in_sec > 0
                     ? "Esperando autorización bancaria"
                     : "QR vencido — pide Nuevo QR por WhatsApp"}
                 </h3>
               </div>
-              <div class="text-right ${order.expires_in_sec > 0 ? "bg-[#FEF3C7] border-[#FDE68A] text-[#B45309]" : "bg-[#FFE4E6] border-[#FECDD3] text-[#9F1239]"} border px-2.5 py-1 rounded-lg">
+              <div class="text-right ${order.expires_in_sec > 0 ? "bg-[#FCE7F0] border-[#F5C6D8] text-[#A0144A]" : "bg-[#FFE4E6] border-[#FECDD3] text-[#9F1239]"} border px-2.5 py-1 rounded-lg">
                 <span class="block text-[9px] font-semibold uppercase tracking-wider">VIGENCIA</span>
                 <span id="qrCountdownTimer" class="tabular-mono text-xs font-bold">
                   ${order.expires_in_sec > 0 ? formatTimer(order.expires_in_sec) : "VENCIDA"}
@@ -1458,31 +1484,31 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center gap-4">
-              <div class="w-40 h-56 p-2 bg-[#FCFBF8] border border-[#E4DFD3] rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+              <div class="w-40 h-56 p-2 bg-[#F4F8F6] border border-[#D0D9D4] rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
                 ${qrVisual}
               </div>
 
               <div class="flex-1 w-full space-y-2 text-xs">
-                <div class="pb-2 border-b border-[#E4DFD3]">
-                  <span class="text-[11px] text-[#686158] block">Monto a liquidar</span>
-                  <span class="money text-[28px] font-semibold text-[#1C1917]">
-                    ${formatMXN(order.total)} <span class="tabular-mono text-xs font-normal text-[#686158]">MXN</span>
+                <div class="pb-2 border-b border-[#D0D9D4]">
+                  <span class="text-[11px] text-[#4A5C55] block">Monto a liquidar</span>
+                  <span class="money text-[28px] font-semibold text-[#0F1A17]">
+                    ${formatMXN(order.total)} <span class="tabular-mono text-xs font-normal text-[#4A5C55]">MXN</span>
                   </span>
                 </div>
 
                 <div class="flex justify-between">
-                  <span class="text-[#686158]">Referencia (numRef)</span>
-                  <span class="tabular-mono font-semibold text-[#1C1917]">${escapeHtml(order.id)}</span>
+                  <span class="text-[#4A5C55]">Referencia (numRef)</span>
+                  <span class="tabular-mono font-semibold text-[#0F1A17]">${escapeHtml(order.id)}</span>
                 </div>
 
                 <div class="flex justify-between">
-                  <span class="text-[#686158]">Comisión CoDi</span>
+                  <span class="text-[#4A5C55]">Comisión CoDi</span>
                   <span class="tabular-mono font-semibold text-[#15803D]">$0.00 MXN</span>
                 </div>
 
                 <div class="flex justify-between">
-                  <span class="text-[#686158]">Perfil Fiscal SAT</span>
-                  <span class="tabular-mono font-medium text-[#16302B]">
+                  <span class="text-[#4A5C55]">Perfil Fiscal SAT</span>
+                  <span class="tabular-mono font-medium text-[#0F2A24]">
                     ${order.requiere_factura === 0
                       ? "No solicitado"
                       : (order.datos_fiscales_ok === 1 ? `${escapeHtml(order.rfc)} ✓` : "Pendiente en chat")}
@@ -1494,13 +1520,13 @@
 
           <!-- Itemized Concepts -->
           <div class="space-y-1.5">
-            <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#686158]">
+            <span class="tabular-mono text-[10px] font-semibold uppercase tracking-wider text-[#4A5C55]">
               DETALLE DE CONCEPTOS
             </span>
             ${order.conceptos.map(c => `
-              <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3] text-xs">
-                <span class="text-[#1C1917]"><strong class="tabular-mono font-semibold">${c.quantity}×</strong> ${escapeHtml(c.description)}</span>
-                <span class="tabular-mono font-semibold text-[#1C1917]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
+              <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-[#EAF0ED] border border-[#D0D9D4] text-xs">
+                <span class="text-[#0F1A17]"><strong class="tabular-mono font-semibold">${c.quantity}×</strong> ${escapeHtml(c.description)}</span>
+                <span class="tabular-mono font-semibold text-[#0F1A17]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
               </div>
             `).join("")}
           </div>
@@ -1510,12 +1536,12 @@
               type="button"
               onclick="cancelarOrden('${escapeHtml(order.id)}')"
               ${isBusy ? "disabled" : ""}
-              class="w-full py-2.5 px-4 rounded-lg bg-[#FCFBF8] hover:bg-[#FFE4E6] disabled:opacity-50 text-[#9F1239] border border-[#FECDD3] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
+              class="w-full py-2.5 px-4 rounded-lg bg-[#F4F8F6] hover:bg-[#FFE4E6] disabled:opacity-50 text-[#9F1239] border border-[#FECDD3] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <i data-lucide="${isBusy ? "loader-2" : "ban"}" class="w-4 h-4 ${isBusy ? "animate-spin" : ""}"></i>
               <span>Cancelar cobro (no se va a cobrar)</span>
             </button>
-            <p class="text-[11px] text-[#686158] text-center">
+            <p class="text-[11px] text-[#4A5C55] text-center">
               Lo saca de pendientes. El QR deja de contar como solicitud activa.
             </p>
           </div>
@@ -1526,12 +1552,12 @@
               type="button"
               onclick="simulatePeyPaymentWebhook('${escapeHtml(order.id)}')"
               ${isBusy ? "disabled" : ""}
-              class="w-full py-2.5 px-4 rounded-lg bg-[#16302B] hover:bg-[#1F423B] disabled:opacity-50 text-[#FCFBF8] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
+              class="w-full py-2.5 px-4 rounded-lg bg-[#C2185B] hover:bg-[#A0144A] disabled:opacity-50 text-[#F4F8F6] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <i data-lucide="${isBusy ? "loader-2" : "zap"}" class="w-4 h-4 ${isBusy ? "animate-spin" : ""}"></i>
               <span>${isBusy ? "Procesando codi.qr.payment_received..." : "Simular Webhook Pago pey"}</span>
             </button>
-            <p class="text-[11px] text-[#686158] text-center mt-1.5">
+            <p class="text-[11px] text-[#4A5C55] text-center mt-1.5">
               ${state.isLiveApi
                 ? "Demo pública: liquida el cobro y dispara timbrado CFDI (sin Sandbox)."
                 : "Simula la confirmación de Banxico y dispara el timbrado CFDI 4.0."}
@@ -1553,63 +1579,63 @@
       return `
         <div class="space-y-4">
           <!-- Crisp Mexican Fiscal Document Sheet -->
-          <div class="bg-[#FFFFFF] border border-[#D8D1C2] rounded-xl p-4 shadow-warm space-y-3.5 relative">
+          <div class="bg-[rgba(255,255,255,0.82)] backdrop-blur-md border border-white/45 rounded-xl p-4 shadow-sheet space-y-3.5 relative">
             <!-- Top Fiscal Document Ribbon -->
-            <div class="flex items-start justify-between gap-2 border-b border-[#E4DFD3] pb-3">
+            <div class="flex items-start justify-between gap-2 border-b border-[#D0D9D4] pb-3">
               <div>
                 <div class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#15803D]">
                   <span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>
                   <span>COMPROBANTE FISCAL DIGITAL · CFDI 4.0</span>
                 </div>
-                <h3 class="editorial-serif text-lg font-semibold text-[#1C1917] mt-0.5">
+                <h3 class="editorial-serif text-lg font-semibold text-[#0F1A17] mt-0.5">
                   Factura Electrónica Timbrada
                 </h3>
               </div>
-              <span class="px-2 py-0.5 rounded bg-[#E8EFECE6] border border-[#16302B]/20 tabular-mono text-[10px] font-bold text-[#16302B]">
+              <span class="px-2 py-0.5 rounded bg-[#E8EFECE6] border border-[#0F2A24]/20 tabular-mono text-[10px] font-bold text-[#0F2A24]">
                 INGRESO (I)
               </span>
             </div>
 
             <!-- Emisor & Receptor Blocks -->
             <div class="grid grid-cols-1 gap-2.5 text-xs">
-              <div class="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E4DFD3]">
-                <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">EMISOR</span>
-                <div class="font-semibold text-[#1C1917] mt-0.5">${escapeHtml(state.emisor.razon_social)}</div>
-                <div class="tabular-mono text-[11px] text-[#686158]">
+              <div class="p-2.5 rounded-lg bg-[#F4F8F6] border border-[#D0D9D4]">
+                <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#4A5C55] block">EMISOR</span>
+                <div class="font-semibold text-[#0F1A17] mt-0.5">${escapeHtml(state.emisor.razon_social)}</div>
+                <div class="tabular-mono text-[11px] text-[#4A5C55]">
                   RFC: ${escapeHtml(state.emisor.rfc)} · Régimen: ${escapeHtml(state.emisor.regimen)} · CP: ${escapeHtml(state.emisor.codigo_postal)}
                 </div>
               </div>
 
-              <div class="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E4DFD3]">
-                <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">RECEPTOR</span>
-                <div class="font-semibold text-[#1C1917] mt-0.5">${escapeHtml(order.razon_social || "—")}</div>
-                <div class="tabular-mono text-[11px] text-[#686158]">
+              <div class="p-2.5 rounded-lg bg-[#F4F8F6] border border-[#D0D9D4]">
+                <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#4A5C55] block">RECEPTOR</span>
+                <div class="font-semibold text-[#0F1A17] mt-0.5">${escapeHtml(order.razon_social || "—")}</div>
+                <div class="tabular-mono text-[11px] text-[#4A5C55]">
                   RFC: ${escapeHtml(order.rfc || "—")} · Régimen: ${escapeHtml(order.regimen || "—")} · CP: ${escapeHtml(order.cp || "—")}
                 </div>
               </div>
             </div>
 
             <!-- Item Breakdown + Subtotal & IVA 16% Desglosado -->
-            <div class="border-t border-b border-dashed border-[#D8D1C2] py-3 space-y-2 text-xs">
+            <div class="border-t border-b border-dashed border-[#C5D0CA] py-3 space-y-2 text-xs">
               <div class="space-y-1">
                 ${order.conceptos.map(c => `
                   <div class="flex justify-between text-[11px]">
-                    <span class="text-[#1C1917]"><span class="tabular-mono text-[#686158]">${c.quantity}×</span> ${escapeHtml(c.description)}</span>
-                    <span class="tabular-mono font-medium text-[#1C1917]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
+                    <span class="text-[#0F1A17]"><span class="tabular-mono text-[#4A5C55]">${c.quantity}×</span> ${escapeHtml(c.description)}</span>
+                    <span class="tabular-mono font-medium text-[#0F1A17]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
                   </div>
                 `).join("")}
               </div>
 
-              <div class="pt-2 border-t border-[#E4DFD3]/70 space-y-1 tabular-mono text-[11px]">
-                <div class="flex justify-between text-[#686158]">
+              <div class="pt-2 border-t border-[#D0D9D4]/70 space-y-1 tabular-mono text-[11px]">
+                <div class="flex justify-between text-[#4A5C55]">
                   <span>Subtotal</span>
                   <span>${formatMXN(subtotal)}</span>
                 </div>
-                <div class="flex justify-between text-[#686158]">
+                <div class="flex justify-between text-[#4A5C55]">
                   <span>IVA Trasladado (16.00%)</span>
                   <span>${formatMXN(iva)}</span>
                 </div>
-                <div class="flex justify-between text-xs font-bold text-[#1C1917] pt-1">
+                <div class="flex justify-between text-xs font-bold text-[#0F1A17] pt-1">
                   <span>Total MXN</span>
                   <span class="text-[#15803D]">${formatMXN(total)} MXN</span>
                 </div>
@@ -1619,15 +1645,15 @@
             <!-- Payment & SAT Metadata -->
             <div class="grid grid-cols-2 gap-2 text-[11px] tabular-mono">
               <div>
-                <span class="text-[9px] uppercase text-[#686158] block">FORMA DE PAGO</span>
-                <span class="font-semibold text-[#1C1917]">03 · Transferencia</span>
+                <span class="text-[9px] uppercase text-[#4A5C55] block">FORMA DE PAGO</span>
+                <span class="font-semibold text-[#0F1A17]">03 · Transferencia</span>
               </div>
               <div>
-                <span class="text-[9px] uppercase text-[#686158] block">MÉTODO / USO</span>
-                <span class="font-semibold text-[#1C1917]">PUE · ${escapeHtml(order.uso_cfdi || "G03")}</span>
+                <span class="text-[9px] uppercase text-[#4A5C55] block">MÉTODO / USO</span>
+                <span class="font-semibold text-[#0F1A17]">PUE · ${escapeHtml(order.uso_cfdi || "G03")}</span>
               </div>
               <div class="col-span-2 pt-1">
-                <span class="text-[9px] uppercase text-[#686158] block">REFERENCIA BANXICO (PEY)</span>
+                <span class="text-[9px] uppercase text-[#4A5C55] block">REFERENCIA BANXICO (PEY)</span>
                 <button
                   type="button"
                   onclick="copyText('${escapeHtml(txId)}', 'Referencia Banxico copiada')"
@@ -1640,21 +1666,21 @@
             </div>
 
             <!-- Folio Fiscal UUID -->
-            <div class="p-2.5 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3]">
-              <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#686158] block">
+            <div class="p-2.5 rounded-lg bg-[#EAF0ED] border border-[#D0D9D4]">
+              <span class="tabular-mono text-[9px] font-semibold uppercase tracking-wider text-[#4A5C55] block">
                 FOLIO FISCAL (UUID SAT)
               </span>
               ${uuid ? `
               <button
                 type="button"
                 onclick="copyText('${escapeHtml(uuid)}', 'Folio Fiscal UUID copiado')"
-                class="mt-1 w-full flex items-center justify-between gap-2 text-left tabular-mono text-[11px] font-semibold text-[#16302B] hover:opacity-80 cursor-pointer"
+                class="mt-1 w-full flex items-center justify-between gap-2 text-left tabular-mono text-[11px] font-semibold text-[#0F2A24] hover:opacity-80 cursor-pointer"
               >
                 <span class="truncate">${escapeHtml(uuid)}</span>
-                <i data-lucide="copy" class="w-3.5 h-3.5 text-[#686158] shrink-0"></i>
+                <i data-lucide="copy" class="w-3.5 h-3.5 text-[#4A5C55] shrink-0"></i>
               </button>
               ` : `
-              <div class="mt-1 tabular-mono text-[11px] text-[#686158]">
+              <div class="mt-1 tabular-mono text-[11px] text-[#4A5C55]">
                 Facturapi: ${escapeHtml(order.facturapi_id || "—")} · UUID pendiente de sincronizar
               </div>
               `}
@@ -1666,7 +1692,7 @@
             <button
               type="button"
               onclick="openFiscalFile('${escapeHtml(order.id)}', 'pdf')"
-              class="py-2.5 px-3 rounded-lg bg-[#16302B] hover:bg-[#1F423B] text-[#FCFBF8] font-semibold text-xs shadow-warm transition flex items-center justify-center gap-1.5 cursor-pointer"
+              class="py-2.5 px-3 rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-[#F4F8F6] font-semibold text-xs shadow-warm transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
               <span>Abrir PDF</span>
@@ -1674,9 +1700,9 @@
             <button
               type="button"
               onclick="openFiscalFile('${escapeHtml(order.id)}', 'xml')"
-              class="py-2.5 px-3 rounded-lg bg-[#FCFBF8] hover:bg-[#F3EFE6] text-[#1C1917] border border-[#E4DFD3] font-semibold text-xs shadow-warm transition flex items-center justify-center gap-1.5 cursor-pointer"
+              class="py-2.5 px-3 rounded-lg bg-[#F4F8F6] hover:bg-[#E4EBE7] text-[#0F1A17] border border-[#D0D9D4] font-semibold text-xs shadow-warm transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-[#16302B]"></i>
+              <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-[#0F2A24]"></i>
               <span>Descargar XML</span>
             </button>
           </div>
@@ -1697,7 +1723,7 @@
               <div class="text-[10px] font-bold uppercase tracking-wider text-[#15803D]">
                 PAGO LIQUIDADO EN BANXICO
               </div>
-              <div class="tabular-mono text-xs font-semibold text-[#1C1917] mt-0.5">
+              <div class="tabular-mono text-xs font-semibold text-[#0F1A17] mt-0.5">
                 ${formatMXN(order.total)} MXN · Ref: ${escapeHtml(txId)}
               </div>
             </div>
@@ -1705,8 +1731,8 @@
           </div>
 
           <!-- Warm Terracotta Alert Box -->
-          <div class="p-4 rounded-xl bg-[#FFEDD5] border border-[#FDBA74] space-y-2.5">
-            <div class="flex items-center gap-2 text-[#C2410C]">
+          <div class="p-4 rounded-xl bg-[#FCE7F0] border border-[#F5C6D8] space-y-2.5">
+            <div class="flex items-center gap-2 text-[#A0144A]">
               <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
               <h3 class="text-xs font-bold uppercase tracking-wider">
                 ${isError ? "Rechazo de Timbrado CFDI 4.0" : "Datos Fiscales Pendientes en Chat"}
@@ -1720,7 +1746,7 @@
             </p>
 
             ${order.rfc ? `
-              <div class="p-2.5 rounded-lg bg-[#FCFBF8]/90 border border-[#FDBA74] tabular-mono text-[11px] text-[#1C1917]">
+              <div class="p-2.5 rounded-lg bg-[#F4F8F6]/90 border border-[#F5C6D8] tabular-mono text-[11px] text-[#0F1A17]">
                 <div><strong>RFC:</strong> ${escapeHtml(order.rfc)} · <strong>CP:</strong> ${escapeHtml(order.cp || "—")}</div>
                 <div class="truncate"><strong>Razón Social:</strong> ${escapeHtml(order.razon_social || "—")}</div>
               </div>
@@ -1732,7 +1758,7 @@
             type="button"
             onclick="retryFiscalStamping('${escapeHtml(order.id)}')"
             ${isBusy ? "disabled" : ""}
-            class="w-full py-2.5 px-4 rounded-lg bg-[#C2410C] hover:bg-[#9A3412] disabled:opacity-50 text-[#FCFBF8] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
+            class="w-full py-2.5 px-4 rounded-lg bg-[#C2185B] hover:bg-[#A0144A] disabled:opacity-50 text-[#F4F8F6] font-semibold text-xs tracking-wide shadow-warm transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <i data-lucide="${isBusy ? "loader-2" : "refresh-cw"}" class="w-3.5 h-3.5 ${isBusy ? "animate-spin" : ""}"></i>
             <span>${isBusy ? "Timbrando contra PAC..." : "Reintentar Timbrado CFDI"}</span>
@@ -1745,32 +1771,32 @@
     function renderPaidSimpleReceipt(order) {
       const txId = order.pey_transaction_id || "tx_banxico_confirmada";
       return `
-        <div class="bg-[#FFFFFF] border border-[#E4DFD3] rounded-xl p-4 shadow-warm space-y-3.5">
-          <div class="flex items-center justify-between border-b border-[#E4DFD3] pb-3">
+        <div class="bg-[rgba(255,255,255,0.82)] backdrop-blur-md border border-white/45 rounded-xl p-4 shadow-sheet space-y-3.5">
+          <div class="flex items-center justify-between border-b border-[#D0D9D4] pb-3">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-[#15803D]">OPERACIÓN LIQUIDADA</span>
-              <h3 class="editorial-serif text-lg font-semibold text-[#1C1917] mt-0.5">Comprobante Digital CoDi</h3>
+              <h3 class="editorial-serif text-lg font-semibold text-[#0F1A17] mt-0.5">Comprobante Digital CoDi</h3>
             </div>
-            <span class="px-2.5 py-0.5 rounded-full bg-[#F3EFE6] text-[#686158] text-[11px] font-medium">Sin factura</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-[#E4EBE7] text-[#4A5C55] text-[11px] font-medium">Sin factura</span>
           </div>
 
           <div class="space-y-1.5 text-xs">
             ${order.conceptos.map(c => `
               <div class="flex justify-between py-1">
-                <span class="text-[#1C1917]"><strong class="tabular-mono">${c.quantity}×</strong> ${escapeHtml(c.description)}</span>
-                <span class="tabular-mono font-semibold text-[#1C1917]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
+                <span class="text-[#0F1A17]"><strong class="tabular-mono">${c.quantity}×</strong> ${escapeHtml(c.description)}</span>
+                <span class="tabular-mono font-semibold text-[#0F1A17]">${formatMXN(c.importe ?? (c.quantity * c.price))}</span>
               </div>
             `).join("")}
           </div>
 
-          <div class="pt-2.5 border-t border-[#E4DFD3] flex justify-between items-baseline">
-            <span class="text-xs font-medium text-[#686158]">Total Liquidado</span>
-            <span class="money text-[28px] font-semibold text-[#15803D]">${formatMXN(order.total)} <span class="text-xs font-medium text-[#686158]">MXN</span></span>
+          <div class="pt-2.5 border-t border-[#D0D9D4] flex justify-between items-baseline">
+            <span class="text-xs font-medium text-[#4A5C55]">Total Liquidado</span>
+            <span class="money text-[28px] font-semibold text-[#15803D]">${formatMXN(order.total)} <span class="text-xs font-medium text-[#4A5C55]">MXN</span></span>
           </div>
 
-          <div class="p-2.5 rounded-lg bg-[#F7F4EC] border border-[#E4DFD3] tabular-mono text-[11px] flex items-center justify-between">
-            <span class="text-[#686158]">Ref. Banxico:</span>
-            <span class="font-semibold text-[#1C1917]">${escapeHtml(txId)}</span>
+          <div class="p-2.5 rounded-lg bg-[#EAF0ED] border border-[#D0D9D4] tabular-mono text-[11px] flex items-center justify-between">
+            <span class="text-[#4A5C55]">Ref. Banxico:</span>
+            <span class="font-semibold text-[#0F1A17]">${escapeHtml(txId)}</span>
           </div>
         </div>
       `;
@@ -1784,16 +1810,16 @@
       list.innerHTML = recent.map(item => {
         const badgeStyle = item.tone === "emerald"
           ? "bg-[#DCFCE7] text-[#15803D]"
-          : (item.tone === "forest" ? "bg-[#E8EFECE6] text-[#16302B]" : "bg-[#FEF3C7] text-[#B45309]");
+          : (item.tone === "forest" ? "bg-[#E8EFECE6] text-[#0F2A24]" : "bg-[#FCE7F0] text-[#A0144A]");
 
         return `
           <div class="px-4 py-2 flex items-center justify-between gap-2 tabular-mono text-[11px]">
             <div class="flex items-center gap-2 min-w-0">
-              <span class="text-[#8C8377] shrink-0">${escapeHtml(item.time)}</span>
-              <span class="font-medium text-[#1C1917] truncate">${escapeHtml(item.event)}</span>
+              <span class="text-[#6A7A73] shrink-0">${escapeHtml(item.time)}</span>
+              <span class="font-medium text-[#0F1A17] truncate">${escapeHtml(item.event)}</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[#686158]">${escapeHtml(item.ref)}</span>
+              <span class="text-[#4A5C55]">${escapeHtml(item.ref)}</span>
               <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${badgeStyle}">${escapeHtml(item.status)}</span>
             </div>
           </div>
@@ -1848,16 +1874,16 @@
             on = (h & 1) === 1;
           }
           if (on) {
-            rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="#1C1917"/>`;
+            rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="#0F1A17"/>`;
           }
         }
       }
 
       return `
         <svg viewBox="0 0 ${size} ${size}" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <rect width="${size}" height="${size}" fill="#FCFBF8"/>
+          <rect width="${size}" height="${size}" fill="#F4F8F6"/>
           ${rects}
-          <rect x="9" y="9" width="3" height="3" rx="0.5" fill="#16302B"/>
+          <rect x="9" y="9" width="3" height="3" rx="0.5" fill="#0F2A24"/>
         </svg>
       `;
     }
@@ -2146,9 +2172,9 @@
 
       const badgeColor = type === "success"
         ? "bg-[#15803D]"
-        : (type === "error" ? "bg-[#C2410C]" : "bg-[#16302B]");
+        : (type === "error" ? "bg-[#C2185B]" : "bg-[#0F2A24]");
 
-      toast.className = "pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#FCFBF8] border border-[#E4DFD3] shadow-sheet text-xs text-[#1C1917] transition-all duration-200 translate-y-2 opacity-0";
+      toast.className = "pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#F4F8F6] border border-[#D0D9D4] shadow-sheet text-xs text-[#0F1A17] transition-all duration-200 translate-y-2 opacity-0";
       toast.innerHTML = `
         <span class="w-2 h-2 rounded-full ${badgeColor} shrink-0"></span>
         <span class="flex-1 font-medium leading-snug">${escapeHtml(message)}</span>
