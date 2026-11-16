@@ -42,6 +42,7 @@ async function migrate(db: D1Database) {
         cfdi_uuid TEXT,
         pey_transaction_id TEXT UNIQUE,
         pey_qr_id TEXT,
+        pey_payment_url TEXT,
         estado_chat TEXT NOT NULL DEFAULT 'ESPERANDO_PRODUCTOS',
         error_fiscal TEXT,
         cliente_fiscal_id INTEGER,

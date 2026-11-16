@@ -25,9 +25,11 @@ import {
 } from "./parse";
 import {
   crearQrPey,
+  extractPaymentLink,
   extractQrPayload,
   getQrExpiresInSec,
   QR_TTL_SEC,
+  savePeyPaymentUrl,
   storeQrPng,
 } from "./pey";
 import { formatTicketCaption } from "./ticket";
@@ -857,6 +859,10 @@ async function emitirQr(
   const qrPayload = extractQrPayload(peyData);
   const peyQrId =
     String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
+  // Link de pago de pey (si lo devuelve): se manda junto con el QR para que
+  // el cliente que compra por WhatsApp pague tocándolo, sin escanear.
+  const paymentUrl = extractPaymentLink(peyData);
+  await savePeyPaymentUrl(env, orden.id, paymentUrl);
   const items = parseOrdenItems(orden);
   await storeQrPng(env, orden.id, qrPayload, {
     items,
@@ -881,7 +887,7 @@ async function emitirQr(
       vigenciaMin: Math.floor(QR_TTL_SEC / 60),
       peyQrId,
     },
-    { mediaUrl: media, ticketUrl },
+    { mediaUrl: media, ticketUrl, paymentUrl },
   );
 
   const hasTwilio = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
@@ -937,7 +943,11 @@ async function resendOrRenewQr(
         vigenciaMin: Math.floor(QR_TTL_SEC / 60),
         peyQrId: orden.pey_qr_id,
       },
-      { mediaUrl: media, ticketUrl },
+      {
+        mediaUrl: media,
+        ticketUrl,
+        paymentUrl: orden.pey_payment_url ?? null,
+      },
     ) + `\n⏱ Vigencia restante: ${formatMmSs(expires)}`;
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     await sendWhatsapp(env, telefono, qrMsg, media);

@@ -105,6 +105,7 @@ app.get("/ticket/:id", async (c) => {
     qrImageUrl,
     estado,
     expiresInSec: expires,
+    paymentUrl: orden.pey_payment_url ?? null,
   });
   return c.html(html, 200, {
     "cache-control": "public, max-age=30",

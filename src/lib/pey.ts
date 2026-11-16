@@ -72,6 +72,63 @@ export function extractQrPayload(peyData: Record<string, unknown>): string {
   return String(qrPayload);
 }
 
+/**
+ * Link de pago de pey, si la respuesta lo trae.
+ * El campo no está documentado en docs.pey.mx, así que se buscan los nombres
+ * habituales (primero los explícitos de pago, al final `url`/`link`) y solo
+ * se acepta un http(s). Si pey no devuelve link, regresa null y el mensaje
+ * queda como antes: solo QR + link del ticket.
+ */
+const PAYMENT_LINK_KEYS = [
+  "paymentUrl",
+  "paymentLink",
+  "payUrl",
+  "checkoutUrl",
+  "payment_url",
+  "payment_link",
+  "url",
+  "link",
+];
+
+export function extractPaymentLink(
+  peyData: Record<string, unknown>,
+): string | null {
+  const candidates: unknown[] = [peyData];
+  const nested = peyData.data;
+  if (nested && typeof nested === "object") candidates.push(nested);
+  for (const obj of candidates) {
+    const rec = obj as Record<string, unknown>;
+    for (const key of PAYMENT_LINK_KEYS) {
+      const v = rec[key];
+      if (typeof v === "string" && /^https?:\/\//i.test(v.trim())) {
+        return v.trim();
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Guarda el link de pago de forma best-effort: si la migración 0004 aún no
+ * se aplicó en esa base, no debe romper el flujo del QR.
+ */
+export async function savePeyPaymentUrl(
+  env: Env,
+  ordenId: number,
+  url: string | null,
+): Promise<void> {
+  if (!url) return;
+  try {
+    await env.DB.prepare(
+      "UPDATE ordenes SET pey_payment_url = ? WHERE id = ?",
+    )
+      .bind(url, ordenId)
+      .run();
+  } catch (err) {
+    console.log(`[pey] no se guardó el link de pago: ${String(err)}`);
+  }
+}
+
 export type StoreQrOptions = {
   items?: Item[];
   monto?: string;
