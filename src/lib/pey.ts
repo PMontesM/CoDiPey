@@ -1,5 +1,6 @@
 import type { Env, Item } from "../types";
 import { putBlob } from "./blobs";
+import { logAppError } from "./error-log";
 import { renderTicketPng, type TicketMeta } from "./ticket";
 
 /** Vigencia CoDi en pey (segundos). */
@@ -141,6 +142,13 @@ export async function tryCrearPaymentLinkPey(
     return link.url;
   } catch (err) {
     console.log(`[pey] payment-link falló (se sigue con QR): ${String(err)}`);
+    await logAppError(env, {
+      level: "warn",
+      source: "pey",
+      message: err instanceof Error ? err.message : String(err),
+      detail: String(err),
+      context: `payment-link orden #${opts.ordenId}`,
+    });
     return null;
   }
 }

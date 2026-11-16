@@ -30,6 +30,12 @@ import {
   type SettingKey,
 } from "./lib/settings";
 import {
+  clearErrorLog,
+  listErrorLog,
+  logAppError,
+  logCaughtError,
+} from "./lib/error-log";
+import {
   getPanelPassword,
   requireSuperadmin,
   setPanelPassword,
@@ -42,6 +48,12 @@ import type { Env, Item, Orden } from "./types";
 type AppEnv = { Bindings: Env };
 
 const app = new Hono<AppEnv>();
+
+app.onError(async (err, c) => {
+  console.log(`[http] ${c.req.method} ${c.req.path}: ${String(err)}`);
+  await logCaughtError(c.env, "http", err, `${c.req.method} ${c.req.path}`);
+  return c.json({ detail: "Error interno" }, 500);
+});
 
 async function runtimeEnv(env: Env): Promise<Env> {
   return withSettings(env);
@@ -190,6 +202,37 @@ app.post("/api/superadmin/test", async (c) => {
   const env = await runtimeEnv(c.env);
   const results = await runAllConnectionTests(env);
   return c.json({ results });
+});
+
+app.get("/api/superadmin/errors", async (c) => {
+  const denied = await requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const limit = Number(c.req.query("limit") || 50);
+  const errors = await listErrorLog(c.env, limit);
+  return c.json(
+    { errors },
+    { headers: { "cache-control": "private, no-store" } },
+  );
+});
+
+app.delete("/api/superadmin/errors", async (c) => {
+  const denied = await requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const cleared = await clearErrorLog(c.env);
+  return c.json({ ok: true, cleared });
+});
+
+/** Solo para comprobar que el log funciona desde el panel. */
+app.post("/api/superadmin/errors/sample", async (c) => {
+  const denied = await requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  await logAppError(c.env, {
+    level: "warn",
+    source: "superadmin",
+    message: "Prueba manual de log desde el panel",
+    context: "/api/superadmin/errors/sample",
+  });
+  return c.json({ ok: true });
 });
 
 app.get("/files/:key", async (c) => {
@@ -446,6 +489,7 @@ app.post("/api/demo/simular-cobro", async (c) => {
     const result = await simularCobroDemo(env, publicUrlFrom(env, c.req.url));
     return c.json(result);
   } catch (err) {
+    await logCaughtError(env, "demo.simular-cobro", err);
     const msg = err instanceof Error ? err.message : String(err);
     return c.json({ detail: msg }, 502);
   }
@@ -464,6 +508,7 @@ app.post("/api/demo/simular-pago/:id", async (c) => {
     const result = await simularPagoDemo(env, publicUrlFrom(env, c.req.url), id);
     return c.json(result);
   } catch (err) {
+    await logCaughtError(env, "demo.simular-pago", err, `orden #${id}`);
     const status = (err as Error & { status?: number }).status || 500;
     const msg = err instanceof Error ? err.message : String(err);
     return c.json({ detail: msg }, status as 400 | 404 | 409 | 500);
@@ -499,6 +544,7 @@ app.post("/whatsapp/webhook", async (c) => {
     );
   } catch (err) {
     console.log(`[whatsapp] unhandled: ${String(err)}`);
+    await logCaughtError(env, "whatsapp", err, from);
     reply =
       "Ocurrió un error temporal. Reintenta en unos segundos o contacta al comercio.";
     try {

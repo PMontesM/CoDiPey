@@ -77,6 +77,20 @@
 
     <div id="app" class="hidden space-y-4">
       <section class="glass rounded-2xl p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Errores recientes</h2>
+          <div class="flex items-center gap-2">
+            <button id="btnErrorsSample" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#D0D9D4] bg-white/80 hover:bg-[#E4EBE7]">Probar log</button>
+            <button id="btnErrorsRefresh" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#D0D9D4] bg-white/80 hover:bg-[#E4EBE7]">Actualizar</button>
+            <button id="btnErrorsClear" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#C2185B]/30 text-[#A0144A] bg-white/80 hover:bg-[#C2185B]/10">Limpiar</button>
+          </div>
+        </div>
+        <p class="text-[11px] text-[#3F524B]">Últimos fallos del Worker (WhatsApp, pey, Facturapi, demos). También puedes ver Logs en Cloudflare.</p>
+        <div id="errorsList" class="space-y-2 max-h-80 overflow-y-auto"></div>
+        <p id="errorsStatus" class="text-xs text-[#3F524B]" role="status"></p>
+      </section>
+
+      <section class="glass rounded-2xl p-5 space-y-3">
         <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Contraseña del panel</h2>
         <p id="passwordHint" class="text-[11px] text-[#3F524B]">Define una contraseña fácil de recordar. El secret de Wrangler sigue sirviendo de respaldo.</p>
         <div class="grid gap-2 sm:grid-cols-2">
@@ -238,6 +252,51 @@
             autocomplete="off" />
         </div>`;
       }).join("");
+      await loadErrors();
+    }
+
+    function esc(s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function loadErrors() {
+      const list = document.getElementById("errorsList");
+      const status = document.getElementById("errorsStatus");
+      status.textContent = "Cargando…";
+      const res = await fetch("/api/superadmin/errors?limit=40", { headers: headers(false) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        status.textContent = data.detail || `Error ${res.status}`;
+        return;
+      }
+      const rows = data.errors || [];
+      if (!rows.length) {
+        list.innerHTML = `<p class="text-sm text-[#3F524B]">Sin errores registrados.</p>`;
+        status.textContent = "";
+        return;
+      }
+      list.innerHTML = rows.map(e => {
+        const lvl = e.level === "warn" ? "aviso" : "error";
+        const lvlCls = e.level === "warn" ? "text-[#B45309] bg-[#FEF3C7]" : "text-[#9F1239] bg-[#FFE4E6]";
+        const when = e.created_at ? new Date(e.created_at).toLocaleString("es-MX", { timeZone: "America/Mexico_City" }) : "—";
+        return `<details class="rounded-xl border border-[#D0D9D4] bg-white/80 p-3">
+          <summary class="cursor-pointer list-none flex flex-wrap items-start gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${lvlCls}">${lvl}</span>
+            <span class="mono text-[10px] text-[#6A7A73]">${esc(e.source)}</span>
+            <span class="text-xs font-semibold flex-1 min-w-[12rem]">${esc(e.message)}</span>
+            <span class="text-[10px] text-[#6A7A73]">${esc(when)}</span>
+          </summary>
+          <div class="mt-2 pt-2 border-t border-[#E4EBE7] space-y-1">
+            ${e.context ? `<div class="text-[11px] text-[#3F524B]">Contexto: <span class="mono">${esc(e.context)}</span></div>` : ""}
+            ${e.detail ? `<pre class="mono text-[10px] whitespace-pre-wrap break-all bg-[#F4F8F6] rounded-lg p-2 max-h-40 overflow-y-auto">${esc(e.detail)}</pre>` : ""}
+          </div>
+        </details>`;
+      }).join("");
+      status.textContent = `${rows.length} registro${rows.length === 1 ? "" : "s"}`;
     }
 
     document.getElementById("btnUnlock").addEventListener("click", async () => {
@@ -324,6 +383,35 @@
     });
     document.getElementById("btnTestAll").addEventListener("click", async () => {
       for (const id of ["pey", "facturapi", "twilio"]) await runTest(id);
+    });
+
+    document.getElementById("btnErrorsRefresh").addEventListener("click", () => loadErrors());
+    document.getElementById("btnErrorsSample").addEventListener("click", async () => {
+      const status = document.getElementById("errorsStatus");
+      status.textContent = "Escribiendo prueba…";
+      const res = await fetch("/api/superadmin/errors/sample", {
+        method: "POST",
+        headers: headers(false),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        status.textContent = data.detail || `Error ${res.status}`;
+        return;
+      }
+      await loadErrors();
+    });
+    document.getElementById("btnErrorsClear").addEventListener("click", async () => {
+      if (!confirm("¿Borrar todos los errores del log?")) return;
+      const res = await fetch("/api/superadmin/errors", {
+        method: "DELETE",
+        headers: headers(false),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        document.getElementById("errorsStatus").textContent = data.detail || `Error ${res.status}`;
+        return;
+      }
+      await loadErrors();
     });
 
     boot();

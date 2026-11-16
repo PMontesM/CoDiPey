@@ -1,5 +1,6 @@
 import type { ClienteFiscal, Env, Item, Orden } from "../types";
 import { putBlob } from "./blobs";
+import { logAppError } from "./error-log";
 import { nowIso } from "./parse";
 import { sendWhatsapp } from "./twilio";
 
@@ -157,6 +158,12 @@ export async function evaluarYTimbrar(
       err instanceof FacturapiError
         ? err.message
         : `Error al timbrar/descargar: ${String(err)}`;
+    await logAppError(env, {
+      source: "facturapi",
+      message,
+      detail: err instanceof Error && err.stack ? err.stack : String(err),
+      context: `orden #${ordenId}`,
+    });
     await env.DB.prepare(
       `UPDATE ordenes SET estado_chat = 'ERROR_FISCAL', error_fiscal = ?, updated_at = ? WHERE id = ?`,
     )

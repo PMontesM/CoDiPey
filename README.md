@@ -74,6 +74,9 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 | `POST /api/demo/simular-pago/:id` | Liquida como pey + CFDI |
 | `GET /api/superadmin/status` | ¿Hay `SUPERADMIN_SECRET`? + URLs webhook |
 | `GET/PUT /api/superadmin/settings` | Overrides D1 (Bearer / `x-superadmin-token`) |
+| `PUT /api/superadmin/password` | Contraseña del panel |
+| `GET/DELETE /api/superadmin/errors` | Log de errores recientes |
+| `POST /api/superadmin/errors/sample` | Escribe un aviso de prueba |
 | `POST /api/superadmin/test/:id` | Prueba `pey` / `facturapi` / `twilio` |
 
 ### Auth (importante para el demo)
@@ -185,7 +188,7 @@ npx wrangler secret put PUBLIC_URL   # https://cobro-codi.inomali.workers.dev
 npm run deploy
 ```
 
-Migraciones en `migrations/` (`0001` … `0005_settings`).
+Migraciones en `migrations/` (`0001` … `0006_error_log`).
 
 Webhook pey → `https://cobro-codi.inomali.workers.dev/pey/webhook`.  
 Webhook Twilio → `https://cobro-codi.inomali.workers.dev/whatsapp/webhook`.  
@@ -221,6 +224,7 @@ npm run typecheck
 | `src/lib/settings.ts` | Overrides D1 + `withSettings` |
 | `src/lib/superadmin.ts` | Auth `SUPERADMIN_SECRET` |
 | `src/lib/connection-tests.ts` | Ping pey / Facturapi / Twilio |
+| `src/lib/error-log.ts` | Errores recientes (D1 → Superadmin) |
 | `src/lib/demo.ts` / `demo-whatsapp.ts` | Simulación y join |
 | `public/` | Landing, panel, superadmin, mascota, video, shots |
 | `migrations/` | Schema D1 |

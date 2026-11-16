@@ -81,6 +81,16 @@ async function migrate(db: D1Database) {
         value TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )`),
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS error_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TEXT NOT NULL,
+        level TEXT NOT NULL DEFAULT 'error',
+        source TEXT NOT NULL,
+        message TEXT NOT NULL,
+        detail TEXT,
+        context TEXT
+      )`),
   ]);
 }
 
@@ -91,6 +101,7 @@ async function clearDb(db: D1Database) {
     db.prepare("DELETE FROM clientes_fiscales"),
     db.prepare("DELETE FROM demo_whatsapp"),
     db.prepare("DELETE FROM settings"),
+    db.prepare("DELETE FROM error_log"),
   ]);
 }
 
@@ -1204,6 +1215,30 @@ describe("Worker HTTP", () => {
 
       const withSecret = await callSa("/api/superadmin/settings", undefined, SA);
       expect(withSecret.status).toBe(200);
+    });
+
+    it("error log: sample, list y clear", async () => {
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      const sample = await callSa("/api/superadmin/errors/sample", {
+        method: "POST",
+      });
+      expect(sample.status).toBe(200);
+
+      const listed = await callSa("/api/superadmin/errors");
+      expect(listed.status).toBe(200);
+      const body = (await listed.json()) as {
+        errors: Array<{ source: string; message: string }>;
+      };
+      expect(body.errors.length).toBeGreaterThan(0);
+      expect(body.errors[0]?.source).toBe("superadmin");
+
+      const cleared = await callSa("/api/superadmin/errors", {
+        method: "DELETE",
+      });
+      expect(cleared.status).toBe(200);
+      const after = await callSa("/api/superadmin/errors");
+      const afterBody = (await after.json()) as { errors: unknown[] };
+      expect(afterBody.errors).toEqual([]);
     });
   });
 });

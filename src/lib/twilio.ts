@@ -1,4 +1,5 @@
 import type { Env } from "../types";
+import { logAppError } from "./error-log";
 
 export type QuickReplyAction = { title: string; id: string };
 export type ListItem = { id: string; item: string; description?: string };
@@ -41,10 +42,23 @@ export async function sendWhatsapp(
       },
     );
     if (!res.ok) {
-      console.log(`[whatsapp] send failed: ${res.status} ${await res.text()}`);
+      const bodyText = await res.text();
+      console.log(`[whatsapp] send failed: ${res.status} ${bodyText}`);
+      await logAppError(env, {
+        source: "twilio",
+        message: `WhatsApp send HTTP ${res.status}`,
+        detail: bodyText,
+        context: dest,
+      });
     }
   } catch (err) {
     console.log(`[whatsapp] send failed: ${String(err)}`);
+    await logAppError(env, {
+      source: "twilio",
+      message: err instanceof Error ? err.message : String(err),
+      detail: String(err),
+      context: dest,
+    });
   }
 }
 
