@@ -49,8 +49,8 @@ Rail de pago: **CoDi Banxico** vía **pey** (QR + payment link opcional). Timbra
 
 1. Abre [/superadmin](https://cobro-codi.inomali.workers.dev/superadmin).
 2. Entra con la **contraseña del panel** (o el `SUPERADMIN_SECRET` de Wrangler la primera vez).
-3. Revisa **Errores recientes**, prueba conexiones, copia webhooks y edita APIs / nombre del negocio **sin redeploy**.
-4. **Cerrar sesión** está arriba a la derecha.
+3. Navega con el **menú lateral** (desktop) o los **chips** (móvil): Resumen → Errores → Webhooks → Conexiones → Config → Acceso.
+4. Desde **Resumen** saltas a lo que necesites; **Cerrar sesión** está arriba a la derecha.
 
 ---
 
@@ -66,7 +66,7 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 |---|---|
 | `/` | Landing (`public/index.html`) |
 | `/admin` | Panel operador (`public/admin.html`) |
-| `/superadmin` | Config APIs, webhooks, contraseña, errores |
+| `/superadmin` | Centro de control: resumen, errores, webhooks, conexiones, config, acceso |
 | `/ticket/:id` | Ticket HTML con QR grande |
 | `/files/:key` | QR PNG, facturas PDF/XML |
 | `/health` | Healthcheck |
@@ -107,7 +107,7 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 
 ## Superadmin
 
-Sirve para operar el comercio sin tocar Wrangler en cada cambio de API key o webhook.
+Sirve para operar el comercio sin tocar Wrangler en cada cambio de API key o webhook. UI en `public/superadmin.html`.
 
 ### Activación (una vez)
 
@@ -120,22 +120,27 @@ npm run deploy
 
 Las tablas `settings` y `error_log` también se crean solas la primera vez que el Worker las usa (útil si el token de deploy no puede aplicar migraciones D1).
 
-### Qué incluye la UI
+### Navegación
 
-| Bloque | Para qué |
+| Vista | Qué hace |
 |---|---|
-| **Errores recientes** | Fallos de WhatsApp, pey, Facturapi, demos (Actualizar / Probar log / Limpiar). Complementa Cloudflare → Workers → Logs |
-| **Contraseña del panel** | Contraseña memorable (≥ 6). Se guarda en D1; no reemplaza el secret de Wrangler |
-| **Webhooks** | URLs listas para pegar en Twilio y pey |
-| **Probar conexiones** | Ping a pey / Facturapi / Twilio con las keys efectivas |
-| **Configuración** | `BUSINESS_NAME`, `PUBLIC_URL`, keys Twilio/pey/Facturapi, secrets de panel/firma |
+| **Resumen** | Nombre del negocio, conteo de errores y atajos a Errores / Conexiones / Config |
+| **Errores** | Log reciente (Actualizar / Probar log / Limpiar). Complementa Cloudflare → Workers → Logs |
+| **Webhooks** | URLs Twilio y pey con botón **Copiar** |
+| **Conexiones** | Ping a pey / Facturapi / Twilio con las keys efectivas |
+| **Configuración** | Overrides agrupados: Negocio, pey, Facturapi, Twilio, Panel/archivos |
+| **Acceso** | Contraseña memorable del panel (≥ 6). El secret de Wrangler queda de respaldo |
+
+- **Desktop:** menú lateral sticky (rail).
+- **Móvil:** chips horizontales arriba del contenido.
+- La pestaña activa se recuerda en la sesión del navegador.
 
 ### Reglas
 
 - Valores en D1 `settings` **pisan** los secrets de Wrangler.
 - En secretos: input vacío = no tocar; `__CLEAR__` = quitar el override.
 - `SUPERADMIN_SECRET` **nunca** se edita desde la UI (solo Wrangler).
-- La contraseña del panel **sí** se cambia desde la UI; el secret sigue valiendo para entrar si la olvidas.
+- La contraseña del panel **sí** se cambia en **Acceso**; el secret sigue valiendo para entrar si la olvidas.
 - **Cerrar sesión** limpia el token de la pestaña (arriba a la derecha).
 
 ---
@@ -268,6 +273,7 @@ npm run typecheck
 | `src/lib/privacy.ts` | Enmascarado de WhatsApp en APIs / logs |
 | `src/lib/settings.ts` | Overrides D1 + `withSettings` |
 | `src/lib/superadmin.ts` | Auth secret + contraseña del panel |
+| `public/superadmin.html` | UI Superadmin (rail / chips / pestañas) |
 | `src/lib/connection-tests.ts` | Ping pey / Facturapi / Twilio |
 | `src/lib/error-log.ts` | Errores recientes (D1 → Superadmin) |
 | `src/lib/demo.ts` / `demo-whatsapp.ts` | Simulación y join |
