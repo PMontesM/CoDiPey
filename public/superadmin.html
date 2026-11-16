@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es" class="antialiased">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Superadmin · Mostrito</title>
+  <link rel="icon" href="/mostrito-icon.jpg" type="image/jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500;1,9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      background: #0B1613;
+      color: #0F1A17;
+      min-height: 100vh;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0; z-index: -2;
+      background: url("/hero-barrio.jpg") center / cover no-repeat;
+      transform: scale(1.02);
+      filter: brightness(1.12) saturate(1.05);
+    }
+    body::after {
+      content: "";
+      position: fixed; inset: 0; z-index: -1;
+      background: linear-gradient(180deg, rgba(8,18,16,.35), rgba(8,18,16,.72));
+    }
+    .glass {
+      background: rgba(244,248,246,.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,.4);
+      box-shadow: 0 16px 40px rgba(8,18,16,.18);
+    }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    .serif { font-family: "Fraunces", Georgia, serif; }
+  </style>
+</head>
+<body class="px-4 py-6 sm:px-6 lg:px-8">
+  <div class="max-w-3xl mx-auto space-y-4">
+    <header class="glass rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <img src="/mostrito-icon.jpg" alt="" class="w-10 h-10 rounded-full object-cover border-2 border-white/70" />
+        <div>
+          <h1 class="serif text-2xl font-semibold tracking-tight">Superadmin</h1>
+          <p class="text-xs text-[#3F524B]">APIs, webhooks y nombre del negocio — sin redeploy</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/admin" class="text-xs font-semibold px-3 py-2 rounded-lg border border-[#D0D9D4] bg-white/80 hover:bg-[#E4EBE7]">Panel</a>
+        <a href="/" class="text-xs font-semibold px-3 py-2 rounded-lg border border-[#D0D9D4] bg-white/80 hover:bg-[#E4EBE7]">Inicio</a>
+      </div>
+    </header>
+
+    <section id="gate" class="glass rounded-2xl p-5 space-y-3">
+      <p id="gateMsg" class="text-sm text-[#3F524B]">Comprobando acceso…</p>
+      <div id="gateForm" class="hidden space-y-2">
+        <label class="text-xs font-semibold text-[#0F1A17]">SUPERADMIN_SECRET</label>
+        <input id="tokenInput" type="password" autocomplete="current-password"
+          class="w-full rounded-lg border border-[#D0D9D4] bg-white px-3 py-2 text-sm mono"
+          placeholder="Token de Wrangler" />
+        <button id="btnUnlock" type="button"
+          class="rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-white text-sm font-semibold px-4 py-2">
+          Desbloquear
+        </button>
+      </div>
+    </section>
+
+    <div id="app" class="hidden space-y-4">
+      <section class="glass rounded-2xl p-5 space-y-3">
+        <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Webhooks (copiar a pey / Twilio)</h2>
+        <div class="space-y-2 text-sm">
+          <div>
+            <div class="text-[11px] font-semibold text-[#3F524B]">Twilio WhatsApp</div>
+            <code id="hookTwilio" class="mono text-xs break-all block bg-white/70 border border-[#D0D9D4] rounded-lg px-3 py-2"></code>
+          </div>
+          <div>
+            <div class="text-[11px] font-semibold text-[#3F524B]">pey (pago)</div>
+            <code id="hookPey" class="mono text-xs break-all block bg-white/70 border border-[#D0D9D4] rounded-lg px-3 py-2"></code>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass rounded-2xl p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Probar conexiones</h2>
+          <button id="btnTestAll" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0F2A24] text-white hover:bg-[#174038]">Probar las 3</button>
+        </div>
+        <div class="grid gap-2 sm:grid-cols-3" id="testCards">
+          <button type="button" data-test="pey" class="test-btn text-left rounded-xl border border-[#D0D9D4] bg-white/80 p-3 hover:border-[#C2185B]">
+            <div class="text-xs font-bold">pey</div>
+            <div class="test-status text-[11px] text-[#3F524B] mt-1">Sin probar</div>
+          </button>
+          <button type="button" data-test="facturapi" class="test-btn text-left rounded-xl border border-[#D0D9D4] bg-white/80 p-3 hover:border-[#C2185B]">
+            <div class="text-xs font-bold">Facturapi</div>
+            <div class="test-status text-[11px] text-[#3F524B] mt-1">Sin probar</div>
+          </button>
+          <button type="button" data-test="twilio" class="test-btn text-left rounded-xl border border-[#D0D9D4] bg-white/80 p-3 hover:border-[#C2185B]">
+            <div class="text-xs font-bold">Twilio</div>
+            <div class="test-status text-[11px] text-[#3F524B] mt-1">Sin probar</div>
+          </button>
+        </div>
+      </section>
+
+      <section class="glass rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Configuración</h2>
+        <p class="text-[11px] text-[#3F524B]">Los valores en D1 pisan los secrets de Wrangler. En secretos: deja vacío para no cambiar; escribe <span class="mono">__CLEAR__</span> para quitar el override.</p>
+        <form id="settingsForm" class="space-y-3"></form>
+        <div class="flex flex-wrap gap-2 pt-1">
+          <button id="btnSave" type="submit" form="settingsForm"
+            class="rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-white text-sm font-semibold px-4 py-2">
+            Guardar
+          </button>
+          <button id="btnLogout" type="button"
+            class="rounded-lg border border-[#D0D9D4] bg-white text-sm font-semibold px-4 py-2">
+            Cerrar sesión
+          </button>
+        </div>
+        <p id="saveStatus" class="text-xs text-[#3F524B]" role="status"></p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "mostrito_superadmin_token";
+    const LABELS = {
+      BUSINESS_NAME: "Nombre del negocio",
+      PUBLIC_URL: "PUBLIC_URL (HTTPS del Worker)",
+      PEY_API_KEY: "pey API key",
+      PEY_WEBHOOK_SECRET: "pey webhook secret",
+      FACTURAPI_KEY: "Facturapi key",
+      TWILIO_ACCOUNT_SID: "Twilio Account SID",
+      TWILIO_AUTH_TOKEN: "Twilio Auth Token",
+      TWILIO_WHATSAPP_FROM: "Twilio WhatsApp From",
+      TWILIO_SANDBOX_JOIN_CODE: "Sandbox join code",
+      TWILIO_SMS_FROM: "Twilio SMS From (opcional)",
+      ADMIN_API_SECRET: "Admin API secret (panel)",
+      FILE_SIGNING_SECRET: "File signing secret (facturas)",
+    };
+
+    function getToken() {
+      try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; }
+    }
+    function setToken(v) {
+      try {
+        if (v) sessionStorage.setItem(TOKEN_KEY, v);
+        else sessionStorage.removeItem(TOKEN_KEY);
+      } catch { /* ignore */ }
+    }
+    function headers(json = true) {
+      const h = {};
+      if (json) h["Content-Type"] = "application/json";
+      const t = getToken();
+      if (t) h["x-superadmin-token"] = t;
+      return h;
+    }
+
+    async function boot() {
+      const st = await fetch("/api/superadmin/status").then(r => r.json());
+      const gateMsg = document.getElementById("gateMsg");
+      const gateForm = document.getElementById("gateForm");
+      if (!st.configured) {
+        gateMsg.textContent = "Superadmin apagado. En Cloudflare: wrangler secret put SUPERADMIN_SECRET (una vez) y redeploy.";
+        document.getElementById("hookTwilio").textContent = st.webhooks?.twilio || "";
+        document.getElementById("hookPey").textContent = st.webhooks?.pey || "";
+        return;
+      }
+      if (!getToken()) {
+        gateMsg.textContent = "Introduce el SUPERADMIN_SECRET para editar APIs y webhooks.";
+        gateForm.classList.remove("hidden");
+        return;
+      }
+      await loadSettings();
+    }
+
+    async function loadSettings() {
+      const res = await fetch("/api/superadmin/settings", { headers: headers(false) });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setToken("");
+        document.getElementById("gateMsg").textContent = "Token inválido.";
+        document.getElementById("gateForm").classList.remove("hidden");
+        document.getElementById("app").classList.add("hidden");
+        return;
+      }
+      if (!res.ok) {
+        document.getElementById("gateMsg").textContent = data.detail || `Error ${res.status}`;
+        return;
+      }
+      document.getElementById("gate").classList.add("hidden");
+      document.getElementById("app").classList.remove("hidden");
+      document.getElementById("hookTwilio").textContent = data.webhooks.twilio;
+      document.getElementById("hookPey").textContent = data.webhooks.pey;
+      const form = document.getElementById("settingsForm");
+      form.innerHTML = data.settings.map(row => {
+        const label = LABELS[row.key] || row.key;
+        const badge = row.from_db ? "D1" : (row.from_env ? "env" : "vacío");
+        return `<div class="rounded-xl border border-[#D0D9D4] bg-white/75 p-3 space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-xs font-semibold" for="f_${row.key}">${label}</label>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-[#E4EBE7] text-[#3F524B]">${badge}</span>
+          </div>
+          <div class="mono text-[10px] text-[#6A7A73]">Efectivo: ${row.effective || "—"}</div>
+          <input id="f_${row.key}" name="${row.key}" type="${row.secret ? "password" : "text"}"
+            class="w-full rounded-lg border border-[#D0D9D4] bg-white px-3 py-2 text-sm ${row.secret ? "mono" : ""}"
+            placeholder="${row.input_placeholder.replace(/"/g, "&quot;")}"
+            autocomplete="off" />
+        </div>`;
+      }).join("");
+    }
+
+    document.getElementById("btnUnlock").addEventListener("click", async () => {
+      setToken(document.getElementById("tokenInput").value.trim());
+      await loadSettings();
+    });
+
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      setToken("");
+      location.reload();
+    });
+
+    document.getElementById("settingsForm").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const status = document.getElementById("saveStatus");
+      status.textContent = "Guardando…";
+      const patch = {};
+      for (const el of ev.target.elements) {
+        if (!el.name) continue;
+        const v = el.value;
+        if (v === "") continue; // no tocar
+        patch[el.name] = v;
+      }
+      const res = await fetch("/api/superadmin/settings", {
+        method: "PUT",
+        headers: headers(true),
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        status.textContent = data.detail || `Error ${res.status}`;
+        return;
+      }
+      status.textContent = "Guardado. Los overrides ya aplican sin redeploy.";
+      await loadSettings();
+    });
+
+    async function runTest(id) {
+      const card = document.querySelector(`[data-test="${id}"]`);
+      const status = card?.querySelector(".test-status");
+      if (status) status.textContent = "Probando…";
+      const res = await fetch(`/api/superadmin/test/${id}`, {
+        method: "POST",
+        headers: headers(false),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (status) {
+        status.textContent = data.message || (res.ok ? "OK" : "Falló");
+        status.className = `test-status text-[11px] mt-1 ${data.ok ? "text-[#15803D] font-semibold" : "text-[#A0144A] font-semibold"}`;
+      }
+    }
+
+    document.querySelectorAll(".test-btn").forEach(btn => {
+      btn.addEventListener("click", () => runTest(btn.getAttribute("data-test")));
+    });
+    document.getElementById("btnTestAll").addEventListener("click", async () => {
+      for (const id of ["pey", "facturapi", "twilio"]) await runTest(id);
+    });
+
+    boot();
+  </script>
+</body>
+</html>

@@ -245,6 +245,8 @@ export async function storeQrPng(
       concepto: opts.concepto,
       vigenciaMin: Math.floor(QR_TTL_SEC / 60),
       peyQrId: opts.peyQrId,
+      businessName:
+        (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito",
     };
     try {
       bytes = await renderTicketPng(qrBytes, meta);

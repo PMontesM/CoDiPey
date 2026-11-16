@@ -9,6 +9,7 @@ Mascota: ajolote **Mostrito**.
 | **Repo** | https://github.com/PMontesM/CoDiPey |
 | **Landing** | https://cobro-codi.inomali.workers.dev/ |
 | **Panel** | https://cobro-codi.inomali.workers.dev/admin |
+| **Superadmin** | https://cobro-codi.inomali.workers.dev/superadmin |
 | **Health** | https://cobro-codi.inomali.workers.dev/health |
 
 ---
@@ -57,6 +58,7 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 |---|---|
 | `/` | Landing (`public/index.html`) |
 | `/admin` | Panel (`public/admin.html`) |
+| `/superadmin` | APIs, webhooks, nombre del negocio (sin redeploy) |
 | `/ticket/:id` | Ticket HTML con QR grande |
 | `/files/:key` | QR PNG, facturas PDF/XML |
 | `/health` | Healthcheck |
@@ -70,6 +72,9 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 | `POST /api/demo/registrar-whatsapp` | Registro público → `wa.me` |
 | `POST /api/demo/simular-cobro` | Orden + QR sin Sandbox |
 | `POST /api/demo/simular-pago/:id` | Liquida como pey + CFDI |
+| `GET /api/superadmin/status` | ¿Hay `SUPERADMIN_SECRET`? + URLs webhook |
+| `GET/PUT /api/superadmin/settings` | Overrides D1 (Bearer / `x-superadmin-token`) |
+| `POST /api/superadmin/test/:id` | Prueba `pey` / `facturapi` / `twilio` |
 
 ### Auth (importante para el demo)
 
@@ -77,6 +82,8 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 |---|---|
 | **Sin** `ADMIN_API_SECRET` | Panel y APIs de operador **abiertos** (single-tenant / demo) |
 | **Con** `ADMIN_API_SECRET` | Hay que pegar el token en el panel (botón **Token**) |
+| **Sin** `SUPERADMIN_SECRET` | `/superadmin` apagado (503 en APIs) |
+| **Con** `SUPERADMIN_SECRET` | UI en `/superadmin` para editar APIs/webhooks/nombre **sin redeploy** (overrides en D1) |
 | Facturas PDF/XML | Si hay secreto de firma (`FILE_SIGNING_SECRET` / `ADMIN_API_SECRET` / `PEY_WEBHOOK_SECRET`), requieren URL firmada (`?exp=&sig=`). **Sin** secreto, se sirven abiertas |
 | QR (`qr_*.png`) y `/ticket/:id` | Públicos |
 | Join WhatsApp | Público (`registrar-whatsapp` no pide token) |
@@ -86,11 +93,24 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 
 ---
 
+## Superadmin (primer slice)
+
+1. Una vez: `npx wrangler secret put SUPERADMIN_SECRET` + `npm run deploy`.
+2. Aplica migración `0005_settings`: `npx wrangler d1 migrations apply cobro-db --remote`.
+3. Abre [/superadmin](https://cobro-codi.inomali.workers.dev/superadmin) (o el enlace desde el panel).
+4. Pega el secret → edita `BUSINESS_NAME`, keys pey/Facturapi/Twilio, `PUBLIC_URL`, etc.
+5. Copia las URLs de webhook a pey / Twilio.
+6. **Probar las 3** conexiones sin tocar Wrangler otra vez.
+
+Los valores en la tabla D1 `settings` **pisan** los secrets de Wrangler. En secretos: input vacío = no tocar; `__CLEAR__` = quitar el override. `SUPERADMIN_SECRET` **nunca** se guarda en D1.
+
+---
+
 ## Secrets / bindings
 
 | Nombre | Uso |
 |---|---|
-| `DB` (D1 `cobro-db`) | Órdenes, fiscales, blobs, demo_whatsapp |
+| `DB` (D1 `cobro-db`) | Órdenes, fiscales, blobs, demo_whatsapp, **settings** |
 | `ASSETS` | `public/` |
 | `PEY_API_KEY` | QR CoDi + payment links |
 | `PEY_WEBHOOK_SECRET` | Firma `/pey/webhook` |
@@ -101,6 +121,8 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 | `ADMIN_API_SECRET` | (Opcional) Cierra el panel |
 | `FILE_SIGNING_SECRET` | (Opcional) HMAC dedicado de facturas |
 | `PUBLIC_URL` | Base HTTPS del Worker |
+| `SUPERADMIN_SECRET` | (Opcional) Desbloquea `/superadmin` — **solo Wrangler** |
+| `BUSINESS_NAME` | (Opcional) Nombre en tickets / WhatsApp (también vía superadmin) |
 
 Plantilla local: [`.env.example`](.env.example).
 
@@ -126,6 +148,7 @@ Estados útiles en panel: `ARMAR_PEDIDO`, `ESPERANDO_FACTURA`, `ESPERANDO_FISCAL
 - Inspector (drawer): QR, simular pago, cancelar, reintentar timbrado, abrir PDF/XML.
 - En móvil, **atrás** cierra el drawer y te deja en el panel.
 - Enlace **Inicio** / logo → landing.
+- Enlace **Superadmin** → `/superadmin` (APIs y webhooks).
 
 ---
 
@@ -157,13 +180,16 @@ npx wrangler secret put PUBLIC_URL   # https://cobro-codi.inomali.workers.dev
 # Opcional endurecimiento:
 # npx wrangler secret put ADMIN_API_SECRET
 # npx wrangler secret put FILE_SIGNING_SECRET
+# Superadmin (editar APIs sin redeploy):
+# npx wrangler secret put SUPERADMIN_SECRET
 npm run deploy
 ```
 
-Migraciones en `migrations/` (`0001` … `0004_pey_payment_url`).
+Migraciones en `migrations/` (`0001` … `0005_settings`).
 
 Webhook pey → `https://cobro-codi.inomali.workers.dev/pey/webhook`.  
-Webhook Twilio → `https://cobro-codi.inomali.workers.dev/whatsapp/webhook`.
+Webhook Twilio → `https://cobro-codi.inomali.workers.dev/whatsapp/webhook`.  
+(También las copias desde `/superadmin`.)
 
 ---
 
@@ -192,8 +218,11 @@ npm run typecheck
 | `src/lib/ticket.ts` | Ticket PNG/HTML |
 | `src/lib/facturapi.ts` | Timbrado + links firmados |
 | `src/lib/security.ts` | Firmas Twilio/pey + operador + facturas |
+| `src/lib/settings.ts` | Overrides D1 + `withSettings` |
+| `src/lib/superadmin.ts` | Auth `SUPERADMIN_SECRET` |
+| `src/lib/connection-tests.ts` | Ping pey / Facturapi / Twilio |
 | `src/lib/demo.ts` / `demo-whatsapp.ts` | Simulación y join |
-| `public/` | Landing, panel, mascota, video, shots |
+| `public/` | Landing, panel, superadmin, mascota, video, shots |
 | `migrations/` | Schema D1 |
 | `scripts/` | Seed, smoke |
 | `test/` | Vitest |

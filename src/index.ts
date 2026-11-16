@@ -2,6 +2,11 @@ import { Hono } from "hono";
 import { buildOrdenesPayload, resolveEmisor } from "./lib/admin";
 import { getBlob } from "./lib/blobs";
 import { handleWhatsappMessage } from "./lib/chat";
+import {
+  runAllConnectionTests,
+  runConnectionTest,
+  type ConnectionTestId,
+} from "./lib/connection-tests";
 import { simularCobroDemo, simularPagoDemo } from "./lib/demo";
 import {
   buildJoinPayload,
@@ -18,6 +23,16 @@ import {
   verifyPeyWebhook,
   verifyTwilioSignature,
 } from "./lib/security";
+import {
+  listSettingsView,
+  upsertSettings,
+  withSettings,
+  type SettingKey,
+} from "./lib/settings";
+import {
+  requireSuperadmin,
+  superadminConfigured,
+} from "./lib/superadmin";
 import { renderTicketHtmlPage } from "./lib/ticket";
 import { sendWhatsapp } from "./lib/twilio";
 import type { Env, Item, Orden } from "./types";
@@ -26,16 +41,21 @@ type AppEnv = { Bindings: Env };
 
 const app = new Hono<AppEnv>();
 
-function publicUrl(c: { env: Env; req: { url: string } }): string {
-  if (c.env.PUBLIC_URL) return c.env.PUBLIC_URL.replace(/\/$/, "");
-  return new URL(c.req.url).origin;
+async function runtimeEnv(env: Env): Promise<Env> {
+  return withSettings(env);
+}
+
+function publicUrlFrom(env: Env, reqUrl: string): string {
+  if (env.PUBLIC_URL) return env.PUBLIC_URL.replace(/\/$/, "");
+  return new URL(reqUrl).origin;
 }
 
 async function guardOperator(c: {
   req: { raw: Request };
   env: Env;
 }): Promise<Response | null> {
-  return requireOperator(c.req.raw, c.env);
+  const env = await runtimeEnv(c.env);
+  return requireOperator(c.req.raw, env);
 }
 
 app.get("/health", (c) => c.json({ status: "ok", runtime: "cloudflare-worker" }));
@@ -56,12 +76,98 @@ app.get("/admin", async (c) => {
   return c.text("admin.html no encontrado", 404);
 });
 
+app.get("/superadmin", async (c) => {
+  if (c.env.ASSETS) {
+    const res = await c.env.ASSETS.fetch(
+      new URL("/superadmin.html", c.req.url),
+    );
+    if (res.ok) return res;
+  }
+  return c.text("superadmin.html no encontrado", 404);
+});
+
+app.get("/api/superadmin/status", (c) =>
+  c.json({
+    configured: superadminConfigured(c.env),
+    webhooks: {
+      twilio: `${new URL(c.req.url).origin}/whatsapp/webhook`,
+      pey: `${new URL(c.req.url).origin}/pey/webhook`,
+    },
+  }),
+);
+
+app.get("/api/superadmin/settings", async (c) => {
+  const denied = requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const env = await runtimeEnv(c.env);
+  const base = publicUrlFrom(env, c.req.url);
+  return c.json(
+    {
+      settings: await listSettingsView(c.env),
+      webhooks: {
+        twilio: `${base}/whatsapp/webhook`,
+        pey: `${base}/pey/webhook`,
+      },
+      business_name: (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito",
+    },
+    { headers: { "cache-control": "private, no-store" } },
+  );
+});
+
+app.put("/api/superadmin/settings", async (c) => {
+  const denied = requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  let body: Partial<Record<SettingKey, string>> = {};
+  try {
+    body = (await c.req.json()) as Partial<Record<SettingKey, string>>;
+  } catch {
+    return c.json({ detail: "JSON inválido" }, 400);
+  }
+  try {
+    await upsertSettings(c.env, body);
+  } catch (err) {
+    return c.json(
+      {
+        detail: `No se pudo guardar (¿migración 0005 aplicada?): ${String(err)}`,
+      },
+      500,
+    );
+  }
+  const env = await runtimeEnv(c.env);
+  return c.json({
+    ok: true,
+    settings: await listSettingsView(c.env),
+    business_name: (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito",
+  });
+});
+
+app.post("/api/superadmin/test/:id", async (c) => {
+  const denied = requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const id = String(c.req.param("id") || "") as ConnectionTestId;
+  if (id !== "pey" && id !== "facturapi" && id !== "twilio") {
+    return c.json({ detail: "id inválido" }, 400);
+  }
+  const env = await runtimeEnv(c.env);
+  const result = await runConnectionTest(env, id);
+  return c.json(result, result.ok ? 200 : 502);
+});
+
+app.post("/api/superadmin/test", async (c) => {
+  const denied = requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const env = await runtimeEnv(c.env);
+  const results = await runAllConnectionTests(env);
+  return c.json({ results });
+});
+
 app.get("/files/:key", async (c) => {
   const key = c.req.param("key");
   if (!/^[\w.-]+$/.test(key)) return c.text("invalid", 400);
+  const env = await runtimeEnv(c.env);
   if (isProtectedFileKey(key)) {
     const ok = await verifyFileAccess(
-      c.env,
+      env,
       key,
       c.req.query("exp") || null,
       c.req.query("sig") || null,
@@ -82,6 +188,7 @@ app.get("/files/:key", async (c) => {
 
 /** Ticket HTML responsive (WhatsApp no embebe HTML; se abre en el navegador). */
 app.get("/ticket/:id", async (c) => {
+  const env = await runtimeEnv(c.env);
   const id = Number(c.req.param("id"));
   if (!Number.isFinite(id) || id <= 0) return c.text("Orden inválida", 400);
   const orden = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
@@ -97,7 +204,7 @@ app.get("/ticket/:id", async (c) => {
     items = [];
   }
 
-  const expires = await getQrExpiresInSec(c.env, {
+  const expires = await getQrExpiresInSec(env, {
     id: orden.id,
     pago_estado: orden.pago_estado,
     pey_qr_id: orden.pey_qr_id,
@@ -113,11 +220,13 @@ app.get("/ticket/:id", async (c) => {
     estado = "VENCIDO";
   }
 
-  const base = publicUrl(c);
+  const base = publicUrlFrom(env, c.req.url);
   const rawQr = await getBlob(c.env, `qr_code_${orden.id}.png`);
   const qrImageUrl = rawQr
     ? `${base}/files/qr_code_${orden.id}.png`
     : `${base}/files/qr_${orden.id}.png`;
+  const businessName =
+    (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito";
   const html = renderTicketHtmlPage({
     meta: {
       ordenId: orden.id,
@@ -126,6 +235,7 @@ app.get("/ticket/:id", async (c) => {
       concepto: orden.concepto_pey || undefined,
       peyQrId: orden.pey_qr_id,
       vigenciaMin: 10,
+      businessName,
     },
     qrImageUrl,
     estado,
@@ -140,6 +250,7 @@ app.get("/ticket/:id", async (c) => {
 app.get("/api/ordenes", async (c) => {
   const denied = await guardOperator(c);
   if (denied) return denied;
+  const env = await runtimeEnv(c.env);
   const { results } = await c.env.DB.prepare(
     `SELECT o.*,
             c.rfc AS rfc,
@@ -154,7 +265,7 @@ app.get("/api/ordenes", async (c) => {
   const rows = results || [];
   const withExpiry = await Promise.all(
     rows.map(async (o) => {
-      const expires_in_sec = await getQrExpiresInSec(c.env, {
+      const expires_in_sec = await getQrExpiresInSec(env, {
         id: Number(o.id),
         pago_estado: String(o.pago_estado),
         pey_qr_id: (o.pey_qr_id as string | null) || null,
@@ -169,9 +280,9 @@ app.get("/api/ordenes", async (c) => {
       };
     }),
   );
-  const emisor = await resolveEmisor(c.env);
+  const emisor = await resolveEmisor(env);
   const payload = buildOrdenesPayload(withExpiry, emisor);
-  const base = publicUrl(c);
+  const base = publicUrlFrom(env, c.req.url);
   payload.ordenes = await Promise.all(
     payload.ordenes.map(async (o) => {
       if (!o.facturapi_id) return o;
@@ -179,12 +290,12 @@ app.get("/api/ordenes", async (c) => {
       return {
         ...o,
         factura_pdf_url: await signedFilePath(
-          c.env,
+          env,
           base,
           `factura_${id}.pdf`,
         ),
         factura_xml_url: await signedFilePath(
-          c.env,
+          env,
           base,
           `factura_${id}.xml`,
         ),
@@ -213,22 +324,24 @@ app.get("/api/ordenes/:id/factura.:ext", async (c) => {
   if (!row) return c.text("not found", 404);
   if (!row.facturapi_id) return c.text("sin factura", 404);
   const key = `factura_${id}.${ext}`;
+  const env = await runtimeEnv(c.env);
   const blob = await getBlob(c.env, key);
   if (!blob) return c.text("not found", 404);
-  const target = await signedFilePath(c.env, publicUrl(c), key);
+  const target = await signedFilePath(env, publicUrlFrom(env, c.req.url), key);
   return c.redirect(target, 302);
 });
 
 app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
   const denied = await guardOperator(c);
   if (denied) return denied;
+  const env = await runtimeEnv(c.env);
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
     .bind(id)
     .first<Orden>();
   if (!row) return c.json({ detail: "Orden no encontrada" }, 404);
   if (row.facturapi_id) return c.json({ orden: row, message: "Ya timbrada" });
-  const updated = await evaluarYTimbrar(c.env, publicUrl(c), id);
+  const updated = await evaluarYTimbrar(env, publicUrlFrom(env, c.req.url), id);
   if (!updated) return c.json({ detail: "Orden no encontrada" }, 404);
   return c.json({ orden: updated });
 });
@@ -264,22 +377,24 @@ app.post("/api/ordenes/:id/cancelar", async (c) => {
 });
 
 /** Config pública para unirse al WhatsApp de Mostrito (Sandbox Twilio). */
-app.get("/api/demo/whatsapp-join", (c) => {
-  const payload = buildJoinPayload(c.env);
+app.get("/api/demo/whatsapp-join", async (c) => {
+  const env = await runtimeEnv(c.env);
+  const payload = buildJoinPayload(env);
   return c.json({
     configured: payload.configured,
     sandbox: payload.sandbox,
     join_text: payload.configured ? payload.join_text : null,
     wa_link: payload.configured ? payload.wa_link : null,
-    sms_disponible: Boolean((c.env.TWILIO_SMS_FROM || "").trim()),
+    sms_disponible: Boolean((env.TWILIO_SMS_FROM || "").trim()),
     nota: payload.configured
       ? "Pon tu número, abre WhatsApp con el mensaje listo y escribe hola."
-      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker.",
+      : "Falta TWILIO_SANDBOX_JOIN_CODE en el Worker o en Superadmin.",
   });
 });
 
 /** Registro público de WhatsApp: guarda el número y devuelve wa.me con join. */
 app.post("/api/demo/registrar-whatsapp", async (c) => {
+  const env = await runtimeEnv(c.env);
   let telefono = "";
   try {
     const body = (await c.req.json()) as { telefono?: string };
@@ -287,7 +402,7 @@ app.post("/api/demo/registrar-whatsapp", async (c) => {
   } catch {
     return c.json({ detail: "JSON inválido" }, 400);
   }
-  const result = await registrarDemoWhatsapp(c.env, telefono);
+  const result = await registrarDemoWhatsapp(env, telefono);
   return c.json(result.body, result.status as 200 | 400 | 503);
 });
 
@@ -295,8 +410,9 @@ app.post("/api/demo/registrar-whatsapp", async (c) => {
 app.post("/api/demo/simular-cobro", async (c) => {
   const denied = await guardOperator(c);
   if (denied) return denied;
+  const env = await runtimeEnv(c.env);
   try {
-    const result = await simularCobroDemo(c.env, publicUrl(c));
+    const result = await simularCobroDemo(env, publicUrlFrom(env, c.req.url));
     return c.json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -308,12 +424,13 @@ app.post("/api/demo/simular-cobro", async (c) => {
 app.post("/api/demo/simular-pago/:id", async (c) => {
   const denied = await guardOperator(c);
   if (denied) return denied;
+  const env = await runtimeEnv(c.env);
   const id = Number(c.req.param("id"));
   if (!Number.isFinite(id) || id <= 0) {
     return c.json({ detail: "id inválido" }, 400);
   }
   try {
-    const result = await simularPagoDemo(c.env, publicUrl(c), id);
+    const result = await simularPagoDemo(env, publicUrlFrom(env, c.req.url), id);
     return c.json(result);
   } catch (err) {
     const status = (err as Error & { status?: number }).status || 500;
@@ -323,12 +440,13 @@ app.post("/api/demo/simular-pago/:id", async (c) => {
 });
 
 app.post("/whatsapp/webhook", async (c) => {
+  const env = await runtimeEnv(c.env);
   const form = await c.req.parseBody();
   const params: Record<string, string> = {};
   for (const [k, v] of Object.entries(form)) {
     if (typeof v === "string") params[k] = v;
   }
-  const signed = await verifyTwilioSignature(c.env, c.req.raw, params);
+  const signed = await verifyTwilioSignature(env, c.req.raw, params);
   if (!signed) {
     return c.text("Forbidden", 403);
   }
@@ -341,8 +459,8 @@ app.post("/whatsapp/webhook", async (c) => {
   let reply: string;
   try {
     reply = await handleWhatsappMessage(
-      c.env,
-      publicUrl(c),
+      env,
+      publicUrlFrom(env, c.req.url),
       from,
       body,
       buttonPayload || undefined,
@@ -353,7 +471,7 @@ app.post("/whatsapp/webhook", async (c) => {
     reply =
       "Ocurrió un error temporal. Reintenta en unos segundos o contacta al comercio.";
     try {
-      await sendWhatsapp(c.env, from, reply);
+      await sendWhatsapp(env, from, reply);
     } catch {
       /* ignore */
     }
@@ -365,8 +483,9 @@ app.post("/whatsapp/webhook", async (c) => {
 });
 
 app.post("/pey/webhook", async (c) => {
+  const env = await runtimeEnv(c.env);
   const rawBody = await c.req.text();
-  const okSig = await verifyPeyWebhook(c.env, c.req.raw, rawBody);
+  const okSig = await verifyPeyWebhook(env, c.req.raw, rawBody);
   if (!okSig) {
     return c.json({ detail: "invalid signature" }, 401);
   }
@@ -440,11 +559,11 @@ app.post("/pey/webhook", async (c) => {
       .run();
 
     await sendWhatsapp(
-      c.env,
+      env,
       orden.telefono,
       `💰 Pago confirmado: $${orden.monto} MXN (orden #${orden.id}).`,
     );
-    await evaluarYTimbrar(c.env, publicUrl(c), orden.id);
+    await evaluarYTimbrar(env, publicUrlFrom(env, c.req.url), orden.id);
     return c.json({
       ok: true,
       orden_id: orden.id,
@@ -494,11 +613,11 @@ app.post("/pey/webhook", async (c) => {
     .run();
 
   await sendWhatsapp(
-    c.env,
+    env,
     orden.telefono,
     `💰 Pago confirmado: $${orden.monto} MXN (orden #${orden.id}).`,
   );
-  await evaluarYTimbrar(c.env, publicUrl(c), orden.id);
+  await evaluarYTimbrar(env, publicUrlFrom(env, c.req.url), orden.id);
   return c.json({ ok: true, orden_id: orden.id, pago: "PAGADO" });
 });
 

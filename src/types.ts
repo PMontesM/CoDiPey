@@ -20,6 +20,13 @@ export type Env = {
   /** HMAC para URLs firmadas de facturas; cae a ADMIN_API_SECRET / PEY_WEBHOOK_SECRET. */
   FILE_SIGNING_SECRET?: string;
   PUBLIC_URL?: string;
+  /**
+   * Solo Wrangler (no editable en D1). Desbloquea /superadmin.
+   * Header: Authorization Bearer o x-superadmin-token.
+   */
+  SUPERADMIN_SECRET?: string;
+  /** Nombre del comercio en tickets / WhatsApp (override vía settings). */
+  BUSINESS_NAME?: string;
 };
 
 export type Orden = {

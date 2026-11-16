@@ -159,9 +159,14 @@ function formatMmSs(sec: number): string {
   return `${mm}:${ss}`;
 }
 
+function businessNameOf(env: Env): string {
+  return (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito";
+}
+
 async function askMenu(env: Env, telefono: string): Promise<string> {
+  const brand = businessNameOf(env);
   const body =
-    "🛒 *Cobro Mostrito + CFDI 4.0*\n" +
+    `🛒 *Cobro ${brand} + CFDI 4.0*\n` +
     "Elige productos (puedes varios) o escríbelos así:\n" +
     "`2 Cafe 45`\n`1 Agua 10`\n\n" +
     "Cuando termines, toca *Cobrar*.";
@@ -890,6 +895,7 @@ async function emitirQr(
       concepto,
       vigenciaMin: Math.floor(QR_TTL_SEC / 60),
       peyQrId,
+      businessName: businessNameOf(env),
     },
     { mediaUrl: media, ticketUrl, paymentUrl },
   );
@@ -946,6 +952,7 @@ async function resendOrRenewQr(
         concepto: orden.concepto_pey || undefined,
         vigenciaMin: Math.floor(QR_TTL_SEC / 60),
         peyQrId: orden.pey_qr_id,
+        businessName: businessNameOf(env),
       },
       {
         mediaUrl: media,

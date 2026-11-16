@@ -94,7 +94,14 @@ export type TicketMeta = {
   concepto?: string;
   vigenciaMin?: number;
   peyQrId?: string | null;
+  /** Nombre del comercio (default Mostrito). */
+  businessName?: string;
 };
+
+function brandOf(meta: TicketMeta): string {
+  const n = (meta.businessName || "").trim();
+  return n || "Mostrito";
+}
 
 /**
  * Ticket térmico de mostrador: papel angosto, mono, líneas punteadas, QR abajo.
@@ -117,7 +124,7 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
       : [
           {
             cantidad: "1",
-            concepto: meta.concepto || "Cobro Mostrito",
+            concepto: meta.concepto || `Cobro ${brandOf(meta)}`,
             precio_unitario: meta.monto,
             subtotal: meta.monto,
           },
@@ -127,9 +134,10 @@ function buildTicketSvg(meta: TicketMeta, qrPngBase64: string): string {
   const qrSize = 360;
   const body: string[] = [];
   let y = 48;
+  const brand = esc(brandOf(meta));
 
   body.push(
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="34" font-weight="700" fill="#111">Mostrito</text>`,
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${MONO}" font-size="34" font-weight="700" fill="#111">${brand}</text>`,
   );
   y += 30;
   body.push(
@@ -299,7 +307,7 @@ export function formatTicketCaption(
       : [
           {
             cantidad: "1",
-            concepto: meta.concepto || "Cobro Mostrito",
+            concepto: meta.concepto || `Cobro ${brandOf(meta)}`,
             precio_unitario: meta.monto,
             subtotal: meta.monto,
           },
@@ -318,7 +326,7 @@ export function formatTicketCaption(
     ? `\n\n💳 *O paga tocando el link (sin escanear):*\n${opts.paymentUrl}`
     : "";
   return (
-    `🧾 *Ticket de cobro* · orden #${meta.ordenId}\n` +
+    `🧾 *Ticket ${brandOf(meta)}* · orden #${meta.ordenId}\n` +
     `${lines}\n` +
     `*TOTAL $${money(meta.monto)} MXN* · $0 comisión\n` +
     `Válido ${vigencia} min.\n\n` +
@@ -338,6 +346,7 @@ export type TicketPageOpts = {
 /** HTML responsive: WhatsApp no renderiza HTML; se abre en el navegador del celular. */
 export function renderTicketHtmlPage(opts: TicketPageOpts): string {
   const { meta, qrImageUrl, estado, paymentUrl } = opts;
+  const brand = brandOf(meta);
   const vigencia = meta.vigenciaMin ?? DEFAULT_VIGENCIA_MIN;
   const items =
     meta.items.length > 0
@@ -345,7 +354,7 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
       : [
           {
             cantidad: "1",
-            concepto: meta.concepto || "Cobro Mostrito",
+            concepto: meta.concepto || `Cobro ${brand}`,
             precio_unitario: meta.monto,
             subtotal: meta.monto,
           },
@@ -386,7 +395,7 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#FFFEF8" />
-  <title>Ticket #${meta.ordenId} · Mostrito</title>
+  <title>Ticket #${meta.ordenId} · ${esc(brand)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -443,7 +452,7 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
 </head>
 <body>
   <article class="paper">
-    <div class="brand">Mostrito</div>
+    <div class="brand">${esc(brand)}</div>
     <div class="sub">TICKET DE COBRO</div>
     <div class="sub">WhatsApp + QR · $0 comisión</div>
     <div class="center"><span class="status ${statusClass}">${statusLabel}</span></div>

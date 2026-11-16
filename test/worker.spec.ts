@@ -75,6 +75,12 @@ async function migrate(db: D1Database) {
         sms_enviado INTEGER NOT NULL DEFAULT 0,
         sms_error TEXT
       )`),
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`),
   ]);
 }
 
@@ -84,6 +90,7 @@ async function clearDb(db: D1Database) {
     db.prepare("DELETE FROM ordenes"),
     db.prepare("DELETE FROM clientes_fiscales"),
     db.prepare("DELETE FROM demo_whatsapp"),
+    db.prepare("DELETE FROM settings"),
   ]);
 }
 
@@ -156,6 +163,8 @@ describe("Worker HTTP", () => {
     e.ADMIN_API_SECRET = ADMIN_SECRET;
     e.FILE_SIGNING_SECRET = "test-file-signing";
     e.PUBLIC_URL = PUBLIC_BASE;
+    e.SUPERADMIN_SECRET = "";
+    e.BUSINESS_NAME = "";
 
     vi.stubGlobal(
       "fetch",
@@ -1039,6 +1048,133 @@ describe("Worker HTTP", () => {
       const orden = await latestOrden();
       expect(orden?.pey_qr_id).toBeTruthy();
       expect(orden?.datos_fiscales_ok).toBe(1);
+    });
+  });
+
+  describe("Superadmin settings", () => {
+    const SA = "test-superadmin-secret";
+
+    async function callSa(
+      path: string,
+      init?: RequestInit,
+      token = SA,
+    ): Promise<Response> {
+      const headers = new Headers(init?.headers);
+      if (token) headers.set("x-superadmin-token", token);
+      const request = new IncomingRequest(`${PUBLIC_BASE}${path}`, {
+        ...init,
+        headers,
+      });
+      const ctx = createExecutionContext();
+      const response = await worker.fetch(request, env, ctx);
+      await waitOnExecutionContext(ctx);
+      return response;
+    }
+
+    it("status sin SUPERADMIN_SECRET → configured false", async () => {
+      const res = await callSa("/api/superadmin/status", undefined, "");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { configured: boolean };
+      expect(body.configured).toBe(false);
+    });
+
+    it("settings sin secret → 503; con token malo → 401", async () => {
+      let res = await callSa("/api/superadmin/settings", undefined, "");
+      expect(res.status).toBe(503);
+
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      res = await callSa("/api/superadmin/settings", undefined, "wrong");
+      expect(res.status).toBe(401);
+    });
+
+    it("PUT BUSINESS_NAME en D1 y withSettings lo aplica al ticket", async () => {
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      const put = await callSa("/api/superadmin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ BUSINESS_NAME: "Abarrotes Luna" }),
+      });
+      expect(put.status).toBe(200);
+      const listed = (await put.json()) as {
+        business_name: string;
+        settings: Array<{ key: string; from_db: boolean; effective: string }>;
+      };
+      expect(listed.business_name).toBe("Abarrotes Luna");
+      const row = listed.settings.find((s) => s.key === "BUSINESS_NAME");
+      expect(row?.from_db).toBe(true);
+      expect(row?.effective).toBe("Abarrotes Luna");
+
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        `INSERT INTO ordenes
+         (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
+          estado_chat, created_at, updated_at)
+         VALUES (?, '[]', '10.00', 'PENDIENTE', 0, 0, 'ESPERANDO_PAGO', ?, ?)`,
+      )
+        .bind("whatsapp:+5215550009999", now, now)
+        .run();
+      const orden = await env.DB.prepare(
+        "SELECT id FROM ordenes ORDER BY id DESC LIMIT 1",
+      ).first<{ id: number }>();
+      const ticket = await call(`/ticket/${orden!.id}`);
+      expect(ticket.status).toBe(200);
+      const html = await ticket.text();
+      expect(html).toContain("Abarrotes Luna");
+    });
+
+    it("secreto vacío no pisa; __CLEAR__ borra override", async () => {
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      await callSa("/api/superadmin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ PEY_API_KEY: "sk_live_override_abcd" }),
+      });
+      let get = await callSa("/api/superadmin/settings");
+      let body = (await get.json()) as {
+        settings: Array<{ key: string; from_db: boolean; effective: string }>;
+      };
+      let pey = body.settings.find((s) => s.key === "PEY_API_KEY");
+      expect(pey?.from_db).toBe(true);
+      expect(pey?.effective).toMatch(/abcd$/);
+
+      await callSa("/api/superadmin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ PEY_API_KEY: "" }),
+      });
+      get = await callSa("/api/superadmin/settings");
+      body = (await get.json()) as typeof body;
+      pey = body.settings.find((s) => s.key === "PEY_API_KEY");
+      expect(pey?.from_db).toBe(true);
+
+      await callSa("/api/superadmin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ PEY_API_KEY: "__CLEAR__" }),
+      });
+      get = await callSa("/api/superadmin/settings");
+      body = (await get.json()) as typeof body;
+      pey = body.settings.find((s) => s.key === "PEY_API_KEY");
+      expect(pey?.from_db).toBe(false);
+    });
+
+    it("test pey reporta key faltante o aceptada vía mock", async () => {
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      (env as Record<string, unknown>).PEY_API_KEY = "";
+      await env.DB.prepare("DELETE FROM settings WHERE key = ?")
+        .bind("PEY_API_KEY")
+        .run();
+      let res = await callSa("/api/superadmin/test/pey", { method: "POST" });
+      expect(res.status).toBe(502);
+      let body = (await res.json()) as { ok: boolean; message: string };
+      expect(body.ok).toBe(false);
+      expect(body.message).toMatch(/Falta PEY_API_KEY/i);
+
+      (env as Record<string, unknown>).PEY_API_KEY = "test-pey";
+      res = await callSa("/api/superadmin/test/pey", { method: "POST" });
+      body = (await res.json()) as { ok: boolean; message: string };
+      expect(body.ok).toBe(true);
+      expect(body.message).toMatch(/aceptada/i);
     });
   });
 });
