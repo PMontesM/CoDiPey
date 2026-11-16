@@ -155,23 +155,29 @@ Tras un smoke o demos que ensucien el panel, vuelve a correr `db:seed:remote` an
 
 ## Deploy
 
+**Host oficial: Cloudflare Workers** (`cobro-codi.inomali.workers.dev`). No uses Cursor Apps Publish para este repo: es un Worker + D1, no una Cursor App.
+
 ```bash
 npm install
 npx wrangler login
 npx wrangler d1 migrations apply cobro-db --remote
 npx wrangler secret put PEY_API_KEY
+npx wrangler secret put PEY_WEBHOOK_SECRET          # Standard Webhooks (portal pey)
 npx wrangler secret put FACTURAPI_KEY
 npx wrangler secret put TWILIO_ACCOUNT_SID
 npx wrangler secret put TWILIO_AUTH_TOKEN
 npx wrangler secret put TWILIO_WHATSAPP_FROM
 npx wrangler secret put TWILIO_SANDBOX_JOIN_CODE   # ej. writer-suggest
-npx wrangler secret put PUBLIC_URL
+npx wrangler secret put ADMIN_API_SECRET            # token del panel (/admin → API token)
+npx wrangler secret put PUBLIC_URL                  # https://cobro-codi.inomali.workers.dev
 npm run deploy
 ```
 
 Migraciones en `migrations/` (`0001_init`, `0002_cfdi_uuid`, `0003_demo_whatsapp`, `0004_pey_payment_url`).
 
 > Los cambios en `public/` y en el Worker **solo se ven en vivo tras** `npm run deploy`. Un push a git no actualiza Cloudflare solo.
+
+Tras el deploy de seguridad: en el panel pulsa **API token** y pega el mismo valor que `ADMIN_API_SECRET` (una vez por sesión). Actualiza en pey la URL del webhook a `https://cobro-codi.inomali.workers.dev/pey/webhook` con el secreto que guardaste.
 
 ---
 
