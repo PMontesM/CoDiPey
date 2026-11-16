@@ -35,10 +35,29 @@ export function isSecretSetting(key: SettingKey): boolean {
   return SECRET_KEYS.has(key);
 }
 
+/** Crea la tabla si falta (útil cuando el token de deploy no puede aplicar migraciones D1). */
+export async function ensureSettingsTable(env: Env): Promise<void> {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+  ).run();
+  try {
+    await env.DB.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_settings_updated ON settings(updated_at)",
+    ).run();
+  } catch {
+    /* índice opcional */
+  }
+}
+
 export async function loadSettingsMap(
   env: Env,
 ): Promise<Partial<Record<SettingKey, string>>> {
   try {
+    await ensureSettingsTable(env);
     const { results } = await env.DB.prepare(
       "SELECT key, value FROM settings",
     ).all<{ key: string; value: string }>();
@@ -50,7 +69,7 @@ export async function loadSettingsMap(
     }
     return out;
   } catch (err) {
-    console.log(`[settings] load failed (¿migración 0005?): ${String(err)}`);
+    console.log(`[settings] load failed: ${String(err)}`);
     return {};
   }
 }
@@ -120,6 +139,7 @@ export async function upsertSetting(
   key: SettingKey,
   value: string,
 ): Promise<void> {
+  await ensureSettingsTable(env);
   const ts = new Date().toISOString();
   const trimmed = value.trim();
   if (!trimmed) {
