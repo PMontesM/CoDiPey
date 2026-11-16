@@ -211,7 +211,7 @@ app.post("/api/demo/registrar-whatsapp", async (c) => {
 /** Demo pública sin Twilio Sandbox: crea cobro + QR CoDi. */
 app.post("/api/demo/simular-cobro", async (c) => {
   try {
-    const result = await simularCobroDemo(c.env);
+    const result = await simularCobroDemo(c.env, publicUrl(c));
     return c.json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -283,6 +283,63 @@ app.post("/pey/webhook", async (c) => {
     string,
     unknown
   >;
+
+  // Payment link: type payment_link.status_updated + status paid
+  if (event === "payment_link.status_updated") {
+    const status = String(payload.status || data.status || "");
+    if (status !== "paid") {
+      return c.json({ ok: true, ignored: `payment_link ${status || "no-status"}` });
+    }
+    const txs = (payload.transactions || data.transactions || []) as Array<
+      Record<string, unknown>
+    >;
+    const txId =
+      txs[0]?.transactionId ||
+      txs[0]?.transaction_id ||
+      payload.transactionId ||
+      data.transactionId;
+    const clientRef = String(
+      payload.clientReferenceId ||
+        data.clientReferenceId ||
+        payload.client_reference_id ||
+        data.client_reference_id ||
+        "",
+    );
+    if (!txId) return c.json({ ok: true, ignored: "payment_link sin transactionId" });
+
+    const existing = await c.env.DB.prepare(
+      "SELECT id FROM ordenes WHERE pey_transaction_id = ?",
+    )
+      .bind(String(txId))
+      .first<{ id: number }>();
+    if (existing) {
+      return c.json({ ok: true, duplicate: true, orden_id: existing.id });
+    }
+
+    let orden: Orden | null = null;
+    if (/^\d+$/.test(clientRef)) {
+      orden = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
+        .bind(Number(clientRef))
+        .first<Orden>();
+    }
+    if (!orden) return c.json({ ok: true, ignored: "unknown clientReferenceId" });
+
+    const nextEstado =
+      Number(orden.requiere_factura) === 1 ? orden.estado_chat : "COMPLETADO";
+    await c.env.DB.prepare(
+      `UPDATE ordenes SET pago_estado = 'PAGADO', pey_transaction_id = ?, estado_chat = ?, updated_at = ? WHERE id = ?`,
+    )
+      .bind(String(txId), nextEstado, nowIso(), orden.id)
+      .run();
+
+    await sendWhatsapp(
+      c.env,
+      orden.telefono,
+      `💰 Pago confirmado: $${orden.monto} MXN (orden #${orden.id}).`,
+    );
+    await evaluarYTimbrar(c.env, publicUrl(c), orden.id);
+    return c.json({ ok: true, orden_id: orden.id, pago: "PAGADO", via: "payment_link" });
+  }
 
   if (
     event &&

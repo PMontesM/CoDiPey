@@ -21,21 +21,45 @@ export async function getQrExpiresInSec(
   return Math.max(0, Math.floor(QR_TTL_SEC - elapsed));
 }
 
+function peyApiKey(env: Env): string {
+  // Evita 403 por espacios/saltos si la key se pegó mal en el dashboard
+  return (env.PEY_API_KEY || "").trim().replace(/^Bearer\s+/i, "");
+}
+
+function peyHeaders(env: Env): HeadersInit {
+  return {
+    Authorization: `Bearer ${peyApiKey(env)}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+}
+
+async function peyError(res: Response, label: string): Promise<never> {
+  const text = await res.text();
+  let detail = text.slice(0, 300);
+  try {
+    const j = JSON.parse(text) as {
+      message?: string;
+      error?: { message?: string };
+    };
+    detail = j.error?.message || j.message || detail;
+  } catch {
+    /* keep text */
+  }
+  const err = new Error(`pey ${label} HTTP ${res.status}: ${detail}`);
+  (err as Error & { status?: number }).status = res.status;
+  throw err;
+}
+
 export async function crearQrPey(
   env: Env,
   ordenId: number,
   amount: number,
   concept: string,
 ): Promise<Record<string, unknown>> {
-  // Evita 403 por espacios/saltos si la key se pegó mal en el dashboard
-  const apiKey = (env.PEY_API_KEY || "").trim().replace(/^Bearer\s+/i, "");
   const res = await fetch("https://api.pey.mx/codi/qr", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: peyHeaders(env),
     body: JSON.stringify({
       amount,
       concept: concept.slice(0, 40),
@@ -43,23 +67,82 @@ export async function crearQrPey(
       numRef: String(ordenId),
     }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    let detail = text.slice(0, 300);
-    try {
-      const j = JSON.parse(text) as {
-        message?: string;
-        error?: { message?: string };
-      };
-      detail = j.error?.message || j.message || detail;
-    } catch {
-      /* keep text */
-    }
-    const err = new Error(`pey HTTP ${res.status}: ${detail}`);
-    (err as Error & { status?: number }).status = res.status;
-    throw err;
-  }
+  if (!res.ok) await peyError(res, "codi/qr");
   return (await res.json()) as Record<string, unknown>;
+}
+
+export type PaymentLinkResult = {
+  id: string;
+  url: string;
+};
+
+/**
+ * Crea un payment link alojado de pey (checkout CoDi / tarjeta / Apple / Google Pay).
+ * Endpoint distinto al QR: POST /payment-link/create → { id, url }.
+ * Requiere successUrl y backUrl con HTTPS (docs.pey.mx).
+ */
+export async function crearPaymentLinkPey(
+  env: Env,
+  opts: {
+    ordenId: number;
+    amount: number;
+    successUrl: string;
+    backUrl: string;
+  },
+): Promise<PaymentLinkResult> {
+  if (!/^https:\/\//i.test(opts.successUrl) || !/^https:\/\//i.test(opts.backUrl)) {
+    throw new Error("pey payment-link requiere successUrl/backUrl HTTPS");
+  }
+  const res = await fetch("https://api.pey.mx/payment-link/create", {
+    method: "POST",
+    headers: peyHeaders(env),
+    body: JSON.stringify({
+      amount: opts.amount,
+      successUrl: opts.successUrl,
+      backUrl: opts.backUrl,
+      hasTip: false,
+      clientReferenceId: String(opts.ordenId),
+      metadata: { ordenId: String(opts.ordenId) },
+    }),
+  });
+  if (!res.ok) await peyError(res, "payment-link/create");
+  const data = (await res.json()) as Record<string, unknown>;
+  const url = extractPaymentLink(data);
+  const id = String(data.id || "");
+  if (!url) throw new Error("pey payment-link/create sin url");
+  return { id, url };
+}
+
+/**
+ * Best-effort: si falla (p. ej. la key no tiene cuenta Stripe/checkout),
+ * el cobro sigue solo con QR CoDi.
+ */
+export async function tryCrearPaymentLinkPey(
+  env: Env,
+  opts: {
+    ordenId: number;
+    amount: number;
+    publicUrl: string;
+  },
+): Promise<string | null> {
+  const base = opts.publicUrl.replace(/\/$/, "");
+  if (!/^https:\/\//i.test(base)) {
+    console.log("[pey] payment-link omitido: PUBLIC_URL no es HTTPS");
+    return null;
+  }
+  const ticket = `${base}/ticket/${opts.ordenId}`;
+  try {
+    const link = await crearPaymentLinkPey(env, {
+      ordenId: opts.ordenId,
+      amount: opts.amount,
+      successUrl: ticket,
+      backUrl: ticket,
+    });
+    return link.url;
+  } catch (err) {
+    console.log(`[pey] payment-link falló (se sigue con QR): ${String(err)}`);
+    return null;
+  }
 }
 
 export function extractQrPayload(peyData: Record<string, unknown>): string {
@@ -73,11 +156,8 @@ export function extractQrPayload(peyData: Record<string, unknown>): string {
 }
 
 /**
- * Link de pago de pey, si la respuesta lo trae.
- * El campo no está documentado en docs.pey.mx, así que se buscan los nombres
- * habituales (primero los explícitos de pago, al final `url`/`link`) y solo
- * se acepta un http(s). Si pey no devuelve link, regresa null y el mensaje
- * queda como antes: solo QR + link del ticket.
+ * Extrae una URL http(s) de una respuesta de pey (p. ej. { url } de
+ * /payment-link/create). El QR CoDi (/codi/qr) no trae link.
  */
 const PAYMENT_LINK_KEYS = [
   "paymentUrl",

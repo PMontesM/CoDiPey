@@ -26,7 +26,7 @@ export type Orden = {
   cfdi_uuid?: string | null;
   pey_transaction_id: string | null;
   pey_qr_id: string | null;
-  /** Link de pago de pey (si la API lo devolvió al crear el QR). */
+  /** Link de checkout pey (POST /payment-link/create), aparte del QR CoDi. */
   pey_payment_url?: string | null;
   estado_chat: string;
   error_fiscal: string | null;

@@ -26,7 +26,7 @@ En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a 
 ### Solución
 1. WhatsApp con **catálogo + carrito** (varios productos) y botones (Cobrar / Menú / Sí factura / Solo pagar / Sin RFC).
 2. **Ticket térmico** (PNG) + página HTML `/ticket/:id` con QR grande.
-3. **QR CoDi** vía pey (vigencia ~10 min). Si pey devuelve un **link de pago**, también va en el caption de WhatsApp y como botón “Pagar sin escanear” en el ticket HTML (útil cuando el cliente compra desde el mismo celular).
+3. **QR CoDi** vía pey (`POST /codi/qr`, vigencia ~10 min) **y** un **payment link** aparte (`POST /payment-link/create`) para pagar sin escanear. El link va en el caption de WhatsApp y como botón en `/ticket/:id`. Si el payment link falla (p. ej. la key sin checkout), el cobro sigue solo con QR.
 4. Factura: **Sin RFC** en un toque, RFC guardado (**Sí, esos** / **Otros datos**), o wizard de 5 pasos con reintento por campo si el SAT rechaza.
 5. **Panel** en tiempo real: liquidación, CFDI, cancelar pendientes, simulación de cobro/pago.
 
@@ -85,7 +85,7 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 | Método | Ruta | Qué hace |
 |---|---|---|
 | POST | `/whatsapp/webhook` | Twilio inbound → FSM del chat |
-| POST | `/pey/webhook` | Pago CoDi → marca PAGADO + timbra si aplica |
+| POST | `/pey/webhook` | Pago CoDi o payment link (`paid`) → PAGADO + timbra si aplica |
 | GET | `/api/ordenes` | Lista + KPIs para el panel |
 | POST | `/api/ordenes/:id/cancelar` | Cancela pendiente |
 | POST | `/api/ordenes/:id/reintentar-timbrado` | Reintenta CFDI |
@@ -103,13 +103,13 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 1. `hola` / **Menú** → catálogo (Prueba CoDi, Café, Agua, o texto libre `2 Cafe 45`).
 2. Cada producto entra al **carrito** (`ARMAR_PEDIDO`). Botones: **Cobrar** / **Agregar más** (+ **Menú** en el 3er slot).
 3. **Cobrar** → `ESPERANDO_FACTURA` → **Sí, factura** o **Solo pagar**.
-4. **Solo pagar** → ticket + QR de inmediato (`ESPERANDO_PAGO`). Si pey manda `paymentUrl`, el caption incluye *Paga tocando el link*.
+4. **Solo pagar** → ticket + QR + payment link (`ESPERANDO_PAGO`). El caption incluye *Paga tocando el link* cuando `POST /payment-link/create` responde con `url`.
 5. **Sí, factura**:
    - Sin datos guardados → **Sin RFC** / **Sí tengo RFC**.
    - Con RFC guardado → **Sí, esos** / **Otros datos** / **Sin RFC** (aquí no se fuerza Menú: WhatsApp solo da 3 botones).
 6. Wizard (5 pasos): RFC → nombre → CP → régimen → uso → validación SAT.
    - Si el SAT rechaza, **re-pide el campo concreto** (CP, nombre, RFC o régimen) y revalida; no solo “empezar de nuevo”.
-7. Pago CoDi (webhook pey o simular-pago) → `PAGADO` → timbrado automático si hay datos fiscales.
+7. Pago (webhook pey `codi.qr.payment_received` / `payment_link.status_updated` paid, o simular-pago) → `PAGADO` → timbrado automático si hay datos fiscales.
 
 ### Reglas importantes del FSM
 
@@ -207,7 +207,7 @@ npm run typecheck
 | `src/lib/fiscal-wizard.ts` | Borrador fiscal, validadores, routing de reintento SAT |
 | `src/lib/sat-validate.ts` | EFOS + validación Facturapi/SAT |
 | `src/lib/twilio.ts` | Quick-reply / listas; `ensureMenuActions` |
-| `src/lib/pey.ts` | QR CoDi + TTL + ticket PNG |
+| `src/lib/pey.ts` | QR CoDi + payment link + TTL + ticket PNG |
 | `src/lib/ticket.ts` | SVG/PNG térmico + HTML `/ticket` |
 | `src/lib/facturapi.ts` | Timbrado CFDI |
 | `src/lib/demo.ts` | Simular cobro/pago |

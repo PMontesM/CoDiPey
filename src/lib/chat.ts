@@ -25,12 +25,12 @@ import {
 } from "./parse";
 import {
   crearQrPey,
-  extractPaymentLink,
   extractQrPayload,
   getQrExpiresInSec,
   QR_TTL_SEC,
   savePeyPaymentUrl,
   storeQrPng,
+  tryCrearPaymentLinkPey,
 } from "./pey";
 import { formatTicketCaption } from "./ticket";
 import {
@@ -859,9 +859,13 @@ async function emitirQr(
   const qrPayload = extractQrPayload(peyData);
   const peyQrId =
     String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
-  // Link de pago de pey (si lo devuelve): se manda junto con el QR para que
-  // el cliente que compra por WhatsApp pague tocándolo, sin escanear.
-  const paymentUrl = extractPaymentLink(peyData);
+  // Payment link = endpoint aparte de pey (POST /payment-link/create).
+  // Best-effort: si falla, el cobro sigue solo con QR + ticket.
+  const paymentUrl = await tryCrearPaymentLinkPey(env, {
+    ordenId: orden.id,
+    amount: Number(orden.monto),
+    publicUrl,
+  });
   await savePeyPaymentUrl(env, orden.id, paymentUrl);
   const items = parseOrdenItems(orden);
   await storeQrPng(env, orden.id, qrPayload, {

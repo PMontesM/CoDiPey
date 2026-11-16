@@ -3,6 +3,8 @@ import { evaluarYTimbrar } from "./facturapi";
 import { nowIso } from "./parse";
 import {
   crearQrPey,
+  savePeyPaymentUrl,
+  tryCrearPaymentLinkPey,
   extractQrPayload,
   storeQrPng,
 } from "./pey";
@@ -70,9 +72,10 @@ async function ensureDemoFiscal(env: Env): Promise<number> {
   return Number(res.meta.last_row_id);
 }
 
-/** Crea orden pendiente + QR CoDi (sin WhatsApp). */
+/** Crea orden pendiente + QR CoDi (+ payment link si hay HTTPS) sin WhatsApp. */
 export async function simularCobroDemo(
   env: Env,
+  publicUrl = "",
 ): Promise<{ orden: Orden; qr_url: string }> {
   const fiscalId = await ensureDemoFiscal(env);
   const ts = nowIso();
@@ -106,6 +109,14 @@ export async function simularCobroDemo(
     concepto,
     peyQrId,
   });
+  const paymentUrl = publicUrl
+    ? await tryCrearPaymentLinkPey(env, {
+        ordenId,
+        amount: Number(monto),
+        publicUrl,
+      })
+    : null;
+  await savePeyPaymentUrl(env, ordenId, paymentUrl);
   await env.DB.prepare(
     `UPDATE ordenes SET pey_qr_id = ?, updated_at = ? WHERE id = ?`,
   )

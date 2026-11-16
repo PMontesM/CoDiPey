@@ -482,6 +482,66 @@ describe("Worker HTTP", () => {
     });
   });
 
+  it("pey webhook liquida payment_link.status_updated paid", async () => {
+    const ts = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT INTO ordenes
+        (telefono, conceptos, monto, pago_estado, requiere_factura, datos_fiscales_ok,
+         estado_chat, created_at, updated_at)
+       VALUES (?, ?, '10.00', 'PENDIENTE', 0, 0, 'ESPERANDO_PAGO', ?, ?)`,
+    )
+      .bind(
+        "whatsapp:+5215510076571",
+        JSON.stringify([
+          {
+            cantidad: "1",
+            concepto: "Link",
+            precio_unitario: "10.00",
+            subtotal: "10.00",
+          },
+        ]),
+        ts,
+        ts,
+      )
+      .run();
+    const orden = await env.DB.prepare(
+      "SELECT id FROM ordenes ORDER BY id DESC LIMIT 1",
+    ).first<{ id: number }>();
+
+    const res = await call("/pey/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "payment_link.status_updated",
+        status: "paid",
+        clientReferenceId: String(orden!.id),
+        paymentLinkId: "01LINKTEST",
+        transactions: [{ transactionId: "tx-link-1", amount: 10 }],
+      }),
+    });
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      pago: "PAGADO",
+      orden_id: orden!.id,
+      via: "payment_link",
+    });
+
+    const pending = await call("/pey/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "payment_link.status_updated",
+        status: "pending",
+        clientReferenceId: String(orden!.id),
+        transactions: [{ transactionId: "tx-link-2" }],
+      }),
+    });
+    expect(await pending.json()).toMatchObject({
+      ok: true,
+      ignored: "payment_link pending",
+    });
+  });
+
   it("hola opens product menu with catalog options", async () => {
     const res = await call("/whatsapp/webhook", {
       method: "POST",

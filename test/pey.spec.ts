@@ -3,6 +3,12 @@ import { extractPaymentLink } from "../src/lib/pey";
 import { formatTicketCaption } from "../src/lib/ticket";
 
 describe("extractPaymentLink", () => {
+  it("toma url de /payment-link/create", () => {
+    expect(
+      extractPaymentLink({ id: "01ABC", url: "https://pay.pey.mx/abc" }),
+    ).toBe("https://pay.pey.mx/abc");
+  });
+
   it("toma el campo explícito de pago", () => {
     expect(
       extractPaymentLink({ qr: "000201...", paymentUrl: "https://pay.pey.mx/abc" }),
@@ -15,8 +21,10 @@ describe("extractPaymentLink", () => {
     ).toBe("https://pay.pey.mx/xyz");
   });
 
-  it("regresa null si no hay link", () => {
-    expect(extractPaymentLink({ qr: "000201...", id: "abc" })).toBeNull();
+  it("regresa null si no hay link (respuesta típica de /codi/qr)", () => {
+    expect(
+      extractPaymentLink({ id: "abc", qrString: "000201..." }),
+    ).toBeNull();
   });
 
   it("rechaza valores que no son URL", () => {
