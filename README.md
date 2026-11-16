@@ -1,183 +1,169 @@
 # Mostrito — Cobro por WhatsApp + CFDI 4.0
 
-**Cobro digital para tiendas de barrio:** el cliente pide por WhatsApp, arma un carrito, paga con **QR de su banco** ($0 de comisión de tarjeta) y, si lo necesita, recibe **factura CFDI 4.0**.
+**Cobro digital para el mostrador:** tú operas el chat de WhatsApp (pedido, factura, ticket). El cliente **solo lee el QR y paga en la app de su banco** ($0 de comisión de tarjeta). Si pide factura, sale **CFDI 4.0**.
 
-Pensado para mostrador: botones, menú, carrito multi-producto y pasos fiscales guiados (no cadenas del SAT).
+Mascota: ajolote **Mostrito**.
 
----
-
-## Pitch (hackathon)
-
-| Campo | Valor |
+| | |
 |---|---|
-| **Nombre** | Mostrito (mascota: ajolote) |
-| **Tagline** | Cobro por WhatsApp + factura CFDI, listo para el mostrador |
-| **Repo** | https://github.com/PMontesM/CoDiPey *(público)* |
+| **Repo** | https://github.com/PMontesM/CoDiPey |
 | **Landing** | https://cobro-codi.inomali.workers.dev/ |
 | **Panel** | https://cobro-codi.inomali.workers.dev/admin |
 | **Health** | https://cobro-codi.inomali.workers.dev/health |
-| **Video en landing** | `/demo-codipey.mp4` (también en `public/`) |
-| **Demo sin WhatsApp** | Panel → **+ Simular Cobro WhatsApp** → abrir orden → **Simular Webhook Pago pey** |
-| **Join Sandbox (vivo)** | `join writer-suggest` (vía landing o `GET /api/demo/whatsapp-join`) |
-
-### Problema
-En el abarrotes / negocio chico cobrar con tarjeta cuesta comisión; facturar a mano es lento y confuso. CoDi es gratis para el comercio, pero el flujo (QR + datos fiscales + CFDI) no está pensado para cajero.
-
-### Solución
-1. WhatsApp con **catálogo + carrito** (varios productos) y botones (Cobrar / Menú / Sí factura / Solo pagar / Sin RFC).
-2. **Ticket térmico** (PNG) + página HTML `/ticket/:id` con QR grande.
-3. **QR de pago** (rail CoDi Banxico) vía pey (`POST /codi/qr`, vigencia ~10 min) **y** un **payment link** aparte (`POST /payment-link/create`) para pagar sin escanear. El link va en el caption de WhatsApp y como botón en `/ticket/:id`. Si el payment link falla (p. ej. la key sin checkout), el cobro sigue solo con QR.
-4. Factura: **Sin RFC** en un toque, RFC guardado (**Sí, esos** / **Otros datos**), o wizard de 5 pasos con reintento por campo si el SAT rechaza.
-5. **Panel** en tiempo real: liquidación, CFDI, cancelar pendientes, simulación de cobro/pago.
-
-### Stack
-Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Facturapi CFDI 4.0 · `@resvg/resvg-wasm` (ticket PNG)
-
-### Cómo demostrar ante el jurado
-
-**A) Sin WhatsApp (2 min)**  
-1. Abrir el [panel](https://cobro-codi.inomali.workers.dev/admin).  
-2. Con seed: la orden más reciente (`ESPERANDO_PAGO` $25) → **Simular Webhook Pago pey**.  
-   O bien: **+ Simular Cobro WhatsApp** → abrir la orden nueva → simular pago.  
-   Filtro **Fiscal**: 3 órdenes de atención (error CP, RFC inválido, listo por timbrar).
-
-**B) Con su WhatsApp (auto-servicio)**  
-1. En la [landing](https://cobro-codi.inomali.workers.dev/) → *Probar en mi WhatsApp*.  
-2. Registrar número → **Abrir WhatsApp con el join** (`join writer-suggest`).  
-3. Enviar el join → cuando confirme, escribir `hola`.  
-4. Elegir productos → **Cobrar** → factura o solo pagar → escanear QR.
-
-> El Sandbox no deja mandar WhatsApp *antes* del join. La instrucción va por `wa.me` (SMS opcional si hay `TWILIO_SMS_FROM`). El juez se une solo.
 
 ---
 
-## Descripción corta (copiar/pegar)
+## Qué es (y qué no es)
 
-> Mostrito es un MVP que permite a un comercio cobrar por WhatsApp con QR bancario (vía pey) y emitir CFDI 4.0 (Facturapi): carrito multi-producto, botones, Sin RFC, captura fiscal guiada con corrección por campo, ticket + panel operativo. Demo pública en `/admin` sin unir números al Sandbox de Twilio.
+| Sí | No |
+|---|---|
+| El **comercio** escribe el pedido en WhatsApp y muestra el QR | El cliente **no** chatea con el bot para armar el carrito |
+| El **cliente** escanea y paga en su banca | No es una app que el cliente tenga que instalar |
+| Factura CFDI si la piden (Sin RFC o con datos) | No sustituye tu cuenta pey / Facturapi / Twilio |
+
+Rail de pago: **CoDi Banxico** vía **pey** (QR + payment link opcional). Timbrado: **Facturapi**.
+
+---
+
+## Demo en vivo
+
+### A) Panel (sin WhatsApp)
+
+1. Abre [/admin](https://cobro-codi.inomali.workers.dev/admin).
+2. **+ Simular Cobro WhatsApp** → abre la orden → **Simular Webhook Pago**.
+3. Filtros: **Hoy / Ayer / 7 días / Todas**, estado (Liquidadas, Pendientes, Atención Fiscal) y paginación (15 por página).
+4. El logo **Mostrito** o **Inicio** regresan a la landing.
+5. En móvil, **atrás** cierra el modal de la orden (no te saca al landing).
+
+### B) WhatsApp Sandbox
+
+1. Landing → *Probar en mi WhatsApp* → registra tu número → abre el `join`.
+2. Envía el join (`join writer-suggest`) → escribe `hola`.
+3. Armas el pedido en el chat (tú) → Cobrar → Solo pagar o factura → muestras el QR al cliente.
+
+> El Sandbox de Twilio exige el `join` antes de poder recibir mensajes del Worker.
+
+---
+
+## Stack
+
+Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (CoDi + payment link) · Facturapi CFDI 4.0 · `@resvg/resvg-wasm` (ticket PNG) · estáticos en `public/`
 
 ---
 
 ## Producción
 
-| | |
+| Ruta | Qué es |
 |---|---|
-| Worker | `https://cobro-codi.inomali.workers.dev` |
-| Landing | `/` → `public/index.html` |
-| Panel | `/admin` → `public/admin.html` |
-| Ticket HTML | `/ticket/:id` |
-| Archivos (QR/PDF/XML) | `/files/:key` |
-| Health | `/health` |
-| Repo | https://github.com/PMontesM/CoDiPey |
+| `/` | Landing (`public/index.html`) |
+| `/admin` | Panel (`public/admin.html`) |
+| `/ticket/:id` | Ticket HTML con QR grande |
+| `/files/:key` | QR PNG, facturas PDF/XML |
+| `/health` | Healthcheck |
+| `POST /whatsapp/webhook` | Twilio → FSM del chat |
+| `POST /pey/webhook` | Pago confirmado → PAGADO + timbra |
+| `GET /api/ordenes` | Lista + KPIs (+ URLs firmadas de factura si aplica) |
+| `GET /api/ordenes/:id/factura.pdf` / `.xml` | Redirect a archivo firmado |
+| `POST /api/ordenes/:id/cancelar` | Cancela pendiente |
+| `POST /api/ordenes/:id/reintentar-timbrado` | Reintenta CFDI |
+| `GET /api/demo/whatsapp-join` | Config pública del join |
+| `POST /api/demo/registrar-whatsapp` | Registro público → `wa.me` |
+| `POST /api/demo/simular-cobro` | Orden + QR sin Sandbox |
+| `POST /api/demo/simular-pago/:id` | Liquida como pey + CFDI |
 
-| Binding / secret | Uso |
-|---|---|
-| `DB` (D1 `cobro-db`) | Órdenes, fiscales, blobs, demo_whatsapp |
-| `ASSETS` | Estáticos de `public/` (landing, panel, video, shots) |
-| `PEY_API_KEY` | QR CoDi + payment links |
-| `PEY_WEBHOOK_SECRET` | Firma Standard Webhooks de `/pey/webhook` |
-| `FACTURAPI_KEY` | Timbrado CFDI 4.0 |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` | WhatsApp (+ firma `X-Twilio-Signature`) |
-| `TWILIO_SANDBOX_JOIN_CODE` | Código del Sandbox (hoy: `writer-suggest`) |
-| `TWILIO_SMS_FROM` | (Opcional) SMS con la instrucción de join |
-| `ADMIN_API_SECRET` | Token operador (panel/APIs) si no hay identidad Cursor |
-| `FILE_SIGNING_SECRET` | (Opcional) HMAC de facturas PDF/XML |
-| `PUBLIC_URL` | Base HTTPS del Worker |
-
-### Webhooks y APIs
-
-| Método | Ruta | Qué hace |
-|---|---|---|
-| POST | `/whatsapp/webhook` | Twilio inbound (firma válida) → FSM del chat |
-| POST | `/pey/webhook` | Pago CoDi o payment link (`paid`) → PAGADO + timbra (firma Standard Webhooks) |
-| GET | `/api/ordenes` | Lista + KPIs para el panel |
-| POST | `/api/ordenes/:id/cancelar` | Cancela pendiente |
-| POST | `/api/ordenes/:id/reintentar-timbrado` | Reintenta CFDI |
-| GET | `/api/demo/whatsapp-join` | Join code + `wa.me` |
-| POST | `/api/demo/registrar-whatsapp` | Registra juez (+ SMS opcional) |
-| POST | `/api/demo/simular-cobro` | Crea orden + QR real (sin Sandbox) |
-| POST | `/api/demo/simular-pago/:id` | Liquida como pey + intenta CFDI |
-
-> Las rutas `/api/demo/*` y el panel son **públicos a propósito** para el hackathon. No son aptos para producción multi-comercio.
-
----
-
-## Flujo WhatsApp (como está en `src/lib/chat.ts`)
-
-1. `hola` / **Menú** → catálogo (Prueba Mostrito, Café, Agua, o texto libre `2 Cafe 45`).
-2. Cada producto entra al **carrito** (`ARMAR_PEDIDO`). Botones: **Cobrar** / **Agregar más** (+ **Menú** en el 3er slot).
-3. **Cobrar** → `ESPERANDO_FACTURA` → **Sí, factura** o **Solo pagar**.
-4. **Solo pagar** → ticket + QR + payment link (`ESPERANDO_PAGO`). El caption incluye *Paga tocando el link* cuando `POST /payment-link/create` responde con `url`.
-5. **Sí, factura**:
-   - Sin datos guardados → **Sin RFC** / **Sí tengo RFC**.
-   - Con RFC guardado → **Sí, esos** / **Otros datos** / **Sin RFC** (aquí no se fuerza Menú: WhatsApp solo da 3 botones).
-6. Wizard (5 pasos): RFC → nombre → CP → régimen → uso → validación SAT.
-   - Si el SAT rechaza, **re-pide el campo concreto** (CP, nombre, RFC o régimen) y revalida; no solo “empezar de nuevo”.
-7. Pago (webhook pey `codi.qr.payment_received` / `payment_link.status_updated` paid, o simular-pago) → `PAGADO` → timbrado automático si hay datos fiscales.
-
-### Reglas importantes del FSM
+### Auth (importante para el demo)
 
 | Situación | Comportamiento |
 |---|---|
-| Tap de producto (`PROD_*`) durante el wizard | Abandona el fiscal y abre **carrito** (no valida el texto como RFC) |
-| **Menú** durante el wizard | Cancela la orden fiscal pendiente y muestra el catálogo |
-| RFC / CP / nombre inválido a mitad de paso | Vuelve a pedir **ese** dato con el error arriba |
-| Fallo SAT al final del wizard | Mensaje de hints + re-pide el campo según `fiscalRetryStepFromHints` |
+| **Sin** `ADMIN_API_SECRET` | Panel y APIs de operador **abiertos** (single-tenant / demo) |
+| **Con** `ADMIN_API_SECRET` | Hay que pegar el token en el panel (botón **Token**) |
+| Facturas PDF/XML | Si hay secreto de firma (`FILE_SIGNING_SECRET` / `ADMIN_API_SECRET` / `PEY_WEBHOOK_SECRET`), requieren URL firmada (`?exp=&sig=`). **Sin** secreto, se sirven abiertas |
+| QR (`qr_*.png`) y `/ticket/:id` | Públicos |
+| Join WhatsApp | Público (`registrar-whatsapp` no pide token) |
+| Webhooks Twilio / pey | Siempre con firma |
+
+> Un push a GitHub **no** actualiza Cloudflare. Hay que `npm run deploy` (o `wrangler deploy`).
+
+---
+
+## Secrets / bindings
+
+| Nombre | Uso |
+|---|---|
+| `DB` (D1 `cobro-db`) | Órdenes, fiscales, blobs, demo_whatsapp |
+| `ASSETS` | `public/` |
+| `PEY_API_KEY` | QR CoDi + payment links |
+| `PEY_WEBHOOK_SECRET` | Firma `/pey/webhook` |
+| `FACTURAPI_KEY` | Timbrado CFDI 4.0 |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` | WhatsApp |
+| `TWILIO_SANDBOX_JOIN_CODE` | Ej. `writer-suggest` |
+| `TWILIO_SMS_FROM` | (Opcional) SMS con el join |
+| `ADMIN_API_SECRET` | (Opcional) Cierra el panel |
+| `FILE_SIGNING_SECRET` | (Opcional) HMAC dedicado de facturas |
+| `PUBLIC_URL` | Base HTTPS del Worker |
+
+Plantilla local: [`.env.example`](.env.example).
+
+---
+
+## Flujo WhatsApp (`src/lib/chat.ts`)
+
+1. `hola` / **Menú** → catálogo (Prueba Mostrito, Café, Agua, o `2 Cafe 45`).
+2. Productos al **carrito** (`ARMAR_PEDIDO`) → **Cobrar** / **Agregar más**.
+3. **Cobrar** → **Sí, factura** o **Solo pagar**.
+4. **Solo pagar** → ticket + QR (+ payment link si pey lo da).
+5. **Sí, factura** → Sin RFC / wizard RFC (5 pasos con reintento por campo si el SAT rechaza).
+6. Webhook pey (o simular-pago) → `PAGADO` → timbra si hay datos fiscales → PDF/XML por WhatsApp.
 
 Estados útiles en panel: `ARMAR_PEDIDO`, `ESPERANDO_FACTURA`, `ESPERANDO_FISCAL_*`, `ESPERANDO_DATOS_FISCALES`, `ESPERANDO_PAGO`, `COMPLETADO`, `ERROR_FISCAL`, `CANCELADO`.
 
 ---
 
-## Seed de presentación
+## Panel (`/admin`)
 
-Borra `ordenes` / `blobs` / `clientes_fiscales` / `demo_whatsapp` y planta **10 escenarios** (`scripts/seed-presentacion.mjs`):
-
-| # | Estado | Para qué |
-|---|---|---|
-| 1 | PAGADO + COMPLETADO + CFDI | Happy path café/pan |
-| 2 | PAGADO sin factura | Flujo Sin RFC |
-| 3 | PAGADO + CFDI $1016 | KPI $0 comisión |
-| 4 | CANCELADO | Historial / filtros |
-| 5 | PAGADO + ERROR_FISCAL (CP) | Filtro Atención fiscal |
-| 6 | PAGADO + ERROR_FISCAL (RFC) | Filtro Atención fiscal |
-| 7 | PAGADO + listo por timbrar | Filtro Atención fiscal |
-| 8 | ESPERANDO_FISCAL_RFC | Wizard a medias |
-| 9 | ARMAR_PEDIDO | Carrito en curso |
-| 10 | ESPERANDO_PAGO $25 | **Simular Webhook Pago pey** |
-
-```bash
-npm run db:seed:remote   # D1 de producción (panel en vivo)
-npm run db:seed:local    # D1 local de wrangler dev
-```
-
-Tras un smoke o demos que ensucien el panel, vuelve a correr `db:seed:remote` antes del pitch.
+- KPIs: volumen liquidado, ahorro vs tarjeta, CFDIs, pendientes.
+- Libro de órdenes con filtros de estado + **día** (Hoy / Ayer / 7 días / Todas) + **paginación**.
+- Inspector (drawer): QR, simular pago, cancelar, reintentar timbrado, abrir PDF/XML.
+- En móvil, **atrás** cierra el drawer y te deja en el panel.
+- Enlace **Inicio** / logo → landing.
 
 ---
 
-## Deploy
+## Seed de presentación
 
-**Host oficial: Cloudflare Workers** (`cobro-codi.inomali.workers.dev`). No uses Cursor Apps Publish para este repo: es un Worker + D1, no una Cursor App.
+```bash
+npm run db:seed:remote   # D1 producción
+npm run db:seed:local    # D1 local
+```
+
+`scripts/seed-presentacion.mjs` planta escenarios (pagado+CFDI, pendientes, errores fiscales, carrito, etc.). Vuelve a sembrarlo si el panel se ensucia en demos.
+
+---
+
+## Deploy (Cloudflare Workers)
 
 ```bash
 npm install
 npx wrangler login
 npx wrangler d1 migrations apply cobro-db --remote
 npx wrangler secret put PEY_API_KEY
-npx wrangler secret put PEY_WEBHOOK_SECRET          # Standard Webhooks (portal pey)
+npx wrangler secret put PEY_WEBHOOK_SECRET
 npx wrangler secret put FACTURAPI_KEY
 npx wrangler secret put TWILIO_ACCOUNT_SID
 npx wrangler secret put TWILIO_AUTH_TOKEN
 npx wrangler secret put TWILIO_WHATSAPP_FROM
-npx wrangler secret put TWILIO_SANDBOX_JOIN_CODE   # ej. writer-suggest
-npx wrangler secret put ADMIN_API_SECRET            # token del panel (/admin → API token)
-npx wrangler secret put PUBLIC_URL                  # https://cobro-codi.inomali.workers.dev
+npx wrangler secret put TWILIO_SANDBOX_JOIN_CODE
+npx wrangler secret put PUBLIC_URL   # https://cobro-codi.inomali.workers.dev
+# Opcional endurecimiento:
+# npx wrangler secret put ADMIN_API_SECRET
+# npx wrangler secret put FILE_SIGNING_SECRET
 npm run deploy
 ```
 
-Migraciones en `migrations/` (`0001_init`, `0002_cfdi_uuid`, `0003_demo_whatsapp`, `0004_pey_payment_url`).
+Migraciones en `migrations/` (`0001` … `0004_pey_payment_url`).
 
-> Los cambios en `public/` y en el Worker **solo se ven en vivo tras** `npm run deploy`. Un push a git no actualiza Cloudflare solo.
-
-Tras el deploy de seguridad: en el panel pulsa **API token** y pega el mismo valor que `ADMIN_API_SECRET` (una vez por sesión). Actualiza en pey la URL del webhook a `https://cobro-codi.inomali.workers.dev/pey/webhook` con el secreto que guardaste.
+Webhook pey → `https://cobro-codi.inomali.workers.dev/pey/webhook`.  
+Webhook Twilio → `https://cobro-codi.inomali.workers.dev/whatsapp/webhook`.
 
 ---
 
@@ -187,50 +173,47 @@ Tras el deploy de seguridad: en el panel pulsa **API token** y pega el mismo val
 npm run dev              # wrangler dev
 npm run db:migrate:local
 npm run db:seed:local
-npm test                 # vitest — Worker + parse + pey link + e2e
-npm run smoke            # health + webhook carrito + Twilio config (prod)
+npm test                 # vitest
+npm run smoke            # health + smoke contra prod
 npm run check            # test + smoke
 npm run typecheck
 ```
 
-### Qué cubren los tests
-
-| Área | Cobertura |
-|---|---|
-| Carrito | Primer producto → `ARMAR_PEDIDO`; varios ítems; `PROD_*` de lista; Cobrar → `ESPERANDO_FACTURA` |
-| Factura | Solo pagar → QR; Sí factura → Sin RFC; Sí tengo RFC / Otros datos → wizard |
-| Wizard | Pasos con botones; RFC inválido re-pide; tap `PROD_*` en wizard → carrito (no error RFC); Menú cancela fiscal |
-| SAT hints | `fiscalRetryStepFromHints` enruta a CP / nombre / RFC / régimen |
-| Botones WA | `ensureMenuActions` (Menú en 3er slot; `stickyMenu: false` preserva Otros datos) |
-| Demo API | simular-cobro / simular-pago / ticket HTML / join WhatsApp |
-| Smoke live | Espera `ARMAR_PEDIDO` y cancela la orden de prueba para no ensuciar el panel |
-
 ---
 
-## Estructura (path vivo)
+## Estructura
 
 | Ruta | Rol |
 |---|---|
 | `src/index.ts` | Rutas Hono |
-| `src/lib/chat.ts` | FSM WhatsApp + carrito + wizard fiscal |
-| `src/lib/fiscal-wizard.ts` | Borrador fiscal, validadores, routing de reintento SAT |
-| `src/lib/sat-validate.ts` | EFOS + validación Facturapi/SAT |
-| `src/lib/twilio.ts` | Quick-reply / listas; `ensureMenuActions` |
-| `src/lib/pey.ts` | QR CoDi + payment link + TTL + ticket PNG |
-| `src/lib/ticket.ts` | SVG/PNG térmico + HTML `/ticket` |
-| `src/lib/facturapi.ts` | Timbrado CFDI |
-| `src/lib/demo.ts` | Simular cobro/pago |
-| `src/lib/demo-whatsapp.ts` | Join Sandbox + registro juez |
-| `public/` | Landing, panel, video, shots |
+| `src/lib/chat.ts` | FSM WhatsApp |
+| `src/lib/fiscal-wizard.ts` | Wizard fiscal + reintentos SAT |
+| `src/lib/pey.ts` | QR + payment link + blobs |
+| `src/lib/ticket.ts` | Ticket PNG/HTML |
+| `src/lib/facturapi.ts` | Timbrado + links firmados |
+| `src/lib/security.ts` | Firmas Twilio/pey + operador + facturas |
+| `src/lib/demo.ts` / `demo-whatsapp.ts` | Simulación y join |
+| `public/` | Landing, panel, mascota, video, shots |
 | `migrations/` | Schema D1 |
-| `scripts/seed-presentacion.mjs` | Seed de pitch |
-| `scripts/smoke-live.mjs` | Smoke contra prod |
-| `test/worker.spec.ts` | Tests Worker + bloque **e2e WhatsApp flows** |
+| `scripts/` | Seed, smoke |
+| `test/` | Vitest |
 
-`main.py` y `templates/` son **legacy** (no se despliegan). El runtime de producción es solo el Worker.
+`main.py` y `templates/` son **legacy** (no se despliegan).
+
+---
+
+## Marca y assets
+
+| Archivo | Uso |
+|---|---|
+| `public/mostrito-mascot.png` | Ajolote (PNG transparente) en landing |
+| `public/mostrito-icon.jpg` | Avatar / favicon |
+| `public/hero-barrio.jpg` | Fondo de barrio |
+| `public/wa-*.png` | Mockups WhatsApp (marca Mostrito) |
+| `public/demo-codipey.mp4` | Video de la landing |
 
 ---
 
 ## Licencia
 
-Hackathon / demo educativo.
+Hackathon / demo educativo. No uses las marcas **CoDi** ni **pey** en el nombre del producto; Mostrito es la marca propia. El rail de pago y los proveedores se mencionan solo como integración técnica.
