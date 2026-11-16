@@ -280,6 +280,37 @@ describe("Worker HTTP", () => {
     expect(ok.headers.get("content-type")).toMatch(/pdf|octet-stream/i);
   });
 
+  it("redirects operator factura route to a signed file URL", async () => {
+    await env.DB.prepare(
+      `INSERT INTO ordenes
+        (telefono, conceptos, monto, requiere_factura, datos_fiscales_ok, pago_estado, estado_chat, facturapi_id, created_at, updated_at)
+       VALUES (?, ?, ?, 1, 1, 'PAGADO', 'COMPLETADO', 'inv_9', ?, ?)`,
+    )
+      .bind(
+        "whatsapp:+5215510076571",
+        JSON.stringify([{ cantidad: "1", concepto: "X", precio_unitario: "10", subtotal: "10" }]),
+        "10.00",
+        new Date().toISOString(),
+        new Date().toISOString(),
+      )
+      .run();
+    const row = await env.DB.prepare(
+      "SELECT id FROM ordenes WHERE facturapi_id = 'inv_9' ORDER BY id DESC LIMIT 1",
+    ).first<{ id: number }>();
+    await env.DB.prepare(
+      `INSERT INTO blobs (key, content_type, data, updated_at)
+       VALUES (?, 'application/pdf', ?, ?)`,
+    )
+      .bind(`factura_${row!.id}.pdf`, PNG_1X1, new Date().toISOString())
+      .run();
+
+    const res = await call(`/api/ordenes/${row!.id}/factura.pdf`);
+    expect(res.status).toBe(302);
+    const loc = res.headers.get("location") || "";
+    expect(loc).toContain(`/files/factura_${row!.id}.pdf?`);
+    expect(loc).toMatch(/sig=/);
+  });
+
   async function startCartAndCheckout(from = "whatsapp:+5215510076571") {
     await callWhatsapp({
         From: from,

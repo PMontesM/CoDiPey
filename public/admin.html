@@ -276,15 +276,23 @@
         </div>
 
         <h1 class="editorial-serif text-xl sm:text-[30px] font-semibold tracking-tight text-[#0F1A17] leading-tight">
-          <span class="inline-flex items-center gap-2">
+          <a href="/" class="inline-flex items-center gap-2 hover:opacity-90 transition" title="Volver al inicio">
             <img src="/mostrito-icon.jpg" alt="" width="36" height="36" class="w-9 h-9 rounded-full object-cover border-2 border-white/70 shadow-sheet" />
             <span>Mostrito <span class="text-[#C2185B] font-normal">·</span> CFDI 4.0</span>
-          </span>
+          </a>
         </h1>
       </div>
 
       <!-- Right Controls -->
       <div class="flex items-center gap-2.5 shrink-0">
+        <a
+          href="/"
+          class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#F4F8F6] hover:bg-[#E4EBE7] text-[#0F1A17] border border-[#D0D9D4] shadow-warm text-xs font-medium transition"
+          title="Volver a la página de inicio"
+        >
+          <i data-lucide="home" class="w-3.5 h-3.5 text-[#4A5C55]"></i>
+          <span class="hidden sm:inline">Inicio</span>
+        </a>
         <button
           type="button"
           onclick="pollOrders(true)"
@@ -2122,11 +2130,12 @@
         const order = state.orders.find(o => String(o.id) === String(orderId));
         const signed =
           ext === "pdf" ? order?.factura_pdf_url : order?.factura_xml_url;
-        if (!signed) {
-          showToast("Esta orden aún no tiene archivo firmado de factura", "error");
-          return;
-        }
-        window.open(signed, "_blank", "noopener");
+        // Preferir URL firmada; si el deploy viejo no la trae, usar redirect del API.
+        window.open(
+          signed || `/api/ordenes/${encodeURIComponent(orderId)}/factura.${ext}`,
+          "_blank",
+          "noopener",
+        );
         return;
       }
 

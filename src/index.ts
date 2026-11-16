@@ -196,6 +196,29 @@ app.get("/api/ordenes", async (c) => {
   });
 });
 
+/** Redirección a PDF/XML firmado (evita /files/factura sin firma en el demo). */
+app.get("/api/ordenes/:id/factura.:ext", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
+  const id = Number(c.req.param("id"));
+  const ext = String(c.req.param("ext") || "").toLowerCase();
+  if (!Number.isFinite(id) || id <= 0 || (ext !== "pdf" && ext !== "xml")) {
+    return c.text("invalid", 400);
+  }
+  const row = await c.env.DB.prepare(
+    "SELECT id, facturapi_id FROM ordenes WHERE id = ?",
+  )
+    .bind(id)
+    .first<{ id: number; facturapi_id: string | null }>();
+  if (!row) return c.text("not found", 404);
+  if (!row.facturapi_id) return c.text("sin factura", 404);
+  const key = `factura_${id}.${ext}`;
+  const blob = await getBlob(c.env, key);
+  if (!blob) return c.text("not found", 404);
+  const target = await signedFilePath(c.env, publicUrl(c), key);
+  return c.redirect(target, 302);
+});
+
 app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
   const denied = await guardOperator(c);
   if (denied) return denied;
