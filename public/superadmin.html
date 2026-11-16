@@ -53,6 +53,10 @@
       <div class="flex items-center gap-2">
         <a href="/admin" class="text-xs font-semibold px-3 py-2 rounded-lg border border-[#D0D9D4] bg-white/80 hover:bg-[#E4EBE7]">Panel</a>
         <a href="/" class="text-xs font-semibold px-3 py-2 rounded-lg border border-[#D0D9D4] bg-white/80 hover:bg-[#E4EBE7]">Inicio</a>
+        <button id="btnLogout" type="button"
+          class="hidden text-xs font-semibold px-3 py-2 rounded-lg border border-[#C2185B]/40 bg-[#C2185B]/10 text-[#A0144A] hover:bg-[#C2185B]/20">
+          Cerrar sesión
+        </button>
       </div>
     </header>
 
@@ -134,10 +138,6 @@
             class="rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-white text-sm font-semibold px-4 py-2">
             Guardar
           </button>
-          <button id="btnLogout" type="button"
-            class="rounded-lg border border-[#D0D9D4] bg-white text-sm font-semibold px-4 py-2">
-            Cerrar sesión
-          </button>
         </div>
         <p id="saveStatus" class="text-xs text-[#3F524B]" role="status"></p>
       </section>
@@ -204,6 +204,7 @@
         document.getElementById("gateMsg").textContent = "Contraseña incorrecta.";
         document.getElementById("gateForm").classList.remove("hidden");
         document.getElementById("app").classList.add("hidden");
+        document.getElementById("btnLogout").classList.add("hidden");
         return;
       }
       if (!res.ok) {
@@ -212,6 +213,7 @@
       }
       document.getElementById("gate").classList.add("hidden");
       document.getElementById("app").classList.remove("hidden");
+      document.getElementById("btnLogout").classList.remove("hidden");
       document.getElementById("hookTwilio").textContent = data.webhooks.twilio;
       document.getElementById("hookPey").textContent = data.webhooks.pey;
       const hint = document.getElementById("passwordHint");
