@@ -83,7 +83,7 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 | **Sin** `ADMIN_API_SECRET` | Panel y APIs de operador **abiertos** (single-tenant / demo) |
 | **Con** `ADMIN_API_SECRET` | Hay que pegar el token en el panel (botón **Token**) |
 | **Sin** `SUPERADMIN_SECRET` | `/superadmin` apagado (503 en APIs) |
-| **Con** `SUPERADMIN_SECRET` | UI en `/superadmin` para editar APIs/webhooks/nombre **sin redeploy** (overrides en D1) |
+| **Con** `SUPERADMIN_SECRET` | UI en `/superadmin`; define una **contraseña** desde el panel (el secret queda de respaldo) |
 | Facturas PDF/XML | Si hay secreto de firma (`FILE_SIGNING_SECRET` / `ADMIN_API_SECRET` / `PEY_WEBHOOK_SECRET`), requieren URL firmada (`?exp=&sig=`). **Sin** secreto, se sirven abiertas |
 | QR (`qr_*.png`) y `/ticket/:id` | Públicos |
 | Join WhatsApp | Público (`registrar-whatsapp` no pide token) |
@@ -98,11 +98,11 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 1. Una vez: `npx wrangler secret put SUPERADMIN_SECRET` + `npm run deploy`.
 2. Aplica migración `0005_settings`: `npx wrangler d1 migrations apply cobro-db --remote`.
 3. Abre [/superadmin](https://cobro-codi.inomali.workers.dev/superadmin) (o el enlace desde el panel).
-4. Pega el secret → edita `BUSINESS_NAME`, keys pey/Facturapi/Twilio, `PUBLIC_URL`, etc.
-5. Copia las URLs de webhook a pey / Twilio.
-6. **Probar las 3** conexiones sin tocar Wrangler otra vez.
+4. Entra con el secret de Wrangler (primer acceso) → en **Contraseña del panel** define una fácil de recordar.
+5. Edita `BUSINESS_NAME`, keys pey/Facturapi/Twilio, `PUBLIC_URL`, etc.
+6. Copia las URLs de webhook a pey / Twilio y **Probar las 3**.
 
-Los valores en la tabla D1 `settings` **pisan** los secrets de Wrangler. En secretos: input vacío = no tocar; `__CLEAR__` = quitar el override. `SUPERADMIN_SECRET` **nunca** se guarda en D1.
+Los valores en la tabla D1 `settings` **pisan** los secrets de Wrangler. En secretos: input vacío = no tocar; `__CLEAR__` = quitar el override. `SUPERADMIN_SECRET` **nunca** se guarda en D1; la contraseña del panel sí (aparte).
 
 ---
 

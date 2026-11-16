@@ -1176,5 +1176,34 @@ describe("Worker HTTP", () => {
       expect(body.ok).toBe(true);
       expect(body.message).toMatch(/aceptada/i);
     });
+
+    it("contraseña del panel se guarda y abre el superadmin", async () => {
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      const bad = await callSa("/api/superadmin/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "123" }),
+      });
+      expect(bad.status).toBe(400);
+
+      const put = await callSa("/api/superadmin/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "luna-2026" }),
+      });
+      expect(put.status).toBe(200);
+
+      const withPw = await callSa(
+        "/api/superadmin/settings",
+        undefined,
+        "luna-2026",
+      );
+      expect(withPw.status).toBe(200);
+      const body = (await withPw.json()) as { password_set: boolean };
+      expect(body.password_set).toBe(true);
+
+      const withSecret = await callSa("/api/superadmin/settings", undefined, SA);
+      expect(withSecret.status).toBe(200);
+    });
   });
 });

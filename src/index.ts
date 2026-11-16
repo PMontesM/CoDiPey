@@ -30,7 +30,9 @@ import {
   type SettingKey,
 } from "./lib/settings";
 import {
+  getPanelPassword,
   requireSuperadmin,
+  setPanelPassword,
   superadminConfigured,
 } from "./lib/superadmin";
 import { renderTicketHtmlPage } from "./lib/ticket";
@@ -97,10 +99,11 @@ app.get("/api/superadmin/status", (c) =>
 );
 
 app.get("/api/superadmin/settings", async (c) => {
-  const denied = requireSuperadmin(c.req.raw, c.env);
+  const denied = await requireSuperadmin(c.req.raw, c.env);
   if (denied) return denied;
   const env = await runtimeEnv(c.env);
   const base = publicUrlFrom(env, c.req.url);
+  const panelPassword = await getPanelPassword(c.env);
   return c.json(
     {
       settings: await listSettingsView(c.env),
@@ -109,13 +112,14 @@ app.get("/api/superadmin/settings", async (c) => {
         pey: `${base}/pey/webhook`,
       },
       business_name: (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito",
+      password_set: Boolean(panelPassword),
     },
     { headers: { "cache-control": "private, no-store" } },
   );
 });
 
 app.put("/api/superadmin/settings", async (c) => {
-  const denied = requireSuperadmin(c.req.raw, c.env);
+  const denied = await requireSuperadmin(c.req.raw, c.env);
   if (denied) return denied;
   let body: Partial<Record<SettingKey, string>> = {};
   try {
@@ -128,7 +132,7 @@ app.put("/api/superadmin/settings", async (c) => {
   } catch (err) {
     return c.json(
       {
-        detail: `No se pudo guardar (¿migración 0005 aplicada?): ${String(err)}`,
+        detail: `No se pudo guardar: ${String(err)}`,
       },
       500,
     );
@@ -138,11 +142,38 @@ app.put("/api/superadmin/settings", async (c) => {
     ok: true,
     settings: await listSettingsView(c.env),
     business_name: (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito",
+    password_set: Boolean(await getPanelPassword(c.env)),
+  });
+});
+
+/** Contraseña del panel (editable aquí; el secret de Wrangler queda de respaldo). */
+app.put("/api/superadmin/password", async (c) => {
+  const denied = await requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  let password = "";
+  try {
+    const body = (await c.req.json()) as { password?: string };
+    password = String(body.password || "");
+  } catch {
+    return c.json({ detail: "JSON inválido" }, 400);
+  }
+  const trimmed = password.trim();
+  if (trimmed.length < 6) {
+    return c.json(
+      { detail: "La contraseña debe tener al menos 6 caracteres." },
+      400,
+    );
+  }
+  await setPanelPassword(c.env, trimmed);
+  return c.json({
+    ok: true,
+    password_set: true,
+    detail: "Contraseña actualizada. Úsala la próxima vez para entrar.",
   });
 });
 
 app.post("/api/superadmin/test/:id", async (c) => {
-  const denied = requireSuperadmin(c.req.raw, c.env);
+  const denied = await requireSuperadmin(c.req.raw, c.env);
   if (denied) return denied;
   const id = String(c.req.param("id") || "") as ConnectionTestId;
   if (id !== "pey" && id !== "facturapi" && id !== "twilio") {
@@ -154,7 +185,7 @@ app.post("/api/superadmin/test/:id", async (c) => {
 });
 
 app.post("/api/superadmin/test", async (c) => {
-  const denied = requireSuperadmin(c.req.raw, c.env);
+  const denied = await requireSuperadmin(c.req.raw, c.env);
   if (denied) return denied;
   const env = await runtimeEnv(c.env);
   const results = await runAllConnectionTests(env);

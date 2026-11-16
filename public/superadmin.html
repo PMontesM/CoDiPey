@@ -59,18 +59,37 @@
     <section id="gate" class="glass rounded-2xl p-5 space-y-3">
       <p id="gateMsg" class="text-sm text-[#3F524B]">Comprobando acceso…</p>
       <div id="gateForm" class="hidden space-y-2">
-        <label class="text-xs font-semibold text-[#0F1A17]">SUPERADMIN_SECRET</label>
+        <label class="text-xs font-semibold text-[#0F1A17]" for="tokenInput">Contraseña</label>
         <input id="tokenInput" type="password" autocomplete="current-password"
-          class="w-full rounded-lg border border-[#D0D9D4] bg-white px-3 py-2 text-sm mono"
-          placeholder="Token de Wrangler" />
+          class="w-full rounded-lg border border-[#D0D9D4] bg-white px-3 py-2 text-sm"
+          placeholder="Tu contraseña de superadmin" />
         <button id="btnUnlock" type="button"
           class="rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-white text-sm font-semibold px-4 py-2">
-          Desbloquear
+          Entrar
         </button>
+        <p class="text-[11px] text-[#6A7A73]">Si aún no definiste una, usa el secret de Wrangler (primer acceso).</p>
       </div>
     </section>
 
     <div id="app" class="hidden space-y-4">
+      <section class="glass rounded-2xl p-5 space-y-3">
+        <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Contraseña del panel</h2>
+        <p id="passwordHint" class="text-[11px] text-[#3F524B]">Define una contraseña fácil de recordar. El secret de Wrangler sigue sirviendo de respaldo.</p>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <input id="newPassword" type="password" autocomplete="new-password"
+            class="w-full rounded-lg border border-[#D0D9D4] bg-white px-3 py-2 text-sm"
+            placeholder="Nueva contraseña (mín. 6)" />
+          <input id="newPassword2" type="password" autocomplete="new-password"
+            class="w-full rounded-lg border border-[#D0D9D4] bg-white px-3 py-2 text-sm"
+            placeholder="Repetir contraseña" />
+        </div>
+        <button id="btnPassword" type="button"
+          class="rounded-lg bg-[#0F2A24] hover:bg-[#174038] text-white text-sm font-semibold px-4 py-2">
+          Guardar contraseña
+        </button>
+        <p id="passwordStatus" class="text-xs text-[#3F524B]" role="status"></p>
+      </section>
+
       <section class="glass rounded-2xl p-5 space-y-3">
         <h2 class="text-sm font-bold uppercase tracking-wide text-[#0F2A24]">Webhooks (copiar a pey / Twilio)</h2>
         <div class="space-y-2 text-sm">
@@ -170,7 +189,7 @@
         return;
       }
       if (!getToken()) {
-        gateMsg.textContent = "Introduce el SUPERADMIN_SECRET para editar APIs y webhooks.";
+        gateMsg.textContent = "Introduce tu contraseña para editar APIs y webhooks.";
         gateForm.classList.remove("hidden");
         return;
       }
@@ -182,7 +201,7 @@
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         setToken("");
-        document.getElementById("gateMsg").textContent = "Token inválido.";
+        document.getElementById("gateMsg").textContent = "Contraseña incorrecta.";
         document.getElementById("gateForm").classList.remove("hidden");
         document.getElementById("app").classList.add("hidden");
         return;
@@ -195,6 +214,12 @@
       document.getElementById("app").classList.remove("hidden");
       document.getElementById("hookTwilio").textContent = data.webhooks.twilio;
       document.getElementById("hookPey").textContent = data.webhooks.pey;
+      const hint = document.getElementById("passwordHint");
+      if (hint) {
+        hint.textContent = data.password_set
+          ? "Ya hay una contraseña. Puedes cambiarla aquí cuando quieras."
+          : "Aún no hay contraseña propia: define una para no depender del secret largo.";
+      }
       const form = document.getElementById("settingsForm");
       form.innerHTML = data.settings.map(row => {
         const label = LABELS[row.key] || row.key;
@@ -217,10 +242,39 @@
       setToken(document.getElementById("tokenInput").value.trim());
       await loadSettings();
     });
+    document.getElementById("tokenInput").addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") document.getElementById("btnUnlock").click();
+    });
 
     document.getElementById("btnLogout").addEventListener("click", () => {
       setToken("");
       location.reload();
+    });
+
+    document.getElementById("btnPassword").addEventListener("click", async () => {
+      const status = document.getElementById("passwordStatus");
+      const a = document.getElementById("newPassword").value;
+      const b = document.getElementById("newPassword2").value;
+      if (a !== b) {
+        status.textContent = "Las contraseñas no coinciden.";
+        return;
+      }
+      status.textContent = "Guardando…";
+      const res = await fetch("/api/superadmin/password", {
+        method: "PUT",
+        headers: headers(true),
+        body: JSON.stringify({ password: a }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        status.textContent = data.detail || `Error ${res.status}`;
+        return;
+      }
+      setToken(a.trim());
+      document.getElementById("newPassword").value = "";
+      document.getElementById("newPassword2").value = "";
+      status.textContent = data.detail || "Contraseña guardada.";
+      await loadSettings();
     });
 
     document.getElementById("settingsForm").addEventListener("submit", async (ev) => {
