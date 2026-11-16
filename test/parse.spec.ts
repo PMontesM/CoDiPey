@@ -6,6 +6,10 @@ import {
   xmlEscape,
 } from "../src/lib/parse";
 import { fiscalRetryStepFromHints } from "../src/lib/fiscal-wizard";
+import {
+  maskPhonesInText,
+  maskWhatsappPhone,
+} from "../src/lib/privacy";
 import { ensureMenuActions } from "../src/lib/twilio";
 
 describe("parseProductLines", () => {
@@ -112,5 +116,23 @@ describe("ensureMenuActions", () => {
       "FISCAL_EDIT",
       "FISCAL_DEMO",
     ]);
+  });
+});
+
+describe("maskWhatsappPhone", () => {
+  it("keeps country code and last 4 digits", () => {
+    expect(maskWhatsappPhone("whatsapp:+52172227110104")).toBe(
+      "+52••••••••0104",
+    );
+    expect(maskWhatsappPhone("+5215510076571")).toMatch(/\+52•+6571$/);
+  });
+
+  it("masks phones inside free text", () => {
+    expect(maskPhonesInText("from whatsapp:+5215510076571 boom")).toContain(
+      "•",
+    );
+    expect(maskPhonesInText("from whatsapp:+5215510076571 boom")).not.toContain(
+      "5510076571",
+    );
   });
 });

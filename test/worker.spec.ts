@@ -494,6 +494,9 @@ describe("Worker HTTP", () => {
     const list = await call("/api/ordenes");
     const payload = await list.json();
     expect(payload.kpis.ordenes_pendientes).toBe(0);
+    const phone = String(payload.ordenes?.[0]?.telefono || "");
+    expect(phone).toContain("•");
+    expect(phone).not.toMatch(/10076571/);
   });
 
   it("WhatsApp cancelar ends active cobro", async () => {

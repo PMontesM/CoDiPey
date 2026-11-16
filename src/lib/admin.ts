@@ -1,4 +1,5 @@
 import type { Env, Orden } from "../types";
+import { maskWhatsappPhone } from "./privacy";
 
 export type EmisorFiscal = {
   rfc: string;
@@ -102,6 +103,7 @@ export function buildOrdenesPayload(
 
     return {
       ...o,
+      telefono: maskWhatsappPhone(String(o.telefono || "")),
       conceptos_parseados: conceptos,
       total: Number(o.monto),
       cp: hasFiscal ? o.codigo_postal : null,

@@ -1,4 +1,5 @@
 import type { Env } from "../types";
+import { maskPhonesInText } from "./privacy";
 
 const MAX_ROWS = 200;
 const DETAIL_MAX = 2000;
@@ -58,12 +59,15 @@ export async function logAppError(
     await ensureErrorLogTable(env);
     const ts = new Date().toISOString();
     const level = input.level === "warn" ? "warn" : "error";
-    const message = truncate((input.message || "error").trim() || "error", 500);
+    const message = truncate(
+      maskPhonesInText((input.message || "error").trim() || "error"),
+      500,
+    );
     const detail = input.detail
-      ? truncate(String(input.detail), DETAIL_MAX)
+      ? truncate(maskPhonesInText(String(input.detail)), DETAIL_MAX)
       : null;
     const context = input.context
-      ? truncate(String(input.context), 500)
+      ? truncate(maskPhonesInText(String(input.context)), 500)
       : null;
     await env.DB.prepare(
       `INSERT INTO error_log (created_at, level, source, message, detail, context)

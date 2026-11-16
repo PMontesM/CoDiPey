@@ -1,5 +1,6 @@
 import type { Env } from "../types";
 import { logAppError } from "./error-log";
+import { maskWhatsappPhone } from "./privacy";
 
 export type QuickReplyAction = { title: string; id: string };
 export type ListItem = { id: string; item: string; description?: string };
@@ -48,7 +49,7 @@ export async function sendWhatsapp(
         source: "twilio",
         message: `WhatsApp send HTTP ${res.status}`,
         detail: bodyText,
-        context: dest,
+        context: maskWhatsappPhone(dest),
       });
     }
   } catch (err) {
@@ -57,7 +58,7 @@ export async function sendWhatsapp(
       source: "twilio",
       message: err instanceof Error ? err.message : String(err),
       detail: String(err),
-      context: dest,
+      context: maskWhatsappPhone(dest),
     });
   }
 }

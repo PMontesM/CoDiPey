@@ -41,6 +41,7 @@ import {
   setPanelPassword,
   superadminConfigured,
 } from "./lib/superadmin";
+import { maskOrdenForApi } from "./lib/privacy";
 import { renderTicketHtmlPage } from "./lib/ticket";
 import { sendWhatsapp } from "./lib/twilio";
 import type { Env, Item, Orden } from "./types";
@@ -414,10 +415,12 @@ app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
     .bind(id)
     .first<Orden>();
   if (!row) return c.json({ detail: "Orden no encontrada" }, 404);
-  if (row.facturapi_id) return c.json({ orden: row, message: "Ya timbrada" });
+  if (row.facturapi_id) {
+    return c.json({ orden: maskOrdenForApi(row), message: "Ya timbrada" });
+  }
   const updated = await evaluarYTimbrar(env, publicUrlFrom(env, c.req.url), id);
   if (!updated) return c.json({ detail: "Orden no encontrada" }, 404);
-  return c.json({ orden: updated });
+  return c.json({ orden: maskOrdenForApi(updated) });
 });
 
 app.post("/api/ordenes/:id/cancelar", async (c) => {
@@ -435,7 +438,10 @@ app.post("/api/ordenes/:id/cancelar", async (c) => {
     );
   }
   if (row.estado_chat === "CANCELADO" || row.pago_estado === "CANCELADO") {
-    return c.json({ orden: row, message: "Ya estaba cancelada" });
+    return c.json({
+      orden: maskOrdenForApi(row),
+      message: "Ya estaba cancelada",
+    });
   }
   await c.env.DB.prepare(
     `UPDATE ordenes
@@ -447,7 +453,10 @@ app.post("/api/ordenes/:id/cancelar", async (c) => {
   const updated = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
     .bind(id)
     .first<Orden>();
-  return c.json({ orden: updated, message: "Orden cancelada" });
+  return c.json({
+    orden: updated ? maskOrdenForApi(updated) : updated,
+    message: "Orden cancelada",
+  });
 });
 
 /** Config pública para unirse al WhatsApp de Mostrito (Sandbox Twilio). */
