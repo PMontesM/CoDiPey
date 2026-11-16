@@ -357,9 +357,9 @@
 
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full xl:w-auto">
         <div class="flex items-center gap-1 overflow-x-auto" role="group" aria-label="Rango de fechas">
-          <button type="button" data-day="today" onclick="setDayScope('today')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">Hoy</button>
+          <button type="button" data-day="today" onclick="setDayScope('today')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-[#C2185B] text-[#F4F8F6] cursor-pointer">Hoy</button>
           <button type="button" data-day="yesterday" onclick="setDayScope('yesterday')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">Ayer</button>
-          <button type="button" data-day="7d" onclick="setDayScope('7d')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-[#C2185B] text-[#F4F8F6] cursor-pointer">7 días</button>
+          <button type="button" data-day="7d" onclick="setDayScope('7d')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">7 días</button>
           <button type="button" data-day="all" onclick="setDayScope('all')" class="day-pill px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap bg-[#E4EBE7] text-[#4A5C55] hover:text-[#0F1A17] cursor-pointer">Todas</button>
         </div>
         <div class="relative w-full sm:w-64">
@@ -735,7 +735,7 @@
         codigo_postal: "06010"
       },
       activeFilter: "ALL",
-      dayScope: "7d",
+      dayScope: "today",
       page: 1,
       pageSize: 15,
       searchQuery: "",

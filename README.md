@@ -31,7 +31,7 @@ Rail de pago: **CoDi Banxico** vía **pey** (QR + payment link opcional). Timbra
 
 1. Abre [/admin](https://cobro-codi.inomali.workers.dev/admin).
 2. **+ Simular Cobro WhatsApp** → abre la orden → **Simular Webhook Pago**.
-3. Filtros: **Hoy / Ayer / 7 días / Todas**, estado (Liquidadas, Pendientes, Atención Fiscal) y paginación (15 por página).
+3. Filtros: **Hoy** (por defecto) / Ayer / 7 días / Todas, estado (Liquidadas, Pendientes, Atención Fiscal) y paginación (15 por página).
 4. El logo **Mostrito** o **Inicio** regresan a la landing.
 5. En móvil, **atrás** cierra el modal de la orden (no te saca al landing).
 
