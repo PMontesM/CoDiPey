@@ -14,7 +14,8 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 const ADMIN_SECRET = "test-admin-secret";
 const TWILIO_TOKEN = "test-twilio-token";
-const PEY_WHSEC = "whsec_dGVzdC1wZXktd2ViaG9vay1zZWNyZXQ"; // base64("test-pey-webhook-secret")
+// Base64 of "test-pey-webhook-secret" (sin prefijo whsec_ para no parecer key real).
+const PEY_WHSEC = "dGVzdC1wZXktd2ViaG9vay1zZWNyZXQ=";
 const PUBLIC_BASE = "https://cobro-codi.test";
 
 const PNG_1X1 = Uint8Array.from([
