@@ -215,7 +215,8 @@ export async function verifyFileAccess(
 ): Promise<boolean> {
   if (!isProtectedFileKey(key)) return true;
   const secret = signingSecret(env);
-  if (!secret) return false;
+  // Sin secreto de firma: Worker single-tenant abierto (mismo criterio que requireOperator).
+  if (!secret) return true;
   const exp = Number(expRaw || "");
   if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return false;
   if (!sig) return false;
