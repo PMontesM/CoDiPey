@@ -3,7 +3,9 @@ import { evaluarYTimbrar } from "./facturapi";
 import { nowIso } from "./parse";
 import {
   crearQrPey,
+  extractPaymentLink,
   extractQrPayload,
+  savePeyPaymentUrl,
   storeQrPng,
 } from "./pey";
 
@@ -100,6 +102,7 @@ export async function simularCobroDemo(
   const qrPayload = extractQrPayload(peyData);
   const peyQrId =
     String(peyData.id || peyData.qrId || peyData.uuid || "") || null;
+  await savePeyPaymentUrl(env, ordenId, extractPaymentLink(peyData));
   await storeQrPng(env, ordenId, qrPayload, {
     items: DEMO_ITEMS,
     monto,

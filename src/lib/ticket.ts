@@ -290,7 +290,7 @@ export async function renderTicketPng(
 
 export function formatTicketCaption(
   meta: TicketMeta,
-  opts: { mediaUrl: string; ticketUrl: string },
+  opts: { mediaUrl: string; ticketUrl: string; paymentUrl?: string | null },
 ): string {
   const vigencia = meta.vigenciaMin ?? DEFAULT_VIGENCIA_MIN;
   const items =
@@ -311,12 +311,19 @@ export function formatTicketCaption(
         `• ${it.cantidad} × ${it.concepto} — $${money(it.subtotal)}`,
     )
     .join("\n");
+  // Link de pago de pey: solo si la API lo devolvió. El cliente que compra
+  // por WhatsApp no puede escanear su propia pantalla; con el link paga
+  // tocándolo, sin cámara.
+  const payLink = opts.paymentUrl
+    ? `\n\n💳 *O paga tocando el link (sin escanear):*\n${opts.paymentUrl}`
+    : "";
   return (
     `🧾 *Ticket de cobro* · orden #${meta.ordenId}\n` +
     `${lines}\n` +
     `*TOTAL $${money(meta.monto)} MXN* · $0 comisión\n` +
     `Válido ${vigencia} min.\n\n` +
-    `📱 *Ábrelo a pantalla completa (más fácil de escanear):*\n${opts.ticketUrl}`
+    `📱 *Ábrelo a pantalla completa (más fácil de escanear):*\n${opts.ticketUrl}` +
+    payLink
   );
 }
 
@@ -325,11 +332,12 @@ export type TicketPageOpts = {
   qrImageUrl: string;
   estado: "PENDIENTE" | "PAGADO" | "CANCELADO" | "VENCIDO";
   expiresInSec?: number;
+  paymentUrl?: string | null;
 };
 
 /** HTML responsive: WhatsApp no renderiza HTML; se abre en el navegador del celular. */
 export function renderTicketHtmlPage(opts: TicketPageOpts): string {
-  const { meta, qrImageUrl, estado } = opts;
+  const { meta, qrImageUrl, estado, paymentUrl } = opts;
   const vigencia = meta.vigenciaMin ?? DEFAULT_VIGENCIA_MIN;
   const items =
     meta.items.length > 0
@@ -429,6 +437,7 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
     }
     .qr-wrap img { width: 100%; height: auto; display: block; image-rendering: pixelated; }
     .foot { text-align: center; font-size: 0.78rem; color: #444; margin-top: 0.85rem; line-height: 1.4; }
+    .paybtn { display: block; text-align: center; margin: 0.9rem auto 0; padding: 0.75rem 0.5rem; border: 2px solid #111; background: #111; color: #FFFEF8; font-weight: 700; font-size: 0.95rem; text-decoration: none; }
     .hint { text-align: center; font-size: 0.72rem; color: #666; margin-top: 1rem; }
   </style>
 </head>
@@ -451,7 +460,11 @@ export function renderTicketHtmlPage(opts: TicketPageOpts): string {
         ? `<div class="dots"></div>
     <p class="scan">*** ESCANEA PARA PAGAR ***</p>
     <div class="qr-wrap"><img src="${esc(qrImageUrl)}" alt="QR CoDi orden ${meta.ordenId}" width="600" height="600" /></div>
-    <p class="foot">QR CoDi · app de tu banco${meta.peyQrId ? `<br/>Ref ${esc(truncate(String(meta.peyQrId), 24))}` : ""}</p>`
+    <p class="foot">QR CoDi · app de tu banco${meta.peyQrId ? `<br/>Ref ${esc(truncate(String(meta.peyQrId), 24))}` : ""}</p>${
+            paymentUrl
+              ? `<a class="paybtn" href="${esc(paymentUrl)}">💳 Pagar sin escanear</a>`
+              : ""
+          }`
         : `<div class="dots"></div><p class="foot">${
             estado === "PAGADO"
               ? "Este cobro ya fue liquidado."
