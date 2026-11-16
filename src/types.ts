@@ -26,6 +26,7 @@ export type Orden = {
   cfdi_uuid?: string | null;
   pey_transaction_id: string | null;
   pey_qr_id: string | null;
+  pey_payment_url: string | null;
   estado_chat: string;
   error_fiscal: string | null;
   cliente_fiscal_id: number | null;
