@@ -1187,13 +1187,16 @@
     }
 
     function selectOrder(id) {
+      const alreadyOpen = Boolean(state.selectedId);
       state.selectedId = id;
       renderLedger();
       renderInspector();
-      openTicket();
+      openTicket({ pushHistory: !alreadyOpen });
     }
 
-    function closeTicket() {
+    function closeTicket(opts = {}) {
+      const { fromPopstate = false } = opts;
+      const wasOpen = Boolean(state.selectedId);
       state.selectedId = null;
       renderLedger();
       const root = document.getElementById("ticketDrawerRoot");
@@ -1207,9 +1210,15 @@
         root.setAttribute("aria-hidden", "true");
         document.getElementById("inspectorSheet").innerHTML = "";
       }, 220);
+      // Si cerramos con la X/backdrop, sacamos el estado del modal del historial
+      // para que un "atrás" posterior no reabra el drawer ni salte al landing.
+      if (wasOpen && !fromPopstate && history.state && history.state.mostritoTicket) {
+        history.back();
+      }
     }
 
-    function openTicket() {
+    function openTicket(opts = {}) {
+      const { pushHistory = true } = opts;
       const root = document.getElementById("ticketDrawerRoot");
       const backdrop = document.getElementById("ticketBackdrop");
       const drawer = document.getElementById("ticketDrawer");
@@ -1220,7 +1229,37 @@
         backdrop.classList.remove("opacity-0");
         drawer.classList.remove("translate-x-full");
       });
+      if (pushHistory) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("orden", String(state.selectedId));
+        history.pushState(
+          { mostritoTicket: true, ordenId: String(state.selectedId) },
+          "",
+          url.pathname + url.search + url.hash,
+        );
+      } else if (history.state && history.state.mostritoTicket) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("orden", String(state.selectedId));
+        history.replaceState(
+          { mostritoTicket: true, ordenId: String(state.selectedId) },
+          "",
+          url.pathname + url.search + url.hash,
+        );
+      }
     }
+
+    window.addEventListener("popstate", () => {
+      const root = document.getElementById("ticketDrawerRoot");
+      const drawerOpen = root && !root.classList.contains("hidden");
+      if (drawerOpen || state.selectedId) {
+        closeTicket({ fromPopstate: true });
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("orden")) {
+          url.searchParams.delete("orden");
+          history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
+    });
 
     // =========================================================================
     // 6. RENDERING: TREASURY RIBBON, LEDGER TABLE, INSPECTOR & LOGS
@@ -2418,6 +2457,24 @@
       }
       renderAll();
       pollOrders();
+      // Si el URL ya trae ?orden=, no empujar historial extra al abrir.
+      const bootOrden = new URL(window.location.href).searchParams.get("orden");
+      if (bootOrden) {
+        const openWhenReady = () => {
+          if (!state.orders.some((o) => String(o.id) === String(bootOrden))) return false;
+          state.selectedId = String(bootOrden);
+          renderLedger();
+          renderInspector();
+          openTicket({ pushHistory: false });
+          return true;
+        };
+        if (!openWhenReady()) {
+          const t = setInterval(() => {
+            if (openWhenReady()) clearInterval(t);
+          }, 300);
+          setTimeout(() => clearInterval(t), 8000);
+        }
+      }
     });
   </script>
 </body>
