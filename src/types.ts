@@ -2,6 +2,8 @@ export type Env = {
   DB: D1Database;
   ASSETS?: Fetcher;
   PEY_API_KEY: string;
+  /** Secreto Standard Webhooks de pey (whsec_…). Obliga firma en /pey/webhook. */
+  PEY_WEBHOOK_SECRET?: string;
   FACTURAPI_KEY: string;
   TWILIO_ACCOUNT_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -10,6 +12,13 @@ export type Env = {
   TWILIO_SANDBOX_JOIN_CODE?: string;
   /** Número Twilio SMS (E.164) para mandar la instrucción antes del join. Opcional. */
   TWILIO_SMS_FROM?: string;
+  /**
+   * Token de operador para panel/APIs cuando no hay identidad Cursor
+   * (p. ej. Worker en workers.dev). Header: Authorization Bearer o x-admin-token.
+   */
+  ADMIN_API_SECRET?: string;
+  /** HMAC para URLs firmadas de facturas; cae a ADMIN_API_SECRET / PEY_WEBHOOK_SECRET. */
+  FILE_SIGNING_SECRET?: string;
   PUBLIC_URL?: string;
 };
 

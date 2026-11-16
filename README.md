@@ -73,19 +73,22 @@ Cloudflare Worker (Hono + TypeScript) · D1 · Twilio WhatsApp · pey CoDi · Fa
 |---|---|
 | `DB` (D1 `cobro-db`) | Órdenes, fiscales, blobs, demo_whatsapp |
 | `ASSETS` | Estáticos de `public/` (landing, panel, video, shots) |
-| `PEY_API_KEY` | QR CoDi |
+| `PEY_API_KEY` | QR CoDi + payment links |
+| `PEY_WEBHOOK_SECRET` | Firma Standard Webhooks de `/pey/webhook` |
 | `FACTURAPI_KEY` | Timbrado CFDI 4.0 |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` | WhatsApp |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_FROM` | WhatsApp (+ firma `X-Twilio-Signature`) |
 | `TWILIO_SANDBOX_JOIN_CODE` | Código del Sandbox (hoy: `writer-suggest`) |
 | `TWILIO_SMS_FROM` | (Opcional) SMS con la instrucción de join |
+| `ADMIN_API_SECRET` | Token operador (panel/APIs) si no hay identidad Cursor |
+| `FILE_SIGNING_SECRET` | (Opcional) HMAC de facturas PDF/XML |
 | `PUBLIC_URL` | Base HTTPS del Worker |
 
 ### Webhooks y APIs
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/whatsapp/webhook` | Twilio inbound → FSM del chat |
-| POST | `/pey/webhook` | Pago CoDi o payment link (`paid`) → PAGADO + timbra si aplica |
+| POST | `/whatsapp/webhook` | Twilio inbound (firma válida) → FSM del chat |
+| POST | `/pey/webhook` | Pago CoDi o payment link (`paid`) → PAGADO + timbra (firma Standard Webhooks) |
 | GET | `/api/ordenes` | Lista + KPIs para el panel |
 | POST | `/api/ordenes/:id/cancelar` | Cancela pendiente |
 | POST | `/api/ordenes/:id/reintentar-timbrado` | Reintenta CFDI |

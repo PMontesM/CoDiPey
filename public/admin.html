@@ -236,6 +236,15 @@
           <span id="lastSyncText" class="tabular-mono text-[11px] text-[#686158] hidden sm:inline">
             Sincronizado · --:--:--
           </span>
+          <button
+            type="button"
+            id="btnAdminToken"
+            onclick="promptAdminToken()"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#E4DFD3] text-[10px] font-medium text-[#686158] hover:bg-[#F3EFE6] cursor-pointer"
+            title="Token de operador (ADMIN_API_SECRET) si no hay sesión Cursor"
+          >
+            API token
+          </button>
         </div>
 
         <h1 class="editorial-serif text-xl sm:text-[30px] font-semibold tracking-tight text-[#1C1917] leading-tight">
@@ -623,6 +632,37 @@
     // =========================================================================
     // 2. APPLICATION STATE
     // =========================================================================
+    const ADMIN_TOKEN_KEY = "codipey_admin_token";
+
+    function getAdminToken() {
+      try {
+        return sessionStorage.getItem(ADMIN_TOKEN_KEY) || "";
+      } catch {
+        return "";
+      }
+    }
+
+    function adminHeaders(extra = {}) {
+      const headers = { ...extra };
+      const token = getAdminToken();
+      if (token) headers["x-admin-token"] = token;
+      return headers;
+    }
+
+    function promptAdminToken() {
+      const current = getAdminToken();
+      const next = window.prompt(
+        "Token de operador (ADMIN_API_SECRET). Vacío = borrar. En apps Cursor private/team no hace falta.",
+        current,
+      );
+      if (next === null) return;
+      try {
+        if (next.trim()) sessionStorage.setItem(ADMIN_TOKEN_KEY, next.trim());
+        else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      } catch { /* ignore */ }
+      pollOrders(true);
+    }
+
     const state = {
       isLiveApi: false,
       orders: JSON.parse(JSON.stringify(DEMO_ORDERS)),
@@ -842,11 +882,14 @@
         const timeoutId = setTimeout(() => controller.abort(), 1800);
 
         const res = await fetch("/api/ordenes", {
-          headers: { "Accept": "application/json" },
+          headers: adminHeaders({ Accept: "application/json" }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
 
+        if (res.status === 401) {
+          throw new Error("No autorizado: configura API token o inicia sesión en Cursor");
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.ordenes || []);
@@ -1826,7 +1869,10 @@
       if (state.isLiveApi) {
         showToast("Creando cobro demo + QR CoDi…", "info");
         try {
-          const res = await fetch("/api/demo/simular-cobro", { method: "POST" });
+          const res = await fetch("/api/demo/simular-cobro", {
+            method: "POST",
+            headers: adminHeaders(),
+          });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
           const newId = String(data.orden?.id || "");
@@ -1893,6 +1939,7 @@
       if (state.isLiveApi) {
         try {
           const res = await fetch(`/api/demo/simular-pago/${encodeURIComponent(id)}`, {
+            headers: adminHeaders(),
             method: "POST"
           });
           const data = await res.json().catch(() => ({}));
@@ -1947,7 +1994,8 @@
       if (state.isLiveApi) {
         try {
           const res = await fetch(`/api/ordenes/${encodeURIComponent(orderId)}/cancelar`, {
-            method: "POST"
+            method: "POST",
+            headers: adminHeaders(),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
@@ -1986,7 +2034,8 @@
       if (state.isLiveApi) {
         try {
           const res = await fetch(`/api/ordenes/${encodeURIComponent(orderId)}/reintentar-timbrado`, {
-            method: "POST"
+            method: "POST",
+            headers: adminHeaders(),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           pushWebhookLog("facturapi.invoice.stamped", orderId, "CFDI 4.0", "forest");

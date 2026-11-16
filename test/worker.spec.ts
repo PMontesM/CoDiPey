@@ -5,8 +5,17 @@ import {
 } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
+import {
+  signPeyWebhookForTest,
+  signTwilioRequestForTest,
+} from "../src/lib/security";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
+
+const ADMIN_SECRET = "test-admin-secret";
+const TWILIO_TOKEN = "test-twilio-token";
+const PEY_WHSEC = "whsec_dGVzdC1wZXktd2ViaG9vay1zZWNyZXQ"; // base64("test-pey-webhook-secret")
+const PUBLIC_BASE = "https://cobro-codi.test";
 
 const PNG_1X1 = Uint8Array.from([
   137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0,
@@ -78,7 +87,14 @@ async function clearDb(db: D1Database) {
 }
 
 async function call(path: string, init?: RequestInit): Promise<Response> {
-  const request = new IncomingRequest(`https://cobro-codi.test${path}`, init);
+  const headers = new Headers(init?.headers);
+  if (!headers.has("x-admin-token") && !headers.has("authorization")) {
+    headers.set("x-admin-token", ADMIN_SECRET);
+  }
+  const request = new IncomingRequest(`${PUBLIC_BASE}${path}`, {
+    ...init,
+    headers,
+  });
   const ctx = createExecutionContext();
   const response = await worker.fetch(request, env, ctx);
   await waitOnExecutionContext(ctx);
@@ -89,17 +105,56 @@ function formBody(data: Record<string, string>): string {
   return new URLSearchParams(data).toString();
 }
 
+async function callWhatsapp(data: Record<string, string>): Promise<Response> {
+  const body = formBody(data);
+  const sig = await signTwilioRequestForTest(
+    TWILIO_TOKEN,
+    `${PUBLIC_BASE}/whatsapp/webhook`,
+    data,
+  );
+  return call("/whatsapp/webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "X-Twilio-Signature": sig,
+    },
+    body,
+  });
+}
+
+async function callPeyWebhook(
+  payload: Record<string, unknown>,
+): Promise<Response> {
+  const raw = JSON.stringify(payload);
+  const ts = String(Math.floor(Date.now() / 1000));
+  const msgId = `msg_${Math.random().toString(16).slice(2)}`;
+  const sig = await signPeyWebhookForTest(PEY_WHSEC, msgId, ts, raw);
+  return call("/pey/webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "webhook-id": msgId,
+      "webhook-timestamp": ts,
+      "webhook-signature": sig,
+    },
+    body: raw,
+  });
+}
+
 describe("Worker HTTP", () => {
   beforeEach(async () => {
     await migrate(env.DB);
     await clearDb(env.DB);
     const e = env as Record<string, unknown>;
     e.PEY_API_KEY = "test-pey";
+    e.PEY_WEBHOOK_SECRET = PEY_WHSEC;
     e.FACTURAPI_KEY = "test-facturapi";
     e.TWILIO_ACCOUNT_SID = "";
-    e.TWILIO_AUTH_TOKEN = "";
+    e.TWILIO_AUTH_TOKEN = TWILIO_TOKEN;
     e.TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
-    e.PUBLIC_URL = "https://cobro-codi.test";
+    e.ADMIN_API_SECRET = ADMIN_SECRET;
+    e.FILE_SIGNING_SECRET = "test-file-signing";
+    e.PUBLIC_URL = PUBLIC_BASE;
 
     vi.stubGlobal(
       "fetch",
@@ -167,36 +222,64 @@ describe("Worker HTTP", () => {
     expect(await res.json()).toMatchObject({ status: "ok" });
   });
 
-  async function startCartAndCheckout(from = "whatsapp:+5215510076571") {
-    await call("/whatsapp/webhook", {
+  it("rejects unsigned pey webhook", async () => {
+    const res = await call("/pey/webhook", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
-        From: from,
-        Body: "1 Prueba CoDi 0.01",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "codi.qr.payment_received",
+        data: { transactionId: "tx-forge", numRef: "1" },
       }),
     });
-    await call("/whatsapp/webhook", {
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects unsigned whatsapp webhook", async () => {
+    const res = await call("/whatsapp/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+      body: formBody({ From: "whatsapp:+5215510076571", Body: "hola" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects admin APIs without operator auth", async () => {
+    const request = new IncomingRequest(`${PUBLIC_BASE}/api/ordenes`);
+    const ctx = createExecutionContext();
+    const bare = await worker.fetch(request, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(bare.status).toBe(401);
+  });
+
+  it("blocks factura files without signature", async () => {
+    await env.DB.prepare(
+      `INSERT INTO blobs (key, content_type, data, updated_at)
+       VALUES ('factura_9.pdf', 'application/pdf', ?, ?)`,
+    )
+      .bind(PNG_1X1, new Date().toISOString())
+      .run();
+    const denied = await call("/files/factura_9.pdf");
+    expect(denied.status).toBe(403);
+  });
+
+  async function startCartAndCheckout(from = "whatsapp:+5215510076571") {
+    await callWhatsapp({
+        From: from,
+        Body: "1 Prueba CoDi 0.01",
+      });
+    await callWhatsapp({
         From: from,
         Body: "Cobrar",
         ButtonPayload: "CART_PAY",
         ButtonText: "Cobrar",
-      }),
-    });
+      });
   }
 
   it("WhatsApp step1 opens cart before invoice", async () => {
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "1 Prueba CoDi 0.01",
-      }),
-    });
+      });
     expect(res.status).toBe(200);
     const twiml = await res.text();
     expect(twiml).toMatch(/orden #\d+/i);
@@ -210,22 +293,14 @@ describe("Worker HTTP", () => {
   });
 
   it("WhatsApp cart accepts several products then checkout", async () => {
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "1 Cafe 45",
-      }),
-    });
-    const add = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+      });
+    const add = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "2 Agua 10",
-      }),
-    });
+      });
     expect(await add.text()).toMatch(/Cafe|Agua|55\.00|Total/i);
 
     const row = await env.DB.prepare(
@@ -236,15 +311,11 @@ describe("Worker HTTP", () => {
     expect(row?.conceptos).toContain("Cafe");
     expect(row?.conceptos).toContain("Agua");
 
-    const pay = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const pay = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Cobrar",
         ButtonPayload: "CART_PAY",
-      }),
-    });
+      });
     expect(await pay.text()).toMatch(/necesita factura|factura/i);
     const after = await env.DB.prepare(
       "SELECT estado_chat FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -253,16 +324,12 @@ describe("Worker HTTP", () => {
   });
 
   it("WhatsApp list picker PROD_ adds catalog item to cart", async () => {
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Prueba CoDi $0.01",
         ButtonPayload: "PROD_PRUEBA_001",
         ButtonText: "Prueba CoDi $0.01",
-      }),
-    });
+      });
     expect(res.status).toBe(200);
     const twiml = await res.text();
     expect(twiml).toMatch(/orden #\d+/i);
@@ -279,16 +346,12 @@ describe("Worker HTTP", () => {
   it("WhatsApp FACTURA_SI asks fiscal first without sending QR", async () => {
     await startCartAndCheckout();
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Sí, factura",
         ButtonPayload: "FACTURA_SI",
         ButtonText: "Sí, factura",
-      }),
-    });
+      });
     expect(res.status).toBe(200);
     const twiml = await res.text();
     expect(twiml).toMatch(/Sin RFC|factura|QR de pago llega al final/i);
@@ -309,15 +372,11 @@ describe("Worker HTTP", () => {
   it("WhatsApp Solo pagar generates CoDi QR immediately", async () => {
     await startCartAndCheckout();
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Solo pagar",
         ButtonPayload: "FACTURA_NO",
-      }),
-    });
+      });
     const text = await res.text();
     expect(text).toMatch(/Ticket de cobro|Ticket CoDiPey|QR CoDi|\/ticket\/\d+|\/files\/qr_\d+\.png/);
 
@@ -369,23 +428,15 @@ describe("Worker HTTP", () => {
   });
 
   it("WhatsApp cancelar ends active cobro", async () => {
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "1 Cafe 45",
-      }),
-    });
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+      });
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "cancelar",
         ButtonPayload: "CANCEL",
-      }),
-    });
+      });
     expect(await res.text()).toMatch(/cancelada/i);
     const orden = await env.DB.prepare(
       "SELECT estado_chat, pago_estado FROM ordenes ORDER BY id DESC LIMIT 1",
@@ -396,25 +447,17 @@ describe("Worker HTTP", () => {
 
   it("WhatsApp Sin RFC after factura releases QR at the end", async () => {
     await startCartAndCheckout();
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Sí, factura",
         ButtonPayload: "FACTURA_SI",
-      }),
-    });
+      });
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Sin RFC",
         ButtonPayload: "FISCAL_DEMO",
-      }),
-    });
+      });
     expect(await res.text()).toMatch(/Ticket de cobro|QR CoDi|\/ticket\/\d+|\/files\/qr_/);
 
     const orden = await env.DB.prepare(
@@ -459,22 +502,14 @@ describe("Worker HTTP", () => {
       event: "codi.qr.payment_received",
       data: { transactionId: "tx-e2e-1", numRef: String(orden!.id) },
     };
-    const res1 = await call("/pey/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res1 = await callPeyWebhook(body);
     expect(await res1.json()).toMatchObject({
       ok: true,
       pago: "PAGADO",
       orden_id: orden!.id,
     });
 
-    const res2 = await call("/pey/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res2 = await callPeyWebhook(body);
     expect(await res2.json()).toMatchObject({
       ok: true,
       duplicate: true,
@@ -508,17 +543,13 @@ describe("Worker HTTP", () => {
       "SELECT id FROM ordenes ORDER BY id DESC LIMIT 1",
     ).first<{ id: number }>();
 
-    const res = await call("/pey/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const res = await callPeyWebhook({
         type: "payment_link.status_updated",
         status: "paid",
         clientReferenceId: String(orden!.id),
         paymentLinkId: "01LINKTEST",
         transactions: [{ transactionId: "tx-link-1", amount: 10 }],
-      }),
-    });
+      });
     expect(await res.json()).toMatchObject({
       ok: true,
       pago: "PAGADO",
@@ -526,16 +557,12 @@ describe("Worker HTTP", () => {
       via: "payment_link",
     });
 
-    const pending = await call("/pey/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const pending = await callPeyWebhook({
         type: "payment_link.status_updated",
         status: "pending",
         clientReferenceId: String(orden!.id),
         transactions: [{ transactionId: "tx-link-2" }],
-      }),
-    });
+      });
     expect(await pending.json()).toMatchObject({
       ok: true,
       ignored: "payment_link pending",
@@ -543,11 +570,7 @@ describe("Worker HTTP", () => {
   });
 
   it("hola opens product menu with catalog options", async () => {
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: "whatsapp:+5215510076571", Body: "hola" }),
-    });
+    const res = await callWhatsapp({ From: "whatsapp:+5215510076571", Body: "hola" });
     const twiml = await res.text();
     expect(twiml).toMatch(/Cobro CoDi|productos|pedido/i);
     expect(twiml).toMatch(/Prueba CoDi/i);
@@ -555,25 +578,17 @@ describe("Worker HTTP", () => {
 
   it("WhatsApp STATUS reports active order", async () => {
     await startCartAndCheckout();
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Solo pagar",
         ButtonPayload: "FACTURA_NO",
-      }),
-    });
+      });
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Estado del cobro",
         ButtonPayload: "STATUS",
-      }),
-    });
+      });
     const twiml = await res.text();
     expect(twiml).toMatch(/Orden #|Vigencia|QR/i);
   });
@@ -611,15 +626,11 @@ describe("Worker HTTP", () => {
       )
       .run();
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: phone,
         Body: "Otros datos",
         ButtonPayload: "FISCAL_EDIT",
-      }),
-    });
+      });
     expect(await res.text()).toMatch(/Paso 1 de 5|RFC/i);
     const orden = await env.DB.prepare(
       "SELECT estado_chat FROM ordenes WHERE telefono = ? ORDER BY id DESC LIMIT 1",
@@ -652,15 +663,11 @@ describe("Worker HTTP", () => {
       )
       .run();
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "Sí tengo RFC",
         ButtonPayload: "FISCAL_EDIT",
-      }),
-    });
+      });
     const twiml = await res.text();
     expect(twiml).toMatch(/Paso 1 de 5|RFC/i);
 
@@ -695,44 +702,20 @@ describe("Worker HTTP", () => {
       )
       .run();
 
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: phone, Body: "tengo rfc", ButtonPayload: "FISCAL_EDIT" }),
-    });
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: phone, Body: "XAXX010101000" }),
-    });
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: phone, Body: "PUBLICO EN GENERAL" }),
-    });
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: phone, Body: "06600" }),
-    });
-    await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    await callWhatsapp({ From: phone, Body: "tengo rfc", ButtonPayload: "FISCAL_EDIT" });
+    await callWhatsapp({ From: phone, Body: "XAXX010101000" });
+    await callWhatsapp({ From: phone, Body: "PUBLICO EN GENERAL" });
+    await callWhatsapp({ From: phone, Body: "06600" });
+    await callWhatsapp({
         From: phone,
         Body: "RESICO (fácil)",
         ButtonPayload: "REG_616",
-      }),
-    });
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+      });
+    const res = await callWhatsapp({
         From: phone,
         Body: "Gastos en general",
         ButtonPayload: "USO_G03",
-      }),
-    });
+      });
     expect(await res.text()).toMatch(/Ticket de cobro|QR CoDi|Datos listos|factura listos|\/ticket\/\d+|\/files\/qr_/i);
 
     const orden = await env.DB.prepare(
@@ -748,11 +731,7 @@ describe("Worker HTTP", () => {
   });
 
   it("rejects gibberish with helpful TwiML", async () => {
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({ From: "whatsapp:+5215510076571", Body: "asdfqwer" }),
-    });
+    const res = await callWhatsapp({ From: "whatsapp:+5215510076571", Body: "asdfqwer" });
     expect(await res.text()).toMatch(/No entendí|menú|cantidad concepto/i);
   });
 
@@ -779,14 +758,10 @@ describe("Worker HTTP", () => {
       )
       .run();
 
-    const res = await call("/whatsapp/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formBody({
+    const res = await callWhatsapp({
         From: "whatsapp:+5215510076571",
         Body: "XAXX010101000 | PUBLICO EN GENERAL | 06600 | 616 | G03",
-      }),
-    });
+      });
     const text = await res.text();
     expect(text).toMatch(/factura timbrada|Datos fiscales guardados/i);
 
@@ -879,11 +854,7 @@ describe("Worker HTTP", () => {
     const phone = "whatsapp:+5215599001122";
 
     async function wa(data: Record<string, string>) {
-      return call("/whatsapp/webhook", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: formBody({ From: phone, ...data }),
-      });
+      return callWhatsapp({ From: phone, ...data });
     }
 
     async function latestOrden() {

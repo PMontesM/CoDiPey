@@ -10,6 +10,13 @@ import {
 import { evaluarYTimbrar } from "./lib/facturapi";
 import { nowIso, xmlEscape } from "./lib/parse";
 import { getQrExpiresInSec } from "./lib/pey";
+import {
+  isProtectedFileKey,
+  requireOperator,
+  verifyFileAccess,
+  verifyPeyWebhook,
+  verifyTwilioSignature,
+} from "./lib/security";
 import { renderTicketHtmlPage } from "./lib/ticket";
 import { sendWhatsapp } from "./lib/twilio";
 import type { Env, Item, Orden } from "./types";
@@ -21,6 +28,13 @@ const app = new Hono<AppEnv>();
 function publicUrl(c: { env: Env; req: { url: string } }): string {
   if (c.env.PUBLIC_URL) return c.env.PUBLIC_URL.replace(/\/$/, "");
   return new URL(c.req.url).origin;
+}
+
+async function guardOperator(c: {
+  req: { raw: Request };
+  env: Env;
+}): Promise<Response | null> {
+  return requireOperator(c.req.raw, c.env);
 }
 
 app.get("/health", (c) => c.json({ status: "ok", runtime: "cloudflare-worker" }));
@@ -44,12 +58,23 @@ app.get("/admin", async (c) => {
 app.get("/files/:key", async (c) => {
   const key = c.req.param("key");
   if (!/^[\w.-]+$/.test(key)) return c.text("invalid", 400);
+  if (isProtectedFileKey(key)) {
+    const ok = await verifyFileAccess(
+      c.env,
+      key,
+      c.req.query("exp") || null,
+      c.req.query("sig") || null,
+    );
+    if (!ok) return c.text("forbidden", 403);
+  }
   const obj = await getBlob(c.env, key);
   if (!obj) return c.text("not found", 404);
   return new Response(obj.data, {
     headers: {
       "content-type": obj.contentType,
-      "cache-control": "public, max-age=300",
+      "cache-control": isProtectedFileKey(key)
+        ? "private, no-store"
+        : "public, max-age=300",
     },
   });
 });
@@ -88,7 +113,6 @@ app.get("/ticket/:id", async (c) => {
   }
 
   const base = publicUrl(c);
-  // Prefer QR suelto (escaneable); cae al ticket si aún no existe.
   const rawQr = await getBlob(c.env, `qr_code_${orden.id}.png`);
   const qrImageUrl = rawQr
     ? `${base}/files/qr_code_${orden.id}.png`
@@ -113,6 +137,8 @@ app.get("/ticket/:id", async (c) => {
 });
 
 app.get("/api/ordenes", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
   const { results } = await c.env.DB.prepare(
     `SELECT o.*,
             c.rfc AS rfc,
@@ -132,14 +158,25 @@ app.get("/api/ordenes", async (c) => {
         pago_estado: String(o.pago_estado),
         pey_qr_id: (o.pey_qr_id as string | null) || null,
       });
-      return { ...o, expires_in_sec, qr_vencido: expires_in_sec === 0 && o.pago_estado === "PENDIENTE" && !!o.pey_qr_id };
+      return {
+        ...o,
+        expires_in_sec,
+        qr_vencido:
+          expires_in_sec === 0 &&
+          o.pago_estado === "PENDIENTE" &&
+          !!o.pey_qr_id,
+      };
     }),
   );
   const emisor = await resolveEmisor(c.env);
-  return c.json(buildOrdenesPayload(withExpiry, emisor));
+  return c.json(buildOrdenesPayload(withExpiry, emisor), {
+    headers: { "cache-control": "private, no-store" },
+  });
 });
 
 app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
     .bind(id)
@@ -152,6 +189,8 @@ app.post("/api/ordenes/:id/reintentar-timbrado", async (c) => {
 });
 
 app.post("/api/ordenes/:id/cancelar", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare("SELECT * FROM ordenes WHERE id = ?")
     .bind(id)
@@ -185,7 +224,6 @@ app.get("/api/demo/whatsapp-join", (c) => {
   return c.json({
     configured: payload.configured,
     sandbox: payload.sandbox,
-    /** Solo si está configurado: el juez puede copiar/pegar. */
     join_text: payload.configured ? payload.join_text : null,
     wa_link: payload.configured ? payload.wa_link : null,
     sms_disponible: Boolean((c.env.TWILIO_SMS_FROM || "").trim()),
@@ -197,6 +235,8 @@ app.get("/api/demo/whatsapp-join", (c) => {
 
 /** Registra número de juez; opcionalmente SMS; siempre devuelve wa.me con join. */
 app.post("/api/demo/registrar-whatsapp", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
   let telefono = "";
   try {
     const body = (await c.req.json()) as { telefono?: string };
@@ -208,8 +248,10 @@ app.post("/api/demo/registrar-whatsapp", async (c) => {
   return c.json(result.body, result.status as 200 | 400 | 503);
 });
 
-/** Demo pública sin Twilio Sandbox: crea cobro + QR CoDi. */
+/** Demo: crea cobro + QR CoDi (requiere operador). */
 app.post("/api/demo/simular-cobro", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
   try {
     const result = await simularCobroDemo(c.env, publicUrl(c));
     return c.json(result);
@@ -219,8 +261,10 @@ app.post("/api/demo/simular-cobro", async (c) => {
   }
 });
 
-/** Demo pública: liquida como pey webhook + timbra CFDI si hay datos. */
+/** Demo: liquida como pey webhook + timbra CFDI (requiere operador). */
 app.post("/api/demo/simular-pago/:id", async (c) => {
+  const denied = await guardOperator(c);
+  if (denied) return denied;
   const id = Number(c.req.param("id"));
   if (!Number.isFinite(id) || id <= 0) {
     return c.json({ detail: "id inválido" }, 400);
@@ -237,6 +281,14 @@ app.post("/api/demo/simular-pago/:id", async (c) => {
 
 app.post("/whatsapp/webhook", async (c) => {
   const form = await c.req.parseBody();
+  const params: Record<string, string> = {};
+  for (const [k, v] of Object.entries(form)) {
+    if (typeof v === "string") params[k] = v;
+  }
+  const signed = await verifyTwilioSignature(c.env, c.req.raw, params);
+  if (!signed) {
+    return c.text("Forbidden", 403);
+  }
   const body = String(form.Body || "");
   const from = String(form.From || "whatsapp:+0000000000");
   const buttonPayload = String(
@@ -270,9 +322,15 @@ app.post("/whatsapp/webhook", async (c) => {
 });
 
 app.post("/pey/webhook", async (c) => {
+  const rawBody = await c.req.text();
+  const okSig = await verifyPeyWebhook(c.env, c.req.raw, rawBody);
+  if (!okSig) {
+    return c.json({ detail: "invalid signature" }, 401);
+  }
+
   let payload: Record<string, unknown>;
   try {
-    payload = (await c.req.json()) as Record<string, unknown>;
+    payload = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     return c.json({ ok: true, ignored: "invalid json" });
   }
@@ -284,11 +342,13 @@ app.post("/pey/webhook", async (c) => {
     unknown
   >;
 
-  // Payment link: type payment_link.status_updated + status paid
   if (event === "payment_link.status_updated") {
     const status = String(payload.status || data.status || "");
     if (status !== "paid") {
-      return c.json({ ok: true, ignored: `payment_link ${status || "no-status"}` });
+      return c.json({
+        ok: true,
+        ignored: `payment_link ${status || "no-status"}`,
+      });
     }
     const txs = (payload.transactions || data.transactions || []) as Array<
       Record<string, unknown>
@@ -305,7 +365,9 @@ app.post("/pey/webhook", async (c) => {
         data.client_reference_id ||
         "",
     );
-    if (!txId) return c.json({ ok: true, ignored: "payment_link sin transactionId" });
+    if (!txId) {
+      return c.json({ ok: true, ignored: "payment_link sin transactionId" });
+    }
 
     const existing = await c.env.DB.prepare(
       "SELECT id FROM ordenes WHERE pey_transaction_id = ?",
@@ -322,7 +384,9 @@ app.post("/pey/webhook", async (c) => {
         .bind(Number(clientRef))
         .first<Orden>();
     }
-    if (!orden) return c.json({ ok: true, ignored: "unknown clientReferenceId" });
+    if (!orden) {
+      return c.json({ ok: true, ignored: "unknown clientReferenceId" });
+    }
 
     const nextEstado =
       Number(orden.requiere_factura) === 1 ? orden.estado_chat : "COMPLETADO";
@@ -338,7 +402,12 @@ app.post("/pey/webhook", async (c) => {
       `💰 Pago confirmado: $${orden.monto} MXN (orden #${orden.id}).`,
     );
     await evaluarYTimbrar(c.env, publicUrl(c), orden.id);
-    return c.json({ ok: true, orden_id: orden.id, pago: "PAGADO", via: "payment_link" });
+    return c.json({
+      ok: true,
+      orden_id: orden.id,
+      pago: "PAGADO",
+      via: "payment_link",
+    });
   }
 
   if (
@@ -350,8 +419,10 @@ app.post("/pey/webhook", async (c) => {
     }
   }
 
-  const txId = data.transactionId || data.transaction_id || payload.transactionId;
-  const numRef = data.numRef || data.num_ref || data.reference || payload.numRef;
+  const txId =
+    data.transactionId || data.transaction_id || payload.transactionId;
+  const numRef =
+    data.numRef || data.num_ref || data.reference || payload.numRef;
   if (!txId) return c.json({ ok: true, ignored: "no transactionId" });
 
   const existing = await c.env.DB.prepare(

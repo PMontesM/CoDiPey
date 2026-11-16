@@ -136,10 +136,21 @@ export async function evaluarYTimbrar(
     )
       .bind(facturapiId, cfdiUuid, nowIso(), ordenId)
       .run();
+    const { signedFilePath } = await import("./security");
+    const pdfUrl = await signedFilePath(
+      env,
+      publicUrl,
+      `factura_${ordenId}.pdf`,
+    );
+    const xmlUrl = await signedFilePath(
+      env,
+      publicUrl,
+      `factura_${ordenId}.xml`,
+    );
     await sendWhatsapp(
       env,
       row.telefono,
-      `✅ Factura CFDI 4.0 timbrada (orden #${ordenId}).\nPDF: ${publicUrl}/files/factura_${ordenId}.pdf\nXML: ${publicUrl}/files/factura_${ordenId}.xml`,
+      `✅ Factura CFDI 4.0 timbrada (orden #${ordenId}).\nPDF: ${pdfUrl}\nXML: ${xmlUrl}`,
     );
   } catch (err) {
     const message =
