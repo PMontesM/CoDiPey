@@ -789,6 +789,8 @@
         cp: raw.cp || raw.codigo_postal || null,
         regimen: raw.regimen || null,
         uso_cfdi: raw.uso_cfdi || null,
+        factura_pdf_url: raw.factura_pdf_url || null,
+        factura_xml_url: raw.factura_xml_url || null,
         creado_en: formatCreadoEn(raw.creado_en || raw.created_at),
         expires_in_sec: typeof raw.expires_in_sec === "number" ? raw.expires_in_sec : 540
       };
@@ -2117,7 +2119,14 @@
 
     function openFiscalFile(orderId, ext) {
       if (state.isLiveApi) {
-        window.open(`/files/factura_${encodeURIComponent(orderId)}.${ext}`, "_blank", "noopener");
+        const order = state.orders.find(o => String(o.id) === String(orderId));
+        const signed =
+          ext === "pdf" ? order?.factura_pdf_url : order?.factura_xml_url;
+        if (!signed) {
+          showToast("Esta orden aún no tiene archivo firmado de factura", "error");
+          return;
+        }
+        window.open(signed, "_blank", "noopener");
         return;
       }
 

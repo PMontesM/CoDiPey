@@ -263,6 +263,23 @@ describe("Worker HTTP", () => {
     expect(denied.status).toBe(403);
   });
 
+  it("serves factura files with a valid signature", async () => {
+    await env.DB.prepare(
+      `INSERT INTO blobs (key, content_type, data, updated_at)
+       VALUES ('factura_9.pdf', 'application/pdf', ?, ?)`,
+    )
+      .bind(PNG_1X1, new Date().toISOString())
+      .run();
+    const { signedFilePath } = await import("../src/lib/security");
+    const url = await signedFilePath(env, PUBLIC_BASE, "factura_9.pdf");
+    expect(url).toMatch(/exp=\d+/);
+    expect(url).toMatch(/sig=[a-f0-9]+/);
+    const path = url.replace(PUBLIC_BASE, "");
+    const ok = await call(path);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toMatch(/pdf|octet-stream/i);
+  });
+
   async function startCartAndCheckout(from = "whatsapp:+5215510076571") {
     await callWhatsapp({
         From: from,

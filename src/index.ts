@@ -13,6 +13,7 @@ import { getQrExpiresInSec } from "./lib/pey";
 import {
   isProtectedFileKey,
   requireOperator,
+  signedFilePath,
   verifyFileAccess,
   verifyPeyWebhook,
   verifyTwilioSignature,
@@ -169,7 +170,28 @@ app.get("/api/ordenes", async (c) => {
     }),
   );
   const emisor = await resolveEmisor(c.env);
-  return c.json(buildOrdenesPayload(withExpiry, emisor), {
+  const payload = buildOrdenesPayload(withExpiry, emisor);
+  const base = publicUrl(c);
+  payload.ordenes = await Promise.all(
+    payload.ordenes.map(async (o) => {
+      if (!o.facturapi_id) return o;
+      const id = Number(o.id);
+      return {
+        ...o,
+        factura_pdf_url: await signedFilePath(
+          c.env,
+          base,
+          `factura_${id}.pdf`,
+        ),
+        factura_xml_url: await signedFilePath(
+          c.env,
+          base,
+          `factura_${id}.xml`,
+        ),
+      };
+    }),
+  );
+  return c.json(payload, {
     headers: { "cache-control": "private, no-store" },
   });
 });
