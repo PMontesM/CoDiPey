@@ -134,6 +134,7 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 | `GET/DELETE /api/superadmin/errors` | Log de errores recientes |
 | `POST /api/superadmin/errors/sample` | Escribe un aviso de prueba |
 | `POST /api/superadmin/test/:id` | Prueba `pey` / `facturapi` / `twilio` |
+| `GET/POST /api/superadmin/e2e` | Prueba E2E (config → APIs → cobro → pago → ticket) |
 
 ### Auth y privacidad
 
@@ -176,6 +177,7 @@ Las tablas `settings` y `error_log` también se crean solas la primera vez que e
 | **Errores** | Log reciente (Actualizar / Probar log / Limpiar). Complementa Cloudflare → Workers → Logs |
 | **Webhooks** | URLs Twilio y pey con botón **Copiar** |
 | **Conexiones** | Ping a pey / Facturapi / Twilio con las keys efectivas |
+| **Prueba E2E** | Chequeo completo: config, D1, APIs, cobro demo + QR, liquidación, CFDI, ticket |
 | **Configuración** | Overrides agrupados: Negocio, pey, Facturapi, Twilio, Panel/archivos |
 | **Acceso** | Contraseña memorable del panel (≥ 6). El secret de Wrangler queda de respaldo |
 
@@ -324,7 +326,7 @@ Scripts opcionales (no hacen falta para clonar):
 |---|---|
 | `wrangler.jsonc` | Worker `cobro-codi` + D1 `cobro-db` |
 | `src/index.ts` | Rutas Hono |
-| `src/lib/*` | Chat, pey, Facturapi, ticket, security, settings, superadmin, privacy, error-log… |
+| `src/lib/*` | Chat, pey, Facturapi, ticket, security, settings, superadmin, privacy, e2e-health, error-log… |
 | `src/wasm/resvg.wasm` | Render de ticket PNG |
 | `public/index.html` | Landing |
 | `public/admin.html` | Panel operador |

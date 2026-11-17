@@ -208,6 +208,10 @@
             Conexiones
             <span class="hint">pey · Facturapi · Twilio</span>
           </button>
+          <button type="button" class="nav-btn" data-tab="e2e">
+            Prueba E2E
+            <span class="hint" id="navE2eHint">Sin correr</span>
+          </button>
           <button type="button" class="nav-btn" data-tab="config">
             Configuración
             <span class="hint">Keys y negocio</span>
@@ -227,6 +231,7 @@
             <button type="button" class="nav-chip" data-tab="errors">Errores</button>
             <button type="button" class="nav-chip" data-tab="hooks">Webhooks</button>
             <button type="button" class="nav-chip" data-tab="tests">Conexiones</button>
+            <button type="button" class="nav-chip" data-tab="e2e">E2E</button>
             <button type="button" class="nav-chip" data-tab="config">Config</button>
             <button type="button" class="nav-chip" data-tab="access">Acceso</button>
           </div>
@@ -237,11 +242,16 @@
           <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-[#C2185B]">Resumen</p>
           <h2 class="serif text-2xl font-semibold mt-1" id="overviewBrand">Mostrito</h2>
           <p class="text-sm text-[#3F524B] mt-1 max-w-xl">Centro de control del Worker: diagnostica fallos, prueba APIs y cambia keys sin redeploy.</p>
-          <div class="mt-5 grid gap-3 sm:grid-cols-3">
+          <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <button type="button" class="jump text-left rounded-xl border border-[#D0D9D4] bg-white/80 p-4 hover:border-[#0F2A24] transition" data-tab="errors">
               <div class="text-[10px] font-bold uppercase tracking-wide text-[#6A7A73]">Errores</div>
               <div class="text-lg font-bold mt-1" id="overviewErrors">—</div>
               <div class="text-[11px] text-[#3F524B] mt-1">Ver log reciente →</div>
+            </button>
+            <button type="button" class="jump text-left rounded-xl border border-[#D0D9D4] bg-white/80 p-4 hover:border-[#0F2A24] transition" data-tab="e2e">
+              <div class="text-[10px] font-bold uppercase tracking-wide text-[#6A7A73]">E2E</div>
+              <div class="text-lg font-bold mt-1" id="overviewE2e">—</div>
+              <div class="text-[11px] text-[#3F524B] mt-1" id="overviewE2eSub">Correr prueba completa →</div>
             </button>
             <button type="button" class="jump text-left rounded-xl border border-[#D0D9D4] bg-white/80 p-4 hover:border-[#0F2A24] transition" data-tab="tests">
               <div class="text-[10px] font-bold uppercase tracking-wide text-[#6A7A73]">Conexiones</div>
@@ -326,6 +336,29 @@
               <div class="test-status text-[11px] text-[#3F524B] mt-2">Sin probar</div>
             </button>
           </div>
+        </section>
+
+        <!-- E2E -->
+        <section class="panel glass rounded-2xl p-5 sm:p-6 space-y-4" data-panel="e2e">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-[#C2185B]">Chequeo</p>
+              <h2 class="serif text-2xl font-semibold">Prueba E2E</h2>
+              <p class="text-[11px] text-[#3F524B] mt-1 max-w-xl">
+                Corre de punta a punta: config, D1, APIs, cobro demo + QR, liquidación, CFDI y ticket.
+                Crea una orden demo real (~$25) como el panel.
+              </p>
+            </div>
+            <button id="btnE2eRun" type="button"
+              class="text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#C2185B] hover:bg-[#A0144A] text-white">
+              Correr prueba E2E
+            </button>
+          </div>
+          <div id="e2eSummary" class="rounded-xl border border-[#D0D9D4] bg-white/80 px-4 py-3 text-sm text-[#3F524B]">
+            Aún no hay corridas. Pulsa el botón para validar el sistema.
+          </div>
+          <div id="e2eSteps" class="space-y-2"></div>
+          <p id="e2eStatus" class="text-xs text-[#3F524B]" role="status"></p>
         </section>
 
         <!-- Config -->
@@ -427,6 +460,7 @@
       });
       try { sessionStorage.setItem("mostrito_sa_tab", tab); } catch { /* ignore */ }
       if (tab === "errors") loadErrors();
+      if (tab === "e2e") loadE2eLast();
     }
 
     async function boot() {
@@ -505,9 +539,56 @@
       }).join("");
 
       await loadErrors();
+      await loadE2eLast();
       let tab = "overview";
       try { tab = sessionStorage.getItem("mostrito_sa_tab") || "overview"; } catch { /* ignore */ }
       showTab(tab);
+    }
+
+    function renderE2e(report) {
+      const summary = document.getElementById("e2eSummary");
+      const stepsEl = document.getElementById("e2eSteps");
+      const navHint = document.getElementById("navE2eHint");
+      const ov = document.getElementById("overviewE2e");
+      const ovSub = document.getElementById("overviewE2eSub");
+      if (!report) {
+        summary.textContent = "Aún no hay corridas. Pulsa el botón para validar el sistema.";
+        stepsEl.innerHTML = "";
+        if (navHint) navHint.textContent = "Sin correr";
+        if (ov) ov.textContent = "Sin correr";
+        if (ovSub) ovSub.textContent = "Correr prueba completa →";
+        return;
+      }
+      const when = report.finished_at
+        ? new Date(report.finished_at).toLocaleString("es-MX", { timeZone: "America/Mexico_City" })
+        : "—";
+      const pass = (report.steps || []).filter((s) => s.ok).length;
+      const total = (report.steps || []).length;
+      summary.innerHTML = report.ok
+        ? `<span class="text-[#15803D] font-semibold">OK</span> · ${pass}/${total} pasos · ${report.duration_ms || 0} ms · ${esc(when)}${report.orden_id ? ` · orden #${report.orden_id}` : ""}`
+        : `<span class="text-[#A0144A] font-semibold">Falló</span> · ${pass}/${total} pasos · ${report.duration_ms || 0} ms · ${esc(when)}${report.orden_id ? ` · orden #${report.orden_id}` : ""}`;
+      if (navHint) navHint.textContent = report.ok ? "Última OK" : "Última falló";
+      if (ov) ov.textContent = report.ok ? "OK" : "Falló";
+      if (ovSub) ovSub.textContent = when;
+      stepsEl.innerHTML = (report.steps || []).map((s) => {
+        const cls = s.ok ? "text-[#15803D] bg-[#DCFCE7]" : "text-[#9F1239] bg-[#FFE4E6]";
+        const mark = s.ok ? "OK" : "FAIL";
+        return `<div class="rounded-xl border border-[#D0D9D4] bg-white/85 px-3 py-2.5 flex flex-wrap gap-2 items-start">
+          <span class="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${cls}">${mark}</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-semibold">${esc(s.label)}</div>
+            <div class="mono text-[10px] text-[#6A7A73] mt-0.5 break-all">${esc(s.message)}</div>
+          </div>
+          <span class="mono text-[10px] text-[#6A7A73]">${Number(s.ms || 0)} ms</span>
+        </div>`;
+      }).join("");
+    }
+
+    async function loadE2eLast() {
+      const res = await fetch("/api/superadmin/e2e", { headers: headers(false) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      renderE2e(data.last || null);
     }
 
     async function loadErrors() {
@@ -660,6 +741,35 @@
     });
     document.getElementById("btnTestAll").addEventListener("click", async () => {
       for (const id of ["pey", "facturapi", "twilio"]) await runTest(id);
+    });
+
+    document.getElementById("btnE2eRun").addEventListener("click", async () => {
+      const btn = document.getElementById("btnE2eRun");
+      const status = document.getElementById("e2eStatus");
+      btn.disabled = true;
+      btn.textContent = "Corriendo…";
+      status.textContent = "Esto puede tardar ~10–30 s (APIs + cobro demo)…";
+      document.getElementById("e2eSteps").innerHTML = "";
+      try {
+        const res = await fetch("/api/superadmin/e2e", {
+          method: "POST",
+          headers: headers(false),
+        });
+        const report = await res.json().catch(() => ({}));
+        if (report.steps) {
+          renderE2e(report);
+          status.textContent = report.ok
+            ? "Prueba E2E completada sin fallos."
+            : "Prueba E2E con fallos — revisa los pasos en rojo.";
+        } else {
+          status.textContent = report.detail || `Error ${res.status}`;
+        }
+      } catch (err) {
+        status.textContent = String(err);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Correr prueba E2E";
+      }
     });
 
     document.getElementById("btnErrorsRefresh").addEventListener("click", () => loadErrors());

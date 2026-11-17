@@ -8,6 +8,7 @@ import {
   type ConnectionTestId,
 } from "./lib/connection-tests";
 import { simularCobroDemo, simularPagoDemo } from "./lib/demo";
+import { loadE2eReport, runE2eHealth } from "./lib/e2e-health";
 import {
   buildJoinPayload,
   registrarDemoWhatsapp,
@@ -203,6 +204,29 @@ app.post("/api/superadmin/test", async (c) => {
   const env = await runtimeEnv(c.env);
   const results = await runAllConnectionTests(env);
   return c.json({ results });
+});
+
+/** Último reporte E2E guardado en D1. */
+app.get("/api/superadmin/e2e", async (c) => {
+  const denied = await requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const last = await loadE2eReport(c.env);
+  return c.json(
+    { last },
+    { headers: { "cache-control": "private, no-store" } },
+  );
+});
+
+/**
+ * Prueba E2E completa: config, D1, APIs, cobro demo, pago, ticket.
+ * Crea una orden demo real (~$25) como el botón del panel.
+ */
+app.post("/api/superadmin/e2e", async (c) => {
+  const denied = await requireSuperadmin(c.req.raw, c.env);
+  if (denied) return denied;
+  const env = await runtimeEnv(c.env);
+  const report = await runE2eHealth(env, publicUrlFrom(env, c.req.url));
+  return c.json(report, report.ok ? 200 : 502);
 });
 
 app.get("/api/superadmin/errors", async (c) => {

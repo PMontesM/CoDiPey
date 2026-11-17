@@ -1243,5 +1243,26 @@ describe("Worker HTTP", () => {
       const afterBody = (await after.json()) as { errors: unknown[] };
       expect(afterBody.errors).toEqual([]);
     });
+
+    it("E2E health corre pasos y guarda el último reporte", async () => {
+      (env as Record<string, unknown>).SUPERADMIN_SECRET = SA;
+      // Twilio SID vacío en beforeEach → api.twilio falla → flujo cobro omitido.
+      const res = await callSa("/api/superadmin/e2e", { method: "POST" });
+      expect([200, 502]).toContain(res.status);
+      const report = (await res.json()) as {
+        ok: boolean;
+        steps: Array<{ id: string; ok: boolean }>;
+      };
+      expect(report.steps.length).toBeGreaterThan(3);
+      expect(report.steps.some((s) => s.id === "d1")).toBe(true);
+      expect(report.steps.some((s) => s.id === "config.pey_webhook")).toBe(
+        true,
+      );
+
+      const last = await callSa("/api/superadmin/e2e");
+      expect(last.status).toBe(200);
+      const body = (await last.json()) as { last: { steps: unknown[] } | null };
+      expect(body.last?.steps?.length).toBe(report.steps.length);
+    });
   });
 });
