@@ -345,8 +345,8 @@
               <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-[#C2185B]">Chequeo</p>
               <h2 class="serif text-2xl font-semibold">Prueba E2E</h2>
               <p class="text-[11px] text-[#3F524B] mt-1 max-w-xl">
-                Corre de punta a punta: config, D1, APIs, cobro demo + QR, liquidación, CFDI y ticket.
-                Crea una orden demo real (~$25) como el panel.
+                Corre de punta a punta: config, D1, APIs, cobro demo + QR, liquidación, CFDI, ticket y blobs.
+                Crea una orden demo real (~$25). Ticket/QR se validan en el Worker (sin auto-fetch HTTP).
               </p>
             </div>
             <button id="btnE2eRun" type="button"

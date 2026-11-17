@@ -1,7 +1,9 @@
-import type { Env } from "../types";
+import type { Env, Item, Orden } from "../types";
+import { getBlob } from "./blobs";
 import { runAllConnectionTests } from "./connection-tests";
 import { simularCobroDemo, simularPagoDemo } from "./demo";
 import { ensureSettingsTable } from "./settings";
+import { renderTicketHtmlPage } from "./ticket";
 
 export type E2eStep = {
   id: string;
@@ -148,27 +150,60 @@ export async function runE2eHealth(
         }),
       );
 
+      // No hacemos fetch al propio Worker (en CF suele 404 por loopback).
+      // Validamos el mismo camino que usan las rutas /ticket y /files.
       steps.push(
-        await step("flow.ticket", "Ticket HTML público", async () => {
+        await step("flow.ticket", "Ticket HTML (render interno)", async () => {
+          const orden = await env.DB.prepare(
+            "SELECT * FROM ordenes WHERE id = ?",
+          )
+            .bind(id)
+            .first<Orden>();
+          if (!orden) throw new Error("Orden no encontrada en D1");
+          let items: Item[] = [];
+          try {
+            const raw = JSON.parse(orden.conceptos) as Item[];
+            if (Array.isArray(raw)) items = raw;
+          } catch {
+            items = [];
+          }
           const base = publicUrl.replace(/\/$/, "");
-          const res = await fetch(`${base}/ticket/${id}`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const html = await res.text();
-          if (!/ticket|total|qr/i.test(html)) {
+          const html = renderTicketHtmlPage({
+            meta: {
+              ordenId: orden.id,
+              monto: String(orden.monto),
+              items,
+              concepto: orden.concepto_pey || undefined,
+              peyQrId: orden.pey_qr_id,
+              vigenciaMin: 10,
+              businessName:
+                (env.BUSINESS_NAME || "Mostrito").trim() || "Mostrito",
+            },
+            qrImageUrl: `${base}/files/qr_code_${orden.id}.png`,
+            estado: orden.pago_estado === "PAGADO" ? "PAGADO" : "PENDIENTE",
+            paymentUrl: orden.pey_payment_url ?? null,
+          });
+          if (!/ticket|total/i.test(html) || !html.includes(`#${orden.id}`)) {
             throw new Error("HTML de ticket inesperado");
           }
-          return `${base}/ticket/${id}`;
+          return `${base}/ticket/${id} · ${html.length} chars`;
         }),
       );
 
       steps.push(
-        await step("flow.qr_file", "Archivo QR PNG", async () => {
-          const base = publicUrl.replace(/\/$/, "");
-          const res = await fetch(`${base}/files/qr_${id}.png`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const buf = await res.arrayBuffer();
-          if (buf.byteLength < 32) throw new Error("PNG vacío");
-          return `${buf.byteLength} bytes`;
+        await step("flow.qr_file", "Archivo QR PNG (D1 blobs)", async () => {
+          const keys = [`qr_${id}.png`, `qr_code_${id}.png`];
+          const found: string[] = [];
+          for (const key of keys) {
+            const blob = await getBlob(env, key);
+            if (blob && blob.data.byteLength >= 32) {
+              found.push(`${key} (${blob.data.byteLength} B)`);
+            }
+          }
+          if (!found.length) {
+            throw new Error(`Sin blobs ${keys.join(" / ")}`);
+          }
+          return found.join(" · ");
         }),
       );
     }
