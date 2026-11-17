@@ -573,13 +573,31 @@ app.post("/pey/webhook", async (c) => {
   const rawBody = await c.req.text();
   const okSig = await verifyPeyWebhook(env, c.req.raw, rawBody);
   if (!okSig) {
+    const hasSecret = Boolean((env.PEY_WEBHOOK_SECRET || "").trim());
+    await logAppError(env, {
+      level: "error",
+      source: "pey.webhook",
+      message: hasSecret
+        ? "Webhook pey rechazado: firma inválida"
+        : "Webhook pey rechazado: falta PEY_WEBHOOK_SECRET",
+      detail: hasSecret
+        ? "Revisa el secreto en pey vs Superadmin/Wrangler."
+        : "Configura PEY_WEBHOOK_SECRET en /superadmin (o wrangler secret put).",
+      context: "/pey/webhook",
+    });
     return c.json({ detail: "invalid signature" }, 401);
   }
 
   let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody) as Record<string, unknown>;
+    payload = JSON.parse(rawBody);
   } catch {
+    await logAppError(env, {
+      level: "warn",
+      source: "pey.webhook",
+      message: "Webhook pey con JSON inválido",
+      context: "/pey/webhook",
+    });
     return c.json({ ok: true, ignored: "invalid json" });
   }
   const event = String(
@@ -633,6 +651,13 @@ app.post("/pey/webhook", async (c) => {
         .first<Orden>();
     }
     if (!orden) {
+      await logAppError(env, {
+        level: "warn",
+        source: "pey.webhook",
+        message: "payment_link pagado sin orden local",
+        detail: `clientReferenceId=${clientRef || "—"} tx=${String(txId)}`,
+        context: "/pey/webhook",
+      });
       return c.json({ ok: true, ignored: "unknown clientReferenceId" });
     }
 
@@ -671,7 +696,16 @@ app.post("/pey/webhook", async (c) => {
     data.transactionId || data.transaction_id || payload.transactionId;
   const numRef =
     data.numRef || data.num_ref || data.reference || payload.numRef;
-  if (!txId) return c.json({ ok: true, ignored: "no transactionId" });
+  if (!txId) {
+    await logAppError(env, {
+      level: "warn",
+      source: "pey.webhook",
+      message: "Webhook pey sin transactionId",
+      detail: `event=${event || "—"}`,
+      context: "/pey/webhook",
+    });
+    return c.json({ ok: true, ignored: "no transactionId" });
+  }
 
   const existing = await c.env.DB.prepare(
     "SELECT id FROM ordenes WHERE pey_transaction_id = ?",
@@ -688,7 +722,16 @@ app.post("/pey/webhook", async (c) => {
       .bind(Number(numRef))
       .first<Orden>();
   }
-  if (!orden) return c.json({ ok: true, ignored: "unknown numRef" });
+  if (!orden) {
+    await logAppError(env, {
+      level: "warn",
+      source: "pey.webhook",
+      message: "Pago pey sin orden local (numRef)",
+      detail: `numRef=${String(numRef ?? "—")} tx=${String(txId)} event=${event || "—"}`,
+      context: "/pey/webhook",
+    });
+    return c.json({ ok: true, ignored: "unknown numRef" });
+  }
 
   const nextEstado =
     Number(orden.requiere_factura) === 1 ? orden.estado_chat : "COMPLETADO";
