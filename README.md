@@ -97,8 +97,9 @@ Archivos de entorno:
 
 1. Abre [/superadmin](https://cobro-codi.inomali.workers.dev/superadmin).
 2. Entra con la **contraseña del panel** (o el `SUPERADMIN_SECRET` de Wrangler la primera vez).
-3. Navega con el **menú lateral** (desktop) o los **chips** (móvil): Resumen → Errores → Webhooks → Conexiones → Config → Acceso.
-4. Desde **Resumen** saltas a lo que necesites; **Cerrar sesión** está arriba a la derecha.
+3. Navega con el **menú lateral** (desktop) o los **chips** (móvil): Resumen → Errores → Webhooks → Conexiones → **Prueba E2E** → Config → Acceso.
+4. En **Prueba E2E** pulsa **Correr prueba E2E** de vez en cuando para validar que todo el stack responde.
+5. **Cerrar sesión** está arriba a la derecha.
 
 ---
 
@@ -134,7 +135,8 @@ Cloudflare Worker (**Hono** + TypeScript) · **D1** · Twilio WhatsApp · pey (C
 | `GET/DELETE /api/superadmin/errors` | Log de errores recientes |
 | `POST /api/superadmin/errors/sample` | Escribe un aviso de prueba |
 | `POST /api/superadmin/test/:id` | Prueba `pey` / `facturapi` / `twilio` |
-| `GET/POST /api/superadmin/e2e` | Prueba E2E (config → APIs → cobro → pago → ticket) |
+| `GET /api/superadmin/e2e` | Último reporte E2E guardado en D1 |
+| `POST /api/superadmin/e2e` | Corre la prueba E2E completa y guarda el resultado |
 
 ### Auth y privacidad
 
@@ -173,17 +175,35 @@ Las tablas `settings` y `error_log` también se crean solas la primera vez que e
 
 | Vista | Qué hace |
 |---|---|
-| **Resumen** | Nombre del negocio, conteo de errores y atajos a Errores / Conexiones / Config |
+| **Resumen** | Nombre del negocio, errores, estado E2E y atajos |
 | **Errores** | Log reciente (Actualizar / Probar log / Limpiar). Complementa Cloudflare → Workers → Logs |
 | **Webhooks** | URLs Twilio y pey con botón **Copiar** |
 | **Conexiones** | Ping a pey / Facturapi / Twilio con las keys efectivas |
-| **Prueba E2E** | Chequeo completo: config, D1, APIs, cobro demo + QR, liquidación, CFDI, ticket |
+| **Prueba E2E** | Chequeo operativo de punta a punta (ver abajo) |
 | **Configuración** | Overrides agrupados: Negocio, pey, Facturapi, Twilio, Panel/archivos |
 | **Acceso** | Contraseña memorable del panel (≥ 6). El secret de Wrangler queda de respaldo |
 
 - **Desktop:** menú lateral sticky (rail).
 - **Móvil:** chips horizontales arriba del contenido.
 - La pestaña activa se recuerda en la sesión del navegador.
+
+### Prueba E2E
+
+Desde **Prueba E2E** → **Correr prueba E2E** (también resumida en **Resumen**).
+
+| Paso | Qué valida |
+|---|---|
+| `PUBLIC_URL` HTTPS | Base pública usable por pey / tickets |
+| `PEY_WEBHOOK_SECRET` | Secreto presente (sin él los pagos reales no liquidan) |
+| Base D1 | Lectura de órdenes |
+| API pey / Facturapi / Twilio | Keys aceptadas por cada proveedor |
+| Cobro demo + QR | Crea orden demo (~$25) + QR pey (como el panel) |
+| Liquidar + timbrar | Marca PAGADO e intenta CFDI |
+| Ticket HTML | Render interno del ticket (no auto-fetch al Worker; en CF el loopback HTTP falla) |
+| Archivo QR PNG | Blobs `qr_*.png` / `qr_code_*.png` en D1 |
+
+- El reporte (`ok`, pasos, `orden_id`, duración) se guarda en D1 (`settings._E2E_LAST`) y se relee con `GET /api/superadmin/e2e`.
+- Úsala de vez en cuando tras cambiar keys o webhooks. Deja una orden demo pagada en el panel (normal).
 
 ### Reglas
 
@@ -192,6 +212,7 @@ Las tablas `settings` y `error_log` también se crean solas la primera vez que e
 - `SUPERADMIN_SECRET` **nunca** se edita desde la UI (solo Wrangler).
 - La contraseña del panel **sí** se cambia en **Acceso**; el secret sigue valiendo para entrar si la olvidas.
 - **Cerrar sesión** limpia el token de la pestaña (arriba a la derecha).
+- Sin `PEY_WEBHOOK_SECRET` la E2E falla ese paso a propósito (y los webhooks de pey reales también).
 
 ---
 
@@ -246,11 +267,12 @@ Estados útiles en panel: `ARMAR_PEDIDO`, `ESPERANDO_FACTURA`, `ESPERANDO_FISCAL
 
 | Dónde | Qué ver |
 |---|---|
+| `/superadmin` → **Prueba E2E** | Chequeo completo bajo demanda; último resultado en Resumen |
 | `/superadmin` → Errores recientes | Últimos ~200 eventos (error/aviso) con fuente, mensaje y detalle |
 | Cloudflare Dashboard → Workers → `cobro-codi` → Logs | Stream en vivo / histórico de `console.log` |
 | `npx wrangler tail` | Tail local contra el Worker desplegado |
 
-Se registran, entre otros: excepciones HTTP, fallos del FSM WhatsApp, timbrado Facturapi, envíos Twilio y avisos de pey payment-link. Los teléfonos en el log también van enmascarados.
+Se registran, entre otros: excepciones HTTP, webhooks pey rechazados (p. ej. sin `PEY_WEBHOOK_SECRET`), fallos del FSM WhatsApp, timbrado Facturapi, envíos Twilio y avisos de pey payment-link. Los teléfonos en el log van enmascarados.
 
 ---
 
